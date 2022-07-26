@@ -1,3 +1,4 @@
+using Avalonia.Media;
 using Avalonia.Threading;
 using SkiaSharp;
 using System.Collections.Generic;
@@ -6,13 +7,6 @@ namespace KyoshinEewViewer.Map.Layers;
 
 public abstract class MapLayer
 {
-	public double Zoom { get; set; }
-	public PointD LeftTopLocation { get; set; }
-	public PointD LeftTopPixel { get; set; }
-	public RectD PixelBound { get; set; }
-	public RectD ViewAreaRect { get; set; }
-	public Avalonia.Thickness Padding { get; set; }
-
 	private List<MapControl> AttachedControls { get; } = new();
 
 	/// <summary>
@@ -52,7 +46,8 @@ public abstract class MapLayer
 	/// <summary>
 	/// 描画を行う
 	/// </summary>
-	/// <param name="canvas">描画対象</param>
+	/// <param name="context">描画対象</param>
+	/// <param name="param">描画する範囲の情報</param>
 	/// <param name="isAnimating">アニメーション(ナビゲーション)中かどうか</param>
-	public abstract void Render(SKCanvas canvas, bool isAnimating);
+	public abstract void Render(DrawingContext context, LayerRenderParameter param, bool isAnimating);
 }

@@ -1,8 +1,8 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Skia;
 using KyoshinEewViewer.Map.Data;
-using SkiaSharp;
 using System;
 
 namespace KyoshinEewViewer.Map.Layers;
@@ -20,30 +20,12 @@ public class LandBorderLayer : MapLayer
 	}
 
 	#region ResourceCache
-	private SKPaint CoastlineStroke { get; set; } = new SKPaint
-	{
-		Style = SKPaintStyle.Stroke,
-		Color = SKColors.Green,
-		StrokeWidth = 1,
-		IsAntialias = true,
-	};
-	private float CoastlineStrokeWidth { get; set; } = 1;
-	private SKPaint PrefStroke { get; set; } = new SKPaint
-	{
-		Style = SKPaintStyle.Stroke,
-		Color = SKColors.Green,
-		StrokeWidth = .8f,
-		IsAntialias = true,
-	};
-	private float PrefStrokeWidth { get; set; } = .8f;
-	private SKPaint AreaStroke { get; set; } = new SKPaint
-	{
-		Style = SKPaintStyle.Stroke,
-		Color = SKColors.Green,
-		StrokeWidth = .4f,
-		IsAntialias = true,
-	};
-	private float AreaStrokeWidth { get; set; } = .4f;
+	private Pen CoastlineStroke { get; set; } = new();
+	private double CoastlineStrokeWidth { get; set; } = 1;
+	private Pen PrefStroke { get; set; } = new();
+	private double PrefStrokeWidth { get; set; } = .8;
+	private Pen AreaStroke { get; set; } = new();
+	private double AreaStrokeWidth { get; set; } = .4;
 
 	private bool InvalidateLandStroke => CoastlineStrokeWidth <= 0;
 	private bool InvalidatePrefStroke => PrefStrokeWidth <= 0;
@@ -51,58 +33,41 @@ public class LandBorderLayer : MapLayer
 
 	public override void RefreshResourceCache(Control targetControl)
 	{
-		SKColor FindColorResource(string name)
-			=> ((Color)(targetControl.FindResource(name) ?? throw new Exception($"マップリソース {name} が見つかりませんでした"))).ToSKColor();
+		Color FindColorResource(string name)
+			=> (Color)(targetControl.FindResource(name) ?? throw new Exception($"マップリソース {name} が見つかりませんでした"));
 		float FindFloatResource(string name)
 			=> (float)(targetControl.FindResource(name) ?? throw new Exception($"マップリソース {name} が見つかりませんでした"));
 
-		CoastlineStroke = new SKPaint
-		{
-			Style = SKPaintStyle.Stroke,
-			Color = FindColorResource("LandStrokeColor"),
-			StrokeWidth = FindFloatResource("LandStrokeThickness"),
-			IsAntialias = true,
-		};
-		CoastlineStrokeWidth = CoastlineStroke.StrokeWidth;
+		CoastlineStroke = new(new SolidColorBrush(FindColorResource("LandStrokeColor")), FindFloatResource("LandStrokeThickness"));
+		CoastlineStrokeWidth = CoastlineStroke.Thickness;
 
-		PrefStroke = new SKPaint
-		{
-			Style = SKPaintStyle.Stroke,
-			Color = FindColorResource("PrefStrokeColor"),
-			StrokeWidth = FindFloatResource("PrefStrokeThickness"),
-			IsAntialias = true,
-		};
-		PrefStrokeWidth = PrefStroke.StrokeWidth;
+		PrefStroke = new(new SolidColorBrush(FindColorResource("PrefStrokeColor")), FindFloatResource("PrefStrokeThickness"));
+		PrefStrokeWidth = PrefStroke.Thickness;
 
-		AreaStroke = new SKPaint
-		{
-			Style = SKPaintStyle.Stroke,
-			Color = FindColorResource("AreaStrokeColor"),
-			StrokeWidth = FindFloatResource("AreaStrokeThickness"),
-			IsAntialias = true,
-		};
-		AreaStrokeWidth = AreaStroke.StrokeWidth;
+		AreaStroke = new(new SolidColorBrush(FindColorResource("AreaStrokeColor")), FindFloatResource("AreaStrokeThickness"));
+		AreaStrokeWidth = AreaStroke.Thickness;
 	}
 	#endregion
 
 	public override bool NeedPersistentUpdate => false;
 
-	public override void Render(SKCanvas canvas, bool isAnimating)
+	public override void Render(DrawingContext context, LayerRenderParameter param, bool isAnimating)
 	{
 		// マップの初期化ができていなければスキップ
 		if (Map == null)
 			return;
-		canvas.Save();
-		try
+
+		// 使用するキャッシュのズーム
+		var baseZoom = (int)Math.Ceiling(param.Zoom);
+		// 実際のズームに合わせるためのスケール
+		var scale = Math.Pow(2, param.Zoom - baseZoom);
+		var matrix = Matrix.CreateScale(scale, scale);
+		// 画面座標への変換
+		var leftTop = param.LeftTopLocation.CastLocation().ToPixel(baseZoom);
+		matrix = matrix.Append(Matrix.CreateTranslation(-leftTop.X, -leftTop.Y));
+
+		using (context.PushPreTransform(matrix))
 		{
-			// 使用するキャッシュのズーム
-			var baseZoom = (int)Math.Ceiling(Zoom);
-			// 実際のズームに合わせるためのスケール
-			var scale = Math.Pow(2, Zoom - baseZoom);
-			canvas.Scale((float)scale);
-			// 画面座標への変換
-			var leftTop = LeftTopLocation.CastLocation().ToPixel(baseZoom);
-			canvas.Translate((float)-leftTop.X, (float)-leftTop.Y);
 
 			// 使用するレイヤー決定
 			var useLayerType = LandLayerType.EarthquakeInformationSubdivisionArea;
@@ -110,32 +75,36 @@ public class LandBorderLayer : MapLayer
 				useLayerType = LandLayerType.MunicipalityEarthquakeTsunamiArea;
 
 			// スケールに合わせてブラシのサイズ変更
-			CoastlineStroke.StrokeWidth = (float)(CoastlineStrokeWidth / scale);
-			PrefStroke.StrokeWidth = (float)(PrefStrokeWidth / scale);
-			AreaStroke.StrokeWidth = (float)(AreaStrokeWidth / scale);
+			CoastlineStroke.Thickness = CoastlineStrokeWidth / scale;
+			PrefStroke.Thickness = PrefStrokeWidth / scale;
+			AreaStroke.Thickness = AreaStrokeWidth / scale;
 
 			if (!Map.TryGetLayer(useLayerType, out var layer))
 				return;
 
-			RenderRect(ViewAreaRect);
+			RenderRect(param.ViewAreaRect);
 			// 左右に途切れないように補完して描画させる
-			if (ViewAreaRect.Bottom > 180)
+			if (param.ViewAreaRect.Bottom > 180)
 			{
-				canvas.Translate((float)new KyoshinMonitorLib.Location(0, 180).ToPixel(baseZoom).X, 0);
+				var matrix2 = Matrix.CreateTranslation(new KyoshinMonitorLib.Location(0, 180).ToPixel(baseZoom).X, 0);
+				using (context.PushPreTransform(matrix2))
+				{
+					var fixedRect = param.ViewAreaRect;
+					fixedRect.Y -= 360;
 
-				var fixedRect = ViewAreaRect;
-				fixedRect.Y -= 360;
-
-				RenderRect(fixedRect);
+					RenderRect(fixedRect);
+				}
 			}
-			else if (ViewAreaRect.Top < -180)
+			else if (param.ViewAreaRect.Top < -180)
 			{
-				canvas.Translate(-(float)new KyoshinMonitorLib.Location(0, 180).ToPixel(baseZoom).X, 0);
+				var matrix2 = Matrix.CreateTranslation(-new KyoshinMonitorLib.Location(0, 180).ToPixel(baseZoom).X, 0);
+				using (context.PushPreTransform(matrix2))
+				{
+					var fixedRect = param.ViewAreaRect;
+					fixedRect.Y += 360;
 
-				var fixedRect = ViewAreaRect;
-				fixedRect.Y += 360;
-
-				RenderRect(fixedRect);
+					RenderRect(fixedRect);
+				}
 			}
 
 			void RenderRect(RectD subViewArea)
@@ -149,23 +118,19 @@ public class LandBorderLayer : MapLayer
 					{
 						case PolylineType.AdminBoundary:
 							if (!InvalidatePrefStroke && baseZoom > 4.5)
-								f.Draw(canvas, baseZoom, PrefStroke);
+								f.Draw(context, baseZoom, PrefStroke);
 							break;
 						case PolylineType.Coastline:
 							if (!InvalidateLandStroke && baseZoom > 4.5)
-								f.Draw(canvas, baseZoom, CoastlineStroke);
+								f.Draw(context, baseZoom, CoastlineStroke);
 							break;
 						case PolylineType.AreaBoundary:
 							if (!InvalidateAreaStroke && baseZoom > 4.5)
-								f.Draw(canvas, baseZoom, AreaStroke);
+								f.Draw(context, baseZoom, AreaStroke);
 							break;
 					}
 				}
 			}
-		}
-		finally
-		{
-			canvas.Restore();
 		}
 	}
 }

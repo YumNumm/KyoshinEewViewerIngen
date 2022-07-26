@@ -1,8 +1,8 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Skia;
 using KyoshinEewViewer.Map.Data;
-using SkiaSharp;
 using System;
 using System.Collections.Generic;
 
@@ -12,11 +12,7 @@ public sealed class LandLayer : MapLayer
 {
 	public override bool NeedPersistentUpdate => false;
 
-	/// <summary>
-	/// 優先して描画するレイヤー
-	/// </summary>
-	//public LandLayerType PrimaryRenderLayer { get; set; } = LandLayerType.PrimarySubdivisionArea;
-	public Dictionary<LandLayerType, Dictionary<int, SKColor>>? CustomColorMap { get; set; }
+	public Dictionary<LandLayerType, Dictionary<int, Color>>? CustomColorMap { get; set; }
 
 	private MapData? map;
 	public MapData? Map
@@ -29,33 +25,20 @@ public sealed class LandLayer : MapLayer
 	}
 
 	#region ResourceCache
-	private SKPaint LandFill { get; set; } = new SKPaint
-	{
-		Style = SKPaintStyle.Fill,
-		Color = new SKColor(242, 239, 233),
-	};
+	private SolidColorBrush LandFill { get; set; } = new(new Color(255, 242, 239, 233));
 	//private SKPaint SpecialLandFill { get; set; } = new SKPaint
 	//{
 	//	Style = SKPaintStyle.Fill,
 	//	Color = new SKColor(242, 239, 233),
 	//};
-	private SKPaint OverSeasLandFill { get; set; } = new SKPaint
-	{
-		Style = SKPaintStyle.Fill,
-		Color = new SKColor(169, 169, 169),
-	};
+	private SolidColorBrush OverSeasLandFill { get; set; } = new(new Color(255, 169, 169, 169));
 
 	public override void RefreshResourceCache(Control targetControl)
 	{
-		SKColor FindColorResource(string name)
-			=> ((Color)(targetControl.FindResource(name) ?? throw new Exception($"マップリソース {name} が見つかりませんでした"))).ToSKColor();
+		Color FindColorResource(string name)
+			=> (Color)(targetControl.FindResource(name) ?? throw new Exception($"マップリソース {name} が見つかりませんでした"));
 
-		LandFill = new SKPaint
-		{
-			Style = SKPaintStyle.Fill,
-			Color = FindColorResource("LandColor"),
-			IsAntialias = false,
-		};
+		LandFill = new(FindColorResource("LandColor"));
 
 		//SpecialLandFill = new SKPaint
 		//{
@@ -66,67 +49,66 @@ public sealed class LandLayer : MapLayer
 		//	IsAntialias = true,
 		//};
 
-		OverSeasLandFill = new SKPaint
-		{
-			Style = SKPaintStyle.Fill,
-			Color = FindColorResource("OverseasLandColor"),
-			IsAntialias = false,
-		};
+		OverSeasLandFill = new(FindColorResource("OverseasLandColor"));
 	}
 	#endregion
-	public override void Render(SKCanvas canvas, bool isAnimating)
+	public override void Render(DrawingContext context, LayerRenderParameter param, bool isAnimating)
 	{
 		// コントローラーの初期化ができていなければスキップ
 		if (Map == null)
 			return;
-		canvas.Save();
-		try
+
+		// 使用するキャッシュのズーム
+		var baseZoom = (int)Math.Ceiling(param.Zoom);
+		// 実際のズームに合わせるためのスケール
+		var scale = Math.Pow(2, param.Zoom - baseZoom);
+		var matrix = Matrix.CreateScale(scale, scale);
+		// 画面座標への変換
+		var leftTop = param.LeftTopLocation.CastLocation().ToPixel(baseZoom);
+		matrix = matrix.Append(Matrix.CreateTranslation(-leftTop.X, -leftTop.Y));
+
+		// 使用するレイヤー決定
+		var useLayerType = LandLayerType.EarthquakeInformationSubdivisionArea;
+		if (baseZoom > 10)
+			useLayerType = LandLayerType.MunicipalityEarthquakeTsunamiArea;
+
+		using (context.PushPreTransform(matrix))
 		{
-			// 使用するキャッシュのズーム
-			var baseZoom = (int)Math.Ceiling(Zoom);
-			// 実際のズームに合わせるためのスケール
-			var scale = Math.Pow(2, Zoom - baseZoom);
-			canvas.Scale((float)scale);
-			// 画面座標への変換
-			var leftTop = LeftTopLocation.CastLocation().ToPixel(baseZoom);
-			canvas.Translate((float)-leftTop.X, (float)-leftTop.Y);
-
-			// 使用するレイヤー決定
-			var useLayerType = LandLayerType.EarthquakeInformationSubdivisionArea;
-			if (baseZoom > 10)
-				useLayerType = LandLayerType.MunicipalityEarthquakeTsunamiArea;
-
 			// スケールに合わせてブラシのサイズ変更
 			//SpecialLandFill.StrokeWidth = (float)(5 / scale);
 
 			if (!Map.TryGetLayer(useLayerType, out var layer))
 				return;
 
-			RenderRect(ViewAreaRect);
+			RenderRect(param.ViewAreaRect);
 			// 左右に途切れないように補完して描画させる
-			if (ViewAreaRect.Bottom > 180)
+			if (param.ViewAreaRect.Bottom > 180)
 			{
-				canvas.Translate((float)new KyoshinMonitorLib.Location(0, 180).ToPixel(baseZoom).X, 0);
+				var matrix2 = Matrix.CreateTranslation(new KyoshinMonitorLib.Location(0, 180).ToPixel(baseZoom).X, 0);
+				using (context.PushPreTransform(matrix2))
+				{
+					var fixedRect = param.ViewAreaRect;
+					fixedRect.Y -= 360;
 
-				var fixedRect = ViewAreaRect;
-				fixedRect.Y -= 360;
-
-				RenderRect(fixedRect);
+					RenderRect(fixedRect);
+				}
 			}
-			else if (ViewAreaRect.Top < -180)
+			else if (param.ViewAreaRect.Top < -180)
 			{
-				canvas.Translate(-(float)new KyoshinMonitorLib.Location(0, 180).ToPixel(baseZoom).X, 0);
+				var matrix2 = Matrix.CreateTranslation(-new KyoshinMonitorLib.Location(0, 180).ToPixel(baseZoom).X, 0);
+				using (context.PushPreTransform(matrix2))
+				{
+					var fixedRect = param.ViewAreaRect;
+					fixedRect.Y += 360;
 
-				var fixedRect = ViewAreaRect;
-				fixedRect.Y += 360;
-
-				RenderRect(fixedRect);
+					RenderRect(fixedRect);
+				}
 			}
 
 			void RenderRect(RectD subViewArea)
 			{
 				// とりあえず海外の描画を行う
-				RenderOverseas(canvas, baseZoom, subViewArea);
+				RenderOverseas(context, baseZoom, subViewArea);
 
 				foreach (var f in layer.FindPolygon(subViewArea))
 				{
@@ -136,23 +118,20 @@ public sealed class LandLayer : MapLayer
 					{
 						var oc = LandFill.Color;
 						LandFill.Color = color;
-						f.Draw(canvas, baseZoom, LandFill);
+						f.Draw(context, baseZoom, LandFill);
 						LandFill.Color = oc;
 					}
 					else
-						f.Draw(canvas, baseZoom, LandFill);
+						f.Draw(context, baseZoom, LandFill);
 				}
 
-				if (CustomColorMap is Dictionary<LandLayerType, Dictionary<int, SKColor>> colorMap)
+				if (CustomColorMap is Dictionary<LandLayerType, Dictionary<int, Color>> colorMap)
 					foreach (var cLayerType in colorMap.Keys)
 						if (cLayerType != useLayerType && Map.TryGetLayer(cLayerType, out var clayer))
 							foreach (var f in clayer.FindPolygon(subViewArea))
 								if (colorMap[cLayerType].TryGetValue(f.Code ?? -1, out var color))
 								{
-									var oc = LandFill.Color;
-									LandFill.Color = color;
-									f.Draw(canvas, baseZoom, LandFill);
-									LandFill.Color = oc;
+									f.Draw(context, baseZoom, new SolidColorBrush(color));
 
 									//var path = f.GetOrCreatePath(baseZoom);
 									//if (path == null)
@@ -169,20 +148,16 @@ public sealed class LandLayer : MapLayer
 								}
 			}
 		}
-		finally
-		{
-			canvas.Restore();
-		}
 	}
 	/// <summary>
 	/// 海外を描画する
 	/// </summary>
-	private void RenderOverseas(SKCanvas canvas, int baseZoom, RectD subViewArea)
+	private void RenderOverseas(DrawingContext context, int baseZoom, RectD subViewArea)
 	{
 		if (!(Map?.TryGetLayer(LandLayerType.WorldWithoutJapan, out var layer) ?? false))
 			return;
 
 		foreach (var f in layer.FindPolygon(subViewArea))
-			f.Draw(canvas, baseZoom, OverSeasLandFill);
+			f.Draw(context, baseZoom, OverSeasLandFill);
 	}
 }

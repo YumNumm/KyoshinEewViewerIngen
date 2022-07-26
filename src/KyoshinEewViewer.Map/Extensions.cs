@@ -1,3 +1,4 @@
+using Avalonia;
 using KyoshinEewViewer.Map.Projections;
 using KyoshinEewViewer.Map.Simplify;
 using KyoshinMonitorLib;
@@ -29,7 +30,7 @@ public static class Extensions
 	}
 
 
-	public static SKPoint[]? ToPixedAndRedction(this Location[] nodes, double zoom, bool closed)
+	public static Point[]? ToPixedAndRedction(this Location[] nodes, double zoom, bool closed)
 	{
 		var points = DouglasPeucker.Reduction(nodes.Select(n => n.ToPixel(zoom)).ToArray(), 1.5, closed);
 		if (points.Length <= 1 ||

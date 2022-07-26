@@ -1,15 +1,12 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Platform;
-using Avalonia.Rendering.SceneGraph;
-using Avalonia.Skia;
 using KyoshinMonitorLib;
 using System;
 
 namespace KyoshinEewViewer.CustomControl;
 
-public class IntensityIcon : Control, ICustomDrawOperation
+public class IntensityIcon : Control
 {
 	private JmaIntensity? intensity;
 	public static readonly DirectProperty<IntensityIcon, JmaIntensity?> IntensityProperty =
@@ -86,24 +83,11 @@ public class IntensityIcon : Control, ICustomDrawOperation
 			FixedObjectRenderer.UpdateIntensityPaintCache(this);
 	}
 
-	public bool Equals(ICustomDrawOperation? other) => false;
-	public bool HitTest(Point p) => false;
-
-	public void Render(IDrawingContextImpl context)
+	public override void Render(DrawingContext context)
 	{
-		var canvas = (context as ISkiaDrawingContextImpl)?.SkCanvas;
-		if (canvas == null)
-			return;
-		canvas.Save();
-
 		var size = Math.Min(DesiredSize.Width, DesiredSize.Height);
-		canvas.DrawIntensity(Intensity ?? JmaIntensity.Error, new SkiaSharp.SKPoint(), (float)size, circle: CircleMode, wide: WideMode, round: CornerRound);
-
-		canvas.Restore();
+		context.DrawIntensity(Intensity ?? JmaIntensity.Error, new Point(), size, circle: CircleMode, wide: WideMode, round: CornerRound);
 	}
-	public override void Render(DrawingContext context) => context.Custom(this);
-
-	public void Dispose() => GC.SuppressFinalize(this);
 
 	protected override Size MeasureOverride(Size availableSize)
 	{

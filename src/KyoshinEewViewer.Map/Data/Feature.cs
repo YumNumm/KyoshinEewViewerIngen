@@ -1,4 +1,5 @@
-using SkiaSharp;
+using Avalonia;
+using Avalonia.Media;
 using System.Collections.Generic;
 
 namespace KyoshinEewViewer.Map.Data;
@@ -9,25 +10,13 @@ public abstract class Feature
 
 	public int? Code { get; protected set; }
 
-	protected Dictionary<int, SKPath> PathCache { get; } = new();
+	protected Dictionary<int, Geometry> PathCache { get; } = new();
 
-	public abstract SKPath? GetOrCreatePath(int zoom);
+	public abstract Geometry? GetOrCreatePath(int zoom);
 
-	public abstract SKPoint[][]? GetOrCreatePointsCache(int zoom);
+	public abstract Point[][]? GetOrCreatePointsCache(int zoom);
 
-	public void ClearCache()
-	{
-		foreach (var p in PathCache.Values)
-			p.Dispose();
-		PathCache.Clear();
-	}
-
-	public void Draw(SKCanvas canvas, int zoom, SKPaint paint)
-	{
-		if (GetOrCreatePath(zoom) is not SKPath path)
-			return;
-		canvas.DrawPath(path, paint);
-	}
+	public void ClearCache() => PathCache.Clear();
 
 	~Feature()
 	{

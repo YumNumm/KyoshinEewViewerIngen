@@ -1,4 +1,5 @@
-﻿using MessagePack;
+using Avalonia;
+using MessagePack;
 using SkiaSharp;
 using System;
 
@@ -43,6 +44,8 @@ public struct PointD
 
 	public SKPoint AsSKPoint()
 		=> new((float)X, (float)Y);
+	public Point AsPoint()
+		=> new(X, Y);
 
 	public override string ToString() => $"{{{X},{Y}}}";
 }

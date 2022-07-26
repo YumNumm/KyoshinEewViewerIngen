@@ -1,3 +1,5 @@
+using Avalonia;
+using Avalonia.Media;
 using KyoshinMonitorLib;
 using SkiaSharp;
 using System;
@@ -37,27 +39,38 @@ public class PolylineFeature : Feature
 	private Location[] Points { get; }
 	public PolylineType Type { get; }
 
-	public override SKPoint[][]? GetOrCreatePointsCache(int zoom)
+	public override Point[][]? GetOrCreatePointsCache(int zoom)
 	{
 		var p = Points.ToPixedAndRedction(zoom, IsClosed);
 		return p == null ? null : new[] { p };
 	}
 
-	public override SKPath? GetOrCreatePath(int zoom)
+	public override Geometry? GetOrCreatePath(int zoom)
 	{
 		if (!PathCache.TryGetValue(zoom, out var path))
 		{
-			PathCache[zoom] = path = new SKPath();
-			// 穴開きポリゴンに対応させる
-			path.FillType = SKPathFillType.EvenOdd;
-
 			var pointsList = GetOrCreatePointsCache(zoom);
 			if (pointsList == null)
 				return null;
-			for (var i = 0; i < pointsList.Length; i++)
-				path.AddPoly(pointsList[i], IsClosed);
+			var geom = new StreamGeometry();
+			using (var ctx = geom.Open())
+			{
+				ctx.SetFillRule(FillRule.EvenOdd);
+				for (var i = 0; i < pointsList.Length; i++) {
+					ctx.BeginFigure(pointsList[i][0], IsClosed);
+					for (var j = 1; j < pointsList[i].Length; j++)
+						ctx.LineTo(pointsList[i][j]);
+				}
+			}
+			return PathCache[zoom] = geom;
 		}
 		return path;
+	}
+
+	public void Draw(DrawingContext context, int zoom, Pen pen)
+	{
+		if (GetOrCreatePath(zoom) is Geometry path)
+			context.DrawGeometry(null, pen, path);
 	}
 }
 public enum PolylineType

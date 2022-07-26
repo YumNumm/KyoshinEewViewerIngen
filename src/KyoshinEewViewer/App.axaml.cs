@@ -172,7 +172,7 @@ public class FrameSkippableRenderTimer : IRenderTimer
 	private IRenderTimer ParentTimer { get; }
 	private ulong FrameCount { get; set; }
 
-	public bool RunsInBackground => false;
+	public bool RunsInBackground => ParentTimer.RunsInBackground;
 
 	public event Action<TimeSpan>? Tick;
 

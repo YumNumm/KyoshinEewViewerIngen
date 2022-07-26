@@ -11,7 +11,7 @@ using System.Collections.Generic;
 
 namespace KyoshinEewViewer.CustomControl;
 
-public class LinkedRealtimeDataList : Control, ICustomDrawOperation
+public class LinkedRealtimeDataList : Control
 {
 	private RealtimeDataRenderMode mode = RealtimeDataRenderMode.ShindoIcon;
 	public static readonly DirectProperty<LinkedRealtimeDataList, RealtimeDataRenderMode> ModeProperty =
@@ -43,22 +43,6 @@ public class LinkedRealtimeDataList : Control, ICustomDrawOperation
 	{
 		get => itemHeight;
 		set => SetAndRaise(ItemHeightProperty, ref itemHeight, value);
-	}
-
-	private float firstItemHeight = 24;
-	public static readonly DirectProperty<LinkedRealtimeDataList, float> FirstItemHeightProperty =
-		AvaloniaProperty.RegisterDirect<LinkedRealtimeDataList, float>(
-			nameof(FirstItemHeight),
-			o => o.FirstItemHeight,
-			(o, v) =>
-			{
-				o.firstItemHeight = v;
-				o.InvalidateVisual();
-			});
-	public float FirstItemHeight
-	{
-		get => firstItemHeight;
-		set => SetAndRaise(ItemHeightProperty, ref firstItemHeight, value);
 	}
 
 	private IEnumerable<RealtimeObservationPoint>? data = new[]
@@ -95,24 +79,6 @@ public class LinkedRealtimeDataList : Control, ICustomDrawOperation
 			FixedObjectRenderer.UpdateIntensityPaintCache(this);
 	}
 
-	public bool Equals(ICustomDrawOperation? other) => false;
-	public bool HitTest(Point p) => false;
-
-	public void Render(IDrawingContextImpl context)
-	{
-		var canvas = (context as ISkiaDrawingContextImpl)?.SkCanvas;
-		if (canvas == null)
-			return;
-		canvas.Save();
-
-		canvas.DrawLinkedRealtimeData(Data, ItemHeight, FirstItemHeight, (float)Bounds.Width, (float)Bounds.Height, Mode);
-
-		canvas.Restore();
-	}
-	public override void Render(DrawingContext context) => context.Custom(this);
-
-
-	public void Dispose()
-	{
-	}
+	public override void Render(DrawingContext context)
+		=> context.DrawLinkedRealtimeData(Data, ItemHeight, Bounds.Width, Bounds.Height, Mode);
 }

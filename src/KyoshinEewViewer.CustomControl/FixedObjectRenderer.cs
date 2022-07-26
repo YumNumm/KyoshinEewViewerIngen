@@ -2,79 +2,45 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Platform;
-using Avalonia.Skia;
 using KyoshinEewViewer.Core.Models;
 using KyoshinMonitorLib;
 using SkiaSharp;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace KyoshinEewViewer.CustomControl;
 
 public static class FixedObjectRenderer
 {
 	public static readonly SKTypeface MainTypeface = SKTypeface.FromStream(AvaloniaLocator.Current.GetService<IAssetLoader>()?.Open(new Uri("avares://KyoshinEewViewer.Core/Assets/Fonts/NotoSansJP-Regular.otf", UriKind.Absolute)));
-	private static readonly SKTypeface intensityFace = SKTypeface.FromStream(AvaloniaLocator.Current.GetService<IAssetLoader>()?.Open(new Uri("avares://KyoshinEewViewer.Core/Assets/Fonts/NotoSansJP-Bold.otf", UriKind.Absolute)));
-	private static readonly SKFont font = new()
-	{
-		Edging = SKFontEdging.SubpixelAntialias,
-		Size = 24
-	};
+
+	public static readonly Typeface AvaloniaMainTypeface = new("MainFont");
+	private static readonly Typeface AvaloniaIntensityTypeface = new("MainFont", weight: FontWeight.Bold);
 
 	public const double INTENSITY_WIDE_SCALE = .75;
 
-	public static ConcurrentDictionary<JmaIntensity, (SKPaint b, SKPaint f)> IntensityPaintCache { get; } = new();
-	private static SKPaint? ForegroundPaint { get; set; }
-	private static SKPaint? SubForegroundPaint { get; set; }
+	public static ConcurrentDictionary<JmaIntensity, (Brush b, Brush f)> IntensityBrushCache { get; } = new();
+	private static SolidColorBrush? ForegroundBrush { get; set; }
+	private static SolidColorBrush? SubForegroundBrush { get; set; }
 
 	public static bool PaintCacheInitalized { get; private set; }
 
 	public static void UpdateIntensityPaintCache(Control control)
 	{
-		SKColor FindColorResource(string name)
-			=> ((Color)(control.FindResource(name) ?? throw new Exception($"震度リソース {name} が見つかりませんでした"))).ToSKColor();
+		Color FindColorResource(string name)
+			=> (Color)(control.FindResource(name) ?? throw new Exception($"震度リソース {name} が見つかりませんでした"));
 
-		if (ForegroundPaint != null)
-			ForegroundPaint.Dispose();
-		ForegroundPaint = new SKPaint
-		{
-			Style = SKPaintStyle.Fill,
-			Color = FindColorResource("ForegroundColor"),
-			Typeface = MainTypeface,
-			IsAntialias = true,
-		};
-		if (SubForegroundPaint != null)
-			SubForegroundPaint.Dispose();
-		SubForegroundPaint = new SKPaint
-		{
-			Style = SKPaintStyle.Fill,
-			Color = FindColorResource("SubForegroundColor"),
-			IsAntialias = true,
-		};
+		ForegroundBrush = new SolidColorBrush(FindColorResource("ForegroundColor"));
+		SubForegroundBrush = new SolidColorBrush(FindColorResource("SubForegroundColor"));
 
 		foreach (var i in Enum.GetValues<JmaIntensity>())
 		{
-			var b = new SKPaint
-			{
-				Style = SKPaintStyle.Fill,
-				Color = FindColorResource(i + "Background"),
-				IsAntialias = true,
-			};
-			var f = new SKPaint
-			{
-				Style = SKPaintStyle.Fill,
-				Color = FindColorResource(i + "Foreground"),
-				Typeface = intensityFace,
-				IsAntialias = true,
-			};
+			var bb = new SolidColorBrush(FindColorResource(i + "Background"));
+			var fb = new SolidColorBrush(FindColorResource(i + "Foreground"));
 
-			IntensityPaintCache.AddOrUpdate(i, (b, f), (v, c) =>
-			{
-				c.b.Dispose();
-				c.f.Dispose();
-				return (b, f);
-			});
+			IntensityBrushCache.AddOrUpdate(i, (bb, fb), (v, c) => (bb, fb));
 		}
 		PaintCacheInitalized = true;
 	}
@@ -90,9 +56,9 @@ public static class FixedObjectRenderer
 	/// <param name="circle">縁を円形にするか wideがfalseのときのみ有効</param>
 	/// <param name="wide">ワイドモード(強弱漢字表記)にするか</param>
 	/// <param name="round">縁を丸めるか wide,circleがfalseのときのみ有効</param>
-	public static void DrawIntensity(this SKCanvas canvas, JmaIntensity intensity, SKPoint point, float size, bool centerPosition = false, bool circle = false, bool wide = false, bool round = false)
+	public static void DrawIntensity(this DrawingContext context, JmaIntensity intensity, Point point, double size, bool centerPosition = false, bool circle = false, bool wide = false, bool round = false)
 	{
-		if (!IntensityPaintCache.TryGetValue(intensity, out var paints))
+		if (!IntensityBrushCache.TryGetValue(intensity, out var paints))
 			return;
 
 		var halfSize = new PointD(size / 2, size / 2);
@@ -101,54 +67,57 @@ public static class FixedObjectRenderer
 		var leftTop = centerPosition ? point - halfSize : (PointD)point;
 
 		if (circle && !wide)
-			canvas.DrawCircle(centerPosition ? point : (SKPoint)(point + halfSize), size / 2, paints.b);
+			context.DrawEllipse(paints.b, null, centerPosition ? point : (point + halfSize).AsPoint(), size / 2, size / 2);
 		else if (round && !wide)
-			canvas.DrawRoundRect((float)leftTop.X, (float)leftTop.Y, (float)(wide ? size / INTENSITY_WIDE_SCALE : size), size, size * .2f, size * .2f, paints.b);
+		{
+			var roundAmount = Math.Min(size * .2, 8);
+			context.DrawRectangle(paints.b, null, new Rect(leftTop.X, leftTop.Y, (float)(wide ? size / INTENSITY_WIDE_SCALE : size), size), roundAmount, roundAmount);
+		}
 		else
-			canvas.DrawRect((float)leftTop.X, (float)leftTop.Y, (float)(wide ? size / INTENSITY_WIDE_SCALE : size), size, paints.b);
+			context.DrawRectangle(paints.b, null, new Rect(leftTop.X, leftTop.Y, (float)(wide ? size / INTENSITY_WIDE_SCALE : size), size));
 
 		switch (intensity)
 		{
 			case JmaIntensity.Int1:
 				if (size >= 8)
 				{
-					paints.f.TextSize = size;
-					canvas.DrawText(intensity.ToShortString(), new PointD(leftTop.X + size * (wide ? .38 : .2), leftTop.Y + size * .87).AsSKPoint(), paints.f);
+					var txt = new FormattedText(intensity.ToShortString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size, paints.f);
+					context.DrawText(txt, new PointD(leftTop.X + size * (wide ? .38 : .2), leftTop.Y - size * .3).AsPoint());
 				}
 				return;
 			case JmaIntensity.Int4:
 				if (size >= 8)
 				{
-					paints.f.TextSize = size;
-					canvas.DrawText(intensity.ToShortString(), new PointD(leftTop.X + size * (wide ? .38 : .19), leftTop.Y + size * .87).AsSKPoint(), paints.f);
+					var txt = new FormattedText(intensity.ToShortString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size, paints.f);
+					context.DrawText(txt, new PointD(leftTop.X + size * (wide ? .38 : .19), leftTop.Y - size * .29).AsPoint());
 				}
 				return;
 			case JmaIntensity.Int7:
 				if (size >= 8)
 				{
-					paints.f.TextSize = size;
-					canvas.DrawText(intensity.ToShortString(), new PointD(leftTop.X + size * (wide ? .38 : .22), leftTop.Y + size * .89).AsSKPoint(), paints.f);
+					var txt = new FormattedText(intensity.ToShortString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size, paints.f);
+					context.DrawText(txt, new PointD(leftTop.X + size * (wide ? .38 : .22), leftTop.Y - size * .28).AsPoint());
 				}
 				return;
 			case JmaIntensity.Int5Lower:
 				{
 					if (size < 8)
 					{
-						paints.f.TextSize = (float)(size * 1.25);
-						canvas.DrawText("-", new PointD(leftTop.X + size * .25, leftTop.Y + size * .8).AsSKPoint(), paints.f);
+						var txt1 = new FormattedText("-", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size * 1.25, paints.f);
+						context.DrawText(txt1, new PointD(leftTop.X + size * .25, leftTop.Y - size * .4).AsPoint());
 						break;
 					}
-					paints.f.TextSize = size;
-					canvas.DrawText("5", new PointD(leftTop.X + size * .1, leftTop.Y + size * .87).AsSKPoint(), paints.f);
+					var txt2 = new FormattedText("5", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size, paints.f);
+					context.DrawText(txt2, new PointD(leftTop.X + size * .1, leftTop.Y - size * .27).AsPoint());
 					if (wide)
 					{
-						paints.f.TextSize = (float)(size * .55);
-						canvas.DrawText("弱", new PointD(leftTop.X + size * .65, leftTop.Y + size * .85).AsSKPoint(), paints.f);
+						var txt3 = new FormattedText("弱", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size * .55, paints.f);
+						context.DrawText(txt3, new PointD(leftTop.X + size * .65, leftTop.Y + size * .22).AsPoint());
 					}
 					else
 					{
-						paints.f.TextSize = size;
-						canvas.DrawText("-", new PointD(leftTop.X + size * .6, leftTop.Y + size * .6).AsSKPoint(), paints.f);
+						var txt3 = new FormattedText("-", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size, paints.f);
+						context.DrawText(txt3, new PointD(leftTop.X + size * .6, leftTop.Y - size * .5).AsPoint());
 					}
 				}
 				return;
@@ -156,21 +125,21 @@ public static class FixedObjectRenderer
 				{
 					if (size < 8)
 					{
-						paints.f.TextSize = (float)(size * 1.25);
-						canvas.DrawText("+", new PointD(leftTop.X + size * .1, leftTop.Y + size * .8).AsSKPoint(), paints.f);
+						var txt1 = new FormattedText("+", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size * 1.25, paints.f);
+						context.DrawText(txt1, new PointD(leftTop.X + size * .1, leftTop.Y + size * .8).AsPoint());
 						break;
 					}
-					paints.f.TextSize = size;
-					canvas.DrawText("5", new PointD(leftTop.X + size * .1, leftTop.Y + size * .87).AsSKPoint(), paints.f);
+					var txt2 = new FormattedText("5", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size, paints.f);
+					context.DrawText(txt2, new PointD(leftTop.X + size * .1, leftTop.Y - size * .27).AsPoint());
 					if (wide)
 					{
-						paints.f.TextSize = (float)(size * .55);
-						canvas.DrawText("強", new PointD(leftTop.X + size * .65, leftTop.Y + size * .85).AsSKPoint(), paints.f);
+						var txt3 = new FormattedText("強", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size * .55, paints.f);
+						context.DrawText(txt3, new PointD(leftTop.X + size * .65, leftTop.Y + size * .22).AsPoint());
 					}
 					else
 					{
-						paints.f.TextSize = (float)(size * .8);
-						canvas.DrawText("+", new PointD(leftTop.X + size * .5, leftTop.Y + size * .65).AsSKPoint(), paints.f);
+						var txt3 = new FormattedText("+", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size * .8, paints.f);
+						context.DrawText(txt3, new PointD(leftTop.X + size * .5, leftTop.Y - size * .25).AsPoint());
 					}
 				}
 				return;
@@ -178,21 +147,21 @@ public static class FixedObjectRenderer
 				{
 					if (size < 8)
 					{
-						paints.f.TextSize = (float)(size * 1.25);
-						canvas.DrawText("-", new PointD(leftTop.X + size * .25, leftTop.Y + size * .8).AsSKPoint(), paints.f);
+						var txt1 = new FormattedText("-", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size * 1.25, paints.f);
+						context.DrawText(txt1, new PointD(leftTop.X + size * .25, leftTop.Y + size * .8).AsPoint());
 						break;
 					}
-					paints.f.TextSize = size;
-					canvas.DrawText("6", new PointD(leftTop.X + size * .1, leftTop.Y + size * .86).AsSKPoint(), paints.f);
+					var txt2 = new FormattedText("6", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size, paints.f);
+					context.DrawText(txt2, new PointD(leftTop.X + size * .1, leftTop.Y - size * .29).AsPoint());
 					if (wide)
 					{
-						paints.f.TextSize = (float)(size * .55);
-						canvas.DrawText("弱", new PointD(leftTop.X + size * .65, leftTop.Y + size * .85).AsSKPoint(), paints.f);
+						var txt3 = new FormattedText("弱", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size * .55, paints.f);
+						context.DrawText(txt3, new PointD(leftTop.X + size * .65, leftTop.Y + size * .22).AsPoint());
 					}
 					else
 					{
-						paints.f.TextSize = size;
-						canvas.DrawText("-", new PointD(leftTop.X + size * .6, leftTop.Y + size * .6).AsSKPoint(), paints.f);
+						var txt3 = new FormattedText("-", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size, paints.f);
+						context.DrawText(txt3, new PointD(leftTop.X + size * .6, leftTop.Y - size * .5).AsPoint());
 					}
 				}
 				return;
@@ -200,50 +169,57 @@ public static class FixedObjectRenderer
 				{
 					if (size < 8)
 					{
-						paints.f.TextSize = (float)(size * 1.25);
-						canvas.DrawText("+", new PointD(leftTop.X + size * .1, leftTop.Y + size * .8).AsSKPoint(), paints.f);
+						var txt1 = new FormattedText("+", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size * 1.25, paints.f);
+						context.DrawText(txt1, new PointD(leftTop.X + size * .1, leftTop.Y + size * .8).AsPoint());
 						break;
 					}
-					paints.f.TextSize = size;
-					canvas.DrawText("6", new PointD(leftTop.X + size * .1, leftTop.Y + size * .86).AsSKPoint(), paints.f);
+					var txt2 = new FormattedText("6", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size, paints.f);
+					context.DrawText(txt2, new PointD(leftTop.X + size * .1, leftTop.Y - size * .29).AsPoint());
 					if (wide)
 					{
-						paints.f.TextSize = (float)(size * .55);
-						canvas.DrawText("強", new PointD(leftTop.X + size * .65, leftTop.Y + size * .85).AsSKPoint(), paints.f);
+						var txt3 = new FormattedText("強", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size * .55, paints.f);
+						context.DrawText(txt3, new PointD(leftTop.X + size * .65, leftTop.Y + size * .22).AsPoint());
 					}
 					else
 					{
-						paints.f.TextSize = (float)(size * .8);
-						canvas.DrawText("+", new PointD(leftTop.X + size * .5, leftTop.Y + size * .65).AsSKPoint(), paints.f);
+						var txt3 = new FormattedText("+", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size * .8, paints.f);
+						context.DrawText(txt3, new PointD(leftTop.X + size * .5, leftTop.Y - size * .25).AsPoint());
 					}
 				}
 				return;
 			case JmaIntensity.Unknown:
-				paints.f.TextSize = size;
-				canvas.DrawText("-", new PointD(leftTop.X + size * (wide ? .52 : .32), leftTop.Y + size * .8).AsSKPoint(), paints.f);
+				{
+					var txt = new FormattedText("-", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size, paints.f);
+					context.DrawText(txt, new PointD(leftTop.X + size * (wide ? .52 : .32), leftTop.Y - size * .35).AsPoint());
+				}
 				return;
 			case JmaIntensity.Error:
-				paints.f.TextSize = size;
-				canvas.DrawText("E", new PointD(leftTop.X + size * (wide ? .35 : .18), leftTop.Y + size * .88).AsSKPoint(), paints.f);
+				{
+					var txt = new FormattedText("E", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size, paints.f);
+					context.DrawText(txt, new PointD(leftTop.X + size * (wide ? .35 : .18), leftTop.Y - size * .29).AsPoint());
+				}
 				return;
-		}
-		if (size >= 8)
-		{
-			paints.f.TextSize = size;
-			canvas.DrawText(intensity.ToShortString(), new PointD(leftTop.X + size * (wide ? .38 : .22), leftTop.Y + size * .87).AsSKPoint(), paints.f);
+			default:
+				{
+					if (size >= 8)
+					{
+						var txt = new FormattedText(intensity.ToShortString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, size, paints.f);
+						context.DrawText(txt, new PointD(leftTop.X + size * (wide ? .38 : .22), leftTop.Y - size * .29).AsPoint());
+					}
+				}
+				return;
 		}
 	}
 
-	public static void DrawLinkedRealtimeData(this SKCanvas canvas, IEnumerable<RealtimeObservationPoint>? points, float itemHeight, float firstHeight, float maxWidth, float maxHeight, RealtimeDataRenderMode mode)
+	public static void DrawLinkedRealtimeData(this DrawingContext context, IEnumerable<RealtimeObservationPoint>? points, double height, double maxWidth, double maxHeight, RealtimeDataRenderMode mode)
 	{
-		if (points == null || ForegroundPaint == null || SubForegroundPaint == null) return;
+		if (points == null || ForegroundBrush == null || SubForegroundBrush == null) return;
 
 		var count = 0;
-		var verticalOffset = 0f;
+		var verticalOffset = 0.0;
 		foreach (var point in points)
 		{
-			var horizontalOffset = 0f;
-			var height = count == 0 ? firstHeight : itemHeight;
+			var horizontalOffset = 0.0;
 			switch (mode)
 			{
 				case RealtimeDataRenderMode.ShindoIconAndRawColor:
@@ -257,34 +233,26 @@ public static class FixedObjectRenderer
 						if (point.LatestColor is SKColor color)
 						{
 							var num = (byte)(color.Red / 3 + color.Green / 3 + color.Blue / 3);
-							using var rectPaint = new SKPaint
-							{
-								Style = SKPaintStyle.Fill,
-								Color = new SKColor(num, num, num),
-							};
-							canvas.DrawRect(0, verticalOffset, height / 5, height, rectPaint);
+							var rectBrush = new SolidColorBrush(new Color(255, num, num, num));
+							context.DrawRectangle(rectBrush, null, new Rect(0, verticalOffset, height / 5, height));
 						}
 						horizontalOffset += height / 5;
 					}
 					break;
 				case RealtimeDataRenderMode.ShindoIcon:
-					canvas.DrawIntensity(point.LatestIntensity.ToJmaIntensity(), new SKPoint(0, verticalOffset), height);
+					context.DrawIntensity(point.LatestIntensity.ToJmaIntensity(), new Point(0, verticalOffset), height);
 					horizontalOffset += height;
 					break;
 				case RealtimeDataRenderMode.WideShindoIcon:
-					canvas.DrawIntensity(point.LatestIntensity.ToJmaIntensity(), new SKPoint(0, verticalOffset), height, wide: true);
+					context.DrawIntensity(point.LatestIntensity.ToJmaIntensity(), new Point(0, verticalOffset), height, wide: true);
 					horizontalOffset += height * 1.25f;
 					break;
 				case RealtimeDataRenderMode.RawColor:
 					{
 						if (point.LatestColor is SKColor color)
 						{
-							using var rectPaint = new SKPaint
-							{
-								Style = SKPaintStyle.Fill,
-								Color = color,
-							};
-							canvas.DrawRect(0, verticalOffset, height / 5, height, rectPaint);
+							var rectBrush = new SolidColorBrush(new Color(255, color.Red, color.Green, color.Blue));
+							context.DrawRectangle(rectBrush, null, new Rect(0, verticalOffset, height / 5, height));
 						}
 						horizontalOffset += height / 5;
 					}
@@ -296,29 +264,23 @@ public static class FixedObjectRenderer
 				region = region[..3];
 
 #if DEBUG
-			var prevColor = ForegroundPaint.Color;
+			var prevColor = ForegroundBrush.Color;
 			if (point.Event != null)
-				ForegroundPaint.Color = point.Event.DebugColor;
+				ForegroundBrush.Color = new Color(255, point.Event.DebugColor.Red, point.Event.DebugColor.Green, point.Event.DebugColor.Blue);
 #endif
 
-			font.Size = itemHeight * .6f;
-			font.Typeface = MainTypeface;
-			canvas.DrawText(region, horizontalOffset + height * 0.1f, verticalOffset + height * .9f, font, ForegroundPaint);
-			horizontalOffset += Math.Max(ForegroundPaint.MeasureText(region), maxWidth / 4);
+			var regionText = new FormattedText(region, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaMainTypeface, height * .6, ForegroundBrush);
+			context.DrawText(regionText, new(horizontalOffset + height * 0.1f, verticalOffset));
+			horizontalOffset += Math.Max(regionText.Width, maxWidth / 4);
 
-			font.Size = itemHeight * .75f;
-			font.Typeface = intensityFace;
-			canvas.DrawText(point.Name, horizontalOffset, verticalOffset + height * .9f, font, ForegroundPaint);
+			var nameText = new FormattedText(point.Name, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaIntensityTypeface, height * .75, ForegroundBrush);
+			context.DrawText(nameText, new(horizontalOffset, verticalOffset - height * .1));
 
-			font.Size = itemHeight * .6f;
-			font.Typeface = MainTypeface;
-			ForegroundPaint.TextAlign = SKTextAlign.Right;
-			canvas.DrawText(point.LatestIntensity?.ToString("0.0") ?? "?", maxWidth, verticalOffset + height, font, ForegroundPaint);
-
-			ForegroundPaint.TextAlign = SKTextAlign.Left;
+			var intensityText = new FormattedText(point.LatestIntensity?.ToString("0.0") ?? "?", CultureInfo.CurrentCulture, FlowDirection.LeftToRight, AvaloniaMainTypeface, height * .6, SubForegroundBrush);
+			context.DrawText(intensityText, new(maxWidth - intensityText.Width, verticalOffset + height * .2));
 
 #if DEBUG
-			ForegroundPaint.Color = prevColor;
+			ForegroundBrush.Color = prevColor;
 #endif
 
 			count++;

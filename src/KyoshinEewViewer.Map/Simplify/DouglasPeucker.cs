@@ -1,4 +1,4 @@
-using SkiaSharp;
+using Avalonia;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,10 +15,10 @@ public class DouglasPeucker
 	/// <param name="points">The points.</param>
 	/// <param name="tolerance">The tolerance.</param>
 	/// <returns></returns>
-	public static SKPoint[] Reduction(PointD[] points, double tolerance, bool closed)
+	public static Point[] Reduction(PointD[] points, double tolerance, bool closed)
 	{
 		if (points.Length < 3)
-			return points.Select(p => p.AsSKPoint()).ToArray();
+			return points.Select(p => p.AsPoint()).ToArray();
 
 		var firstPoint = 0;
 		var lastPoint = points.Length - 1;
@@ -36,9 +36,9 @@ public class DouglasPeucker
 		DouglasPeuckerReduction(ref points, ref firstPoint, ref lastPoint, ref tolerance, ref pointIndexsToKeep);
 		pointIndexsToKeep.Sort();
 
-		var returnPoints = new SKPoint[pointIndexsToKeep.Count];
+		var returnPoints = new Point[pointIndexsToKeep.Count];
 		for (var i = 0; i < returnPoints.Length; i++)
-			returnPoints[i] = points[pointIndexsToKeep[i]].AsSKPoint();
+			returnPoints[i] = points[pointIndexsToKeep[i]].AsPoint();
 
 		return returnPoints;
 	}

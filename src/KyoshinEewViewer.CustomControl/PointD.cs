@@ -1,4 +1,5 @@
-﻿using SkiaSharp;
+using Avalonia;
+using SkiaSharp;
 
 namespace KyoshinEewViewer.CustomControl;
 
@@ -17,9 +18,13 @@ internal struct PointD
 		=> new(p1.X + p2.X, p1.Y + p2.Y);
 	public static PointD operator +(SKPoint p1, PointD p2)
 		=> new(p1.X + p2.X, p1.Y + p2.Y);
+	public static PointD operator +(Point p1, PointD p2)
+		=> new(p1.X + p2.X, p1.Y + p2.Y);
 	public static PointD operator -(PointD p1, PointD p2)
 		=> new(p1.X - p2.X, p1.Y - p2.Y);
 	public static PointD operator -(SKPoint p1, PointD p2)
+		=> new(p1.X - p2.X, p1.Y - p2.Y);
+	public static PointD operator -(Point p1, PointD p2)
 		=> new(p1.X - p2.X, p1.Y - p2.Y);
 
 	public static explicit operator SKPoint(PointD s)
@@ -27,7 +32,14 @@ internal struct PointD
 	public static explicit operator PointD(SKPoint s)
 		=> new(s.X, s.Y);
 
+	public static explicit operator Point(PointD s)
+		=> new((float)s.X, (float)s.Y);
+	public static explicit operator PointD(Point s)
+		=> new(s.X, s.Y);
+
 	public SKPoint AsSKPoint()
+		=> new((float)X, (float)Y);
+	public Point AsPoint()
 		=> new((float)X, (float)Y);
 
 	public override string ToString() => $"{{{X},{Y}}}";
