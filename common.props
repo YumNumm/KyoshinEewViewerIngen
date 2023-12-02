@@ -20,39 +20,39 @@
 		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
 		<DebugType>embedded</DebugType>
 
-		<TrimMode>link</TrimMode>
-		<EnableUnsafeBinaryFormatterSerialization>false</EnableUnsafeBinaryFormatterSerialization>
+        <EnableUnsafeBinaryFormatterSerialization>false</EnableUnsafeBinaryFormatterSerialization>
 		<EnableUnsafeUTF7Encoding>false</EnableUnsafeUTF7Encoding>
 		<EventSourceSupport>false</EventSourceSupport>
 		<InvariantGlobalization>false</InvariantGlobalization>
+
+		<TrimMode>full</TrimMode>
+        <StripSymbols>false</StripSymbols>
+        <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
 
 		<DefineConstants Condition="$(RuntimeIdentifier.StartsWith('linux'))">LINUX</DefineConstants>
 	</PropertyGroup>
 
 	<PropertyGroup>
 		<AvaloniaVersion>11.0.5</AvaloniaVersion>
-	</PropertyGroup>
+    </PropertyGroup>
 
 	<!-- NuGet -->
 	<ItemGroup>
 		<PackageReference Include="Dotnet.Bundle" Version="*" />
 
 		<PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
-		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics"
-			Version="$(AvaloniaVersion)" />
+		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="$(AvaloniaVersion)" />
 		<PackageReference Include="Avalonia.ReactiveUI" Version="$(AvaloniaVersion)" />
 		<PackageReference Include="Avalonia.Skia" Version="$(AvaloniaVersion)" />
 		<PackageReference Include="FluentAvaloniaUI" Version="2.0.4" />
-		<PackageReference Include="Splat.DependencyInjection.SourceGenerator" Version="1.1.93"
-			PrivateAssets="all" />
+        <PackageReference Include="Splat.DependencyInjection.SourceGenerator" Version="1.1.93" PrivateAssets="all" />
 
-		<PackageReference Condition="$(RuntimeIdentifier.StartsWith('linux'))"
-			Include="Mono.Posix.NETStandard" Version="1.0.0" />
+		<PackageReference Condition="$(RuntimeIdentifier.StartsWith('linux'))" Include="Mono.Posix.NETStandard" Version="1.0.0" />
 
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
 		<PackageReference Include="NReco.Logging.File" Version="1.1.7" />
 
-		<PackageReference Include="KyoshinMonitorLib" Version="0.4.6-alpha2" />
+		<PackageReference Include="KyoshinMonitorLib" Version="0.4.6-alpha3" />
 		<PackageReference Include="KyoshinMonitorLib.SkiaImages" Version="0.4.5.1" />
 		<PackageReference Include="KyoshinMonitorLib.Timers" Version="0.4.2.1" />
 		<PackageReference Include="DmdataSharp" Version="0.5.6" />

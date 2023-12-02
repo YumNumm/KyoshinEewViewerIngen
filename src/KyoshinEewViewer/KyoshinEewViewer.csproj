@@ -4,7 +4,6 @@
     <PropertyGroup>
         <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
         <CFBundleIconFile>icon.icns</CFBundleIconFile>
-        <TrimMode>link</TrimMode>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     </PropertyGroup>
@@ -28,10 +27,6 @@
         <PackageReference Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
         <PackageReference Include="CommandLineParser" Version="2.9.1" />
         <PackageReference Include="ManagedBass" Version="3.1.1" />
-        <PackageReference Include="MessagePack.MSBuild.Tasks" Version="2.5.140">
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
         <PackageReference Include="System.IO.Ports" Version="8.0.0" />
@@ -110,12 +105,4 @@
         </EmbeddedResource>
     </ItemGroup>
 
-    <ItemGroup>
-    </ItemGroup>
-
-    <PropertyGroup>
-        <MessagePackGeneratedResolverNamespace>MessagePack</MessagePackGeneratedResolverNamespace>
-        <MessagePackGeneratedResolverName>GeneratedMainResolver</MessagePackGeneratedResolverName>
-        <MessagePackGeneratedUsesMapMode>true</MessagePackGeneratedUsesMapMode>
-    </PropertyGroup>
 </Project>
