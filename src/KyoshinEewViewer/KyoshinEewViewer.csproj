@@ -1,96 +1,121 @@
 <Project Sdk="Microsoft.NET.Sdk">
-	<Import Project="..\..\common.props" />
+    <Import Project="..\..\common.props" />
 
-	<PropertyGroup>
-		<OutputType>WinExe</OutputType>
-		<ApplicationIcon>Assets\logo.ico</ApplicationIcon>
-		<CFBundleIconFile>icon.icns</CFBundleIconFile>
+    <PropertyGroup>
+        <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
+        <CFBundleIconFile>icon.icns</CFBundleIconFile>
         <TrimMode>link</TrimMode>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-	</PropertyGroup>
+        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    </PropertyGroup>
 
-	<!-- プロジェクト参照 -->
-	<ItemGroup>
-		<ProjectReference Include="..\KyoshinEewViewer.Core\KyoshinEewViewer.Core.csproj" />
-		<ProjectReference Include="..\KyoshinEewViewer.DCReportParser\KyoshinEewViewer.DCReportParser.csproj" />
-		<ProjectReference Include="..\KyoshinEewViewer.JmaXmlParser\KyoshinEewViewer.JmaXmlParser.csproj" />
-		<ProjectReference Include="..\KyoshinEewViewer.Map\KyoshinEewViewer.Map.csproj" />
-		<ProjectReference Include="..\KyoshinEewViewer.CustomControl\KyoshinEewViewer.CustomControl.csproj" />
-		<ProjectReference Include="..\KyoshinEewViewer.CsvSourceGenerator\KyoshinEewViewer.CsvSourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
-		<PackageReference Include="CommandLineParser" Version="2.9.1" />
-        <PackageReference Include="ManagedBass" Version="3.1.1" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
-		<PackageReference Include="System.IO.Ports" Version="8.0.0" />
-		<PackageReference Include="Splat.Microsoft.Extensions.Logging" Version="14.8.6" />
-		<PackageReference Include="Avalonia.Xaml.Behaviors" Version="11.0.5" />
-		<PackageReference Include="Sentry.Extensions.Logging" Version="3.41.3" />
-		<PackageReference Include="System.ServiceModel.Syndication" Version="8.0.0" />
-		<PackageReference Include="Markdown.Avalonia" Version="11.0.2" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<AvaloniaResource Include="Assets\**" />
+    <!-- プロジェクト参照 -->
+    <ItemGroup>
+        <ProjectReference Include="..\KyoshinEewViewer.Core\KyoshinEewViewer.Core.csproj" />
+        <ProjectReference
+            Include="..\KyoshinEewViewer.DCReportParser\KyoshinEewViewer.DCReportParser.csproj" />
+        <ProjectReference
+            Include="..\KyoshinEewViewer.JmaXmlParser\KyoshinEewViewer.JmaXmlParser.csproj" />
+        <ProjectReference Include="..\KyoshinEewViewer.Map\KyoshinEewViewer.Map.csproj" />
+        <ProjectReference
+            Include="..\KyoshinEewViewer.CustomControl\KyoshinEewViewer.CustomControl.csproj" />
+        <ProjectReference
+            Include="..\KyoshinEewViewer.CsvSourceGenerator\KyoshinEewViewer.CsvSourceGenerator.csproj"
+            OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
-    
+    <ItemGroup>
+        <PackageReference Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
+        <PackageReference Include="CommandLineParser" Version="2.9.1" />
+        <PackageReference Include="ManagedBass" Version="3.1.1" />
+        <PackageReference Include="MessagePack.MSBuild.Tasks" Version="2.5.140">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
+        <PackageReference Include="System.IO.Ports" Version="8.0.0" />
+        <PackageReference Include="Splat.Microsoft.Extensions.Logging" Version="14.8.6" />
+        <PackageReference Include="Avalonia.Xaml.Behaviors" Version="11.0.5" />
+        <PackageReference Include="Sentry.Extensions.Logging" Version="3.41.3" />
+        <PackageReference Include="System.ServiceModel.Syndication" Version="8.0.0" />
+        <PackageReference Include="Markdown.Avalonia" Version="11.0.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <AvaloniaResource Include="Assets\**" />
+    </ItemGroup>
+
+
     <ItemGroup>
         <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="KeyType" />
         <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="KeyFormat" />
         <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="ValueType" />
         <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="ValueFormat" />
-        
+
         <Folder Include="csv\" />
-        <!--<AdditionalFiles Include="..\..\jma-code-dictionary\csv\AdditionalCommentEarthquake.csv" Link="csv\AdditionalCommentEarthquake.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />-->
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaEpicenter.csv" Link="csv\AreaEpicenter.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <!--<AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaEpicenterAbbreviation.csv" Link="csv\AreaEpicenterAbbreviation.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaEpicenterDetail.csv" Link="csv\AreaEpicenterDetail.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaFloodForecast.csv" Link="csv\AreaFloodForecast.csv" KeyType="long" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaForecastEEW.csv" Link="csv\AreaForecastEEW.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaForecastLocalEEW.csv" Link="csv\AreaForecastLocalEEW.csv" KeyType="int" KeyFormat="{0}" ValueType="(string Name, string NameKana)" ValueFormat="(&quot;{1}&quot;, &quot;{2}&quot;)" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaMarineJ.csv" Link="csv\AreaMarineJ.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaRiver.csv" Link="csv\AreaRiver.csv" KeyType="long" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\CoastTsunami.csv" Link="csv\CoastTsunami.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />-->
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\PointVolcano.csv" Link="csv\PointVolcano.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <!--<AdditionalFiles Include="..\..\jma-code-dictionary\csv\VolcanicWarning.csv" Link="csv\VolcanicWarning.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\WaterLevelStation.csv" Link="csv\WaterLevelStation.csv" KeyType="long" KeyFormat="{0}" ValueType="(string Name, string Series)" ValueFormat="(&quot;{1}&quot;, &quot;{2}&quot;)" />-->
-	</ItemGroup>
+        <!--<AdditionalFiles
+        Include="..\..\jma-code-dictionary\csv\AdditionalCommentEarthquake.csv"
+        Link="csv\AdditionalCommentEarthquake.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+        ValueFormat="&quot;{1}&quot;" />-->
+        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaEpicenter.csv"
+            Link="csv\AreaEpicenter.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+            ValueFormat="&quot;{1}&quot;" />
+        <!--<AdditionalFiles
+        Include="..\..\jma-code-dictionary\csv\AreaEpicenterAbbreviation.csv"
+        Link="csv\AreaEpicenterAbbreviation.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+        ValueFormat="&quot;{1}&quot;" />
+        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaEpicenterDetail.csv"
+        Link="csv\AreaEpicenterDetail.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+        ValueFormat="&quot;{1}&quot;" />
+        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaFloodForecast.csv"
+        Link="csv\AreaFloodForecast.csv" KeyType="long" KeyFormat="{0}" ValueType="string"
+        ValueFormat="&quot;{1}&quot;" />
+        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaForecastEEW.csv"
+        Link="csv\AreaForecastEEW.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+        ValueFormat="&quot;{1}&quot;" />
+        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaForecastLocalEEW.csv"
+        Link="csv\AreaForecastLocalEEW.csv" KeyType="int" KeyFormat="{0}" ValueType="(string Name,
+        string NameKana)" ValueFormat="(&quot;{1}&quot;, &quot;{2}&quot;)" />
+        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaMarineJ.csv" Link="csv\AreaMarineJ.csv"
+        KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
+        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaRiver.csv" Link="csv\AreaRiver.csv"
+        KeyType="long" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
+        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\CoastTsunami.csv"
+        Link="csv\CoastTsunami.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+        ValueFormat="&quot;{1}&quot;" />-->
+        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\PointVolcano.csv"
+            Link="csv\PointVolcano.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+            ValueFormat="&quot;{1}&quot;" />
+        <!--<AdditionalFiles
+        Include="..\..\jma-code-dictionary\csv\VolcanicWarning.csv" Link="csv\VolcanicWarning.csv"
+        KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
+        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\WaterLevelStation.csv"
+        Link="csv\WaterLevelStation.csv" KeyType="long" KeyFormat="{0}" ValueType="(string Name,
+        string Series)" ValueFormat="(&quot;{1}&quot;, &quot;{2}&quot;)" />-->
+    </ItemGroup>
 
-	<ItemGroup>
-		<Compile Update="Properties\Resources.Designer.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>Resources.resx</DependentUpon>
-		</Compile>
-	</ItemGroup>
+    <ItemGroup>
+        <Compile Update="Properties\Resources.Designer.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>Resources.resx</DependentUpon>
+        </Compile>
+    </ItemGroup>
 
-	<ItemGroup>
-		<EmbeddedResource Update="Properties\Resources.resx">
-			<Generator>PublicResXFileCodeGenerator</Generator>
-			<LastGenOutput>Resources.Designer.cs</LastGenOutput>
-		</EmbeddedResource>
-	</ItemGroup>
+    <ItemGroup>
+        <EmbeddedResource Update="Properties\Resources.resx">
+            <Generator>PublicResXFileCodeGenerator</Generator>
+            <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+        </EmbeddedResource>
+    </ItemGroup>
 
-	<ItemGroup>
-		<None Update="icon.icns" Condition="$(RuntimeIdentifier.StartsWith('osx'))">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="libs\linux-x64\libbass.so" Condition="$(RuntimeIdentifier)=='' or $(RuntimeIdentifier)=='linux-x64'">
-			<Link>libbass.so</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="libs\osx-x64\libbass.dylib" Condition="$(RuntimeIdentifier)=='' or $(RuntimeIdentifier)=='osx-x64'">
-			<Link>libbass.dylib</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="libs\win-x64\bass.dll" Condition="$(RuntimeIdentifier)=='' or $(RuntimeIdentifier)=='win-x64'">
-			<Link>bass.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-	</ItemGroup>
+    <ItemGroup>
+    </ItemGroup>
+
+    <PropertyGroup>
+        <MessagePackGeneratedResolverNamespace>MessagePack</MessagePackGeneratedResolverNamespace>
+        <MessagePackGeneratedResolverName>GeneratedMainResolver</MessagePackGeneratedResolverName>
+        <MessagePackGeneratedUsesMapMode>true</MessagePackGeneratedUsesMapMode>
+    </PropertyGroup>
 </Project>
