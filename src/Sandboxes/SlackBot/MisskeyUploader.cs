@@ -241,7 +241,7 @@ public class MisskeyUploader
 						Text = text,
 						Cw = cw,
 						ReplyId = replyId,
-						FileIds = fileId != null ? [fileId] : null,
+						FileIds = fileId != null ? new[] { fileId } : null,
 						Visibility = isPublic ? "public" : "home",
 					},
 					new JsonSerializerOptions(JsonSerializerOptions.Default) { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull }),

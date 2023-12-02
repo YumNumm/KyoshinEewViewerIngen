@@ -105,12 +105,13 @@ public class KyoshinEvent
 	public SKColor DebugColor { get; }
 
 	private static int CycleCount { get; set; } = 0;
-	private static SKColor[] ColorCycle { get; } = [
+	private static SKColor[] ColorCycle { get; } = new[]
+	{
 		new SKColor(200, 0, 0, 100),
 		new SKColor(0, 255, 0, 100),
 		new SKColor(255, 0, 255, 100),
 		new SKColor(0xda, 0xa5, 0x20, 100),
-	];
+	};
 }
 
 public enum KyoshinEventLevel

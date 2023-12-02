@@ -26,11 +26,11 @@ public partial class MainView : UserControl
 			var mapData = await MapData.LoadDefaultMapAsync();
 			var landLayer = new LandLayer { Map = mapData };
 			var landBorderLayer = new LandBorderLayer { Map = mapData };
-			Map.Layers = [
+			Map.Layers = new MapLayer[] {
 				landLayer,
 				landBorderLayer,
 				new GridLayer(),
-			];
+			};
 		});
 	}
 }

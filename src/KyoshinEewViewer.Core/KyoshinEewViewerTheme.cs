@@ -41,7 +41,7 @@ public class KyoshinEewViewerTheme : IStyle, IResourceProvider
 			{
 				_isLoading = true;
 				var loaded = (IStyle)AvaloniaXamlLoader.Load(GetUri(), _baseUri);
-				_loaded = [loaded];
+				_loaded = new[] { loaded };
 				_isLoading = false;
 			}
 

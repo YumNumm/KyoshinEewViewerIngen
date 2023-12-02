@@ -34,7 +34,8 @@ internal class TyphoonSeries : SeriesBase
 
 		if (Design.IsDesignMode)
 		{
-			Typhoons = [
+			Typhoons = new TyphoonItem[]
+			{
 			new(
 				"",
 				"台風0号",
@@ -54,7 +55,7 @@ internal class TyphoonSeries : SeriesBase
 					null
 				),
 				null)
-			];
+			};
 			SelectedTyphoon = Typhoons.First();
 			return;
 		}
@@ -113,7 +114,7 @@ internal class TyphoonSeries : SeriesBase
 
 				FocusBound = rect;
 			}
-			TyphoonLayer.TyphoonItems = [i];
+			TyphoonLayer.TyphoonItems = new[] { i };
 		});
 
 		TyphoonWatchService.WhenAnyValue(x => x.Enabled).Subscribe(e =>
@@ -194,7 +195,7 @@ internal class TyphoonSeries : SeriesBase
 				return;
 
 			var tc = TyphoonWatchService.ProcessXml(File.OpenRead(file), file);
-			Typhoons = tc != null ? [tc] : null;
+			Typhoons = tc != null ? new[] { tc } : null;
 			SelectedTyphoon = tc;
 		}
 		catch (Exception ex)
