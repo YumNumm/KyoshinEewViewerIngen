@@ -127,7 +127,7 @@
                 </ui:NavigationView.MenuItemTemplate>
                 <Panel Background="{DynamicResource MainBackgroundColor}">
                     <map:MapControl Name="Map"
-									ClipToBounds="True"
+									ClipToBounds="False"
                                     Padding="{Binding MapPadding}"
 									MinZoom="3"
 									MaxNavigateZoom="{Binding MaxMapNavigateZoom}"

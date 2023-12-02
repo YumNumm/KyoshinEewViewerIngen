@@ -37,6 +37,22 @@
                 "/consoleloggerparameters:NoSummary"
             ],
             "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "run-debug-android",
+            "command": "dotnet",
+            "type": "shell",
+            "args": [
+                "build",
+                "--no-restore",
+                "-t:Run",
+                "${workspaceFolder}/src/KyoshinEewViewer.Android/KyoshinEewViewer.Android.csproj",
+                "-p:TargetFramework=net7.0-android",
+                "-p:Configuration=Debug",
+                "-p:AndroidAttachDebugger=true",
+                "-p:AndroidSdbHostPort=10000"
+            ],
+            "problemMatcher": "$msCompile"
         }
     ]
 }

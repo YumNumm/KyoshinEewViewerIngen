@@ -409,7 +409,10 @@ public class MapControl : Avalonia.Controls.Control, ICustomDrawOperation
 		using var lease = leaseFeature.Lease();
 		var canvas = lease.SkCanvas;
 		if (Layers is null)
+		{
+			Console.WriteLine("**************** Layers is null ****************");
 			return;
+		}
 
 		var needUpdate = false;
 		var param = RenderParameter;
@@ -421,6 +424,7 @@ public class MapControl : Avalonia.Controls.Control, ICustomDrawOperation
 				foreach (var layer in Layers)
 				{
 					layer.Render(canvas, param, IsNavigating);
+					Console.WriteLine($"Render {layer.GetType().Name}");
 					if (!needUpdate && layer.NeedPersistentUpdate)
 						needUpdate = true;
 				}

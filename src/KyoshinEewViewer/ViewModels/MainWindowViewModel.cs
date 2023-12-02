@@ -333,5 +333,8 @@ public partial class MainWindowViewModel : ViewModelBase
 		=> MessageBus.Current.SendMessage(new MapNavigationRequested(SelectedSeries?.FocusBound));
 
 	public void ShowSettingWindow()
-		=> SubWindowsService.ShowSettingWindow();
+	{
+		SubWindowsService.ShowSettingWindow();
+	}
+
 }

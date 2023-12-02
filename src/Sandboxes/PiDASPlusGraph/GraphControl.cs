@@ -107,7 +107,7 @@ public class GraphControl : Avalonia.Controls.Control, ICustomDrawOperation
 
 	public GraphControl()
 	{
-		ClipToBounds = true;
+		ClipToBounds = false;
 	}
 
 	public override void Render(DrawingContext context) => context.Custom(this);
