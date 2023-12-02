@@ -5,7 +5,7 @@
 	<key>CFBundleDisplayName</key>
 	<string>KyoshinEewViewer</string>
 	<key>CFBundleIdentifier</key>
-	<string>companyName.KyoshinEewViewer</string>
+	<string>net.yumnumm.KyoshinEewViewer</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
@@ -32,6 +32,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
