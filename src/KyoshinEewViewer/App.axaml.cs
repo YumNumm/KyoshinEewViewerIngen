@@ -168,7 +168,13 @@ public class App : Application
 				ConfigurationLoader.Save(config);
 			};
 		}
-
+		else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
+		{
+			singleViewPlatform.MainView = new MainView
+			{
+				DataContext = Locator.Current.GetService<MainWindowViewModel>(),
+			};
+		}
 		base.OnFrameworkInitializationCompleted();
 	}
 
