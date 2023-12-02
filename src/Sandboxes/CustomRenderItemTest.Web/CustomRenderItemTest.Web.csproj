@@ -2,12 +2,12 @@
 	<Import Project="..\..\..\common.props" />
 
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net7.0</TargetFramework>
 		<RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
 		<WasmMainJSPath>AppBundle\main.js</WasmMainJSPath>
 		<OutputType>Exe</OutputType>
 
-        <DefineConstants>USE_SKIA_PATH</DefineConstants>
+		<DefineConstants>USE_SKIA_PATH</DefineConstants>
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -1,7 +1,7 @@
 <Project>
 	<PropertyGroup>
 		<LangVersion>latest</LangVersion>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net7.0</TargetFramework>
 
 		<AssemblyVersion>$(APP_VERSION).$(BUILD_NUMBER)</AssemblyVersion>
 		<CFBundleShortVersionString>$(APP_VERSION).$(BUILD_NUMBER)</CFBundleShortVersionString>
@@ -28,7 +28,7 @@
 
 		<DefineConstants Condition="$(RuntimeIdentifier.StartsWith('linux'))">LINUX</DefineConstants>
 	</PropertyGroup>
-	
+
 	<PropertyGroup>
 		<AvaloniaVersion>11.0.5</AvaloniaVersion>
 	</PropertyGroup>
@@ -38,13 +38,16 @@
 		<PackageReference Include="Dotnet.Bundle" Version="*" />
 
 		<PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
-		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="$(AvaloniaVersion)" />
+		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics"
+			Version="$(AvaloniaVersion)" />
 		<PackageReference Include="Avalonia.ReactiveUI" Version="$(AvaloniaVersion)" />
 		<PackageReference Include="Avalonia.Skia" Version="$(AvaloniaVersion)" />
 		<PackageReference Include="FluentAvaloniaUI" Version="2.0.4" />
-        <PackageReference Include="Splat.DependencyInjection.SourceGenerator" Version="1.1.93" PrivateAssets="all" />
+		<PackageReference Include="Splat.DependencyInjection.SourceGenerator" Version="1.1.93"
+			PrivateAssets="all" />
 
-		<PackageReference Condition="$(RuntimeIdentifier.StartsWith('linux'))" Include="Mono.Posix.NETStandard" Version="1.0.0" />
+		<PackageReference Condition="$(RuntimeIdentifier.StartsWith('linux'))"
+			Include="Mono.Posix.NETStandard" Version="1.0.0" />
 
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
 		<PackageReference Include="NReco.Logging.File" Version="1.1.7" />
