@@ -44,6 +44,12 @@
                 </Button>
             </Grid>
         </Border>
+        <ui:SettingsExpander Header="リプレイ中もリアルタイム震度の受信を継続する"
+                                 Description="リプレイ終了後も揺れの検知処理に影響がないように裏でリアルタイム震度の受信を続けます。">
+            <ui:SettingsExpander.Footer>
+                <ToggleSwitch OnContent="する" OffContent="しない" />
+            </ui:SettingsExpander.Footer>
+        </ui:SettingsExpander>
         <TextBlock Text="リプレイ開始" FontWeight="Bold" Margin="10,20,10,5" />
         <Expander Margin="10,0" IsExpanded="True">
             <Expander.Header>
@@ -80,10 +86,7 @@
                 </StackPanel>
                 <Button Content="タイムシフト開始" Command="{Binding BackToTimeshiftRealtime}"
 						HorizontalAlignment="Center" Margin="0,5" />
-                <TextBlock Text="※タイムシフト中は緊急地震速報周りの挙動について以下の制約があります。&#xA;　1.&#160;強震モニタ以外のソースは利用できません。&#xA;　2.&#160;EEW発表中にタイムシフトに入った場合、正常にEEWの再現ができなくなることがあります。" FontSize="12" />
-                <CheckBox IsEnabled="False" Margin="0,2">
-                    <TextBlock Text="タイムシフト中に緊急地震速報が発表された場合すぐリアルタイムに戻る(未実装)" />
-                </CheckBox>
+                <TextBlock Text="※タイムシフト中は強震モニタ以外の緊急地震速報のソースは利用できません。" FontSize="12" />
             </StackPanel>
         </Expander>
         <Expander Margin="10,0" IsExpanded="True">
@@ -95,36 +98,6 @@
                 </Grid>
             </Expander.Header>
             <StackPanel HorizontalAlignment="Stretch">
-                <Grid Margin="0,5,0,-5">
-                    <TextBlock Text="現在" FontSize="14" HorizontalAlignment="Right" />
-                    <TextBlock Text="3時間前" FontSize="14" HorizontalAlignment="Left" />
-                    <TextBlock Text="{Binding TimeshiftSecondsString}" HorizontalAlignment="Center" />
-                </Grid>
-                <Slider Margin="0,5" Value="{Binding Config.Timer.TimeshiftSeconds}"
-						Minimum="{Binding MinTimeshiftSeconds}" Maximum="{Binding MaxTimeshiftSeconds}" />
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,-15,0,0">
-                    <StackPanel.Styles>
-                        <Style Selector="Button">
-                            <Setter Property="Width" Value="60" />
-                            <Setter Property="HorizontalContentAlignment" Value="Center" />
-                            <Setter Property="Command" Value="{Binding OffsetTimeshiftSeconds}" />
-                        </Style>
-                    </StackPanel.Styles>
-                    <Button Content="-10m" CommandParameter="-600" />
-                    <Button Content="-1m" CommandParameter="-60" />
-                    <Button Content="-30s" CommandParameter="-30" />
-                    <Button Content="-10s" CommandParameter="-10" />
-                    <Button Content="+10s" CommandParameter="10" />
-                    <Button Content="+30s" CommandParameter="30" />
-                    <Button Content="+1m" CommandParameter="60" />
-                    <Button Content="+10m" CommandParameter="600" />
-                </StackPanel>
-                <Button Content="タイムシフト開始" Command="{Binding BackToTimeshiftRealtime}"
-						HorizontalAlignment="Center" Margin="0,5" />
-                <TextBlock Text="※タイムシフト中は緊急地震速報周りの挙動について以下の制約があります。&#xA;　1.&#160;強震モニタ以外のソースは利用できません。&#xA;　2.&#160;EEW発表中にタイムシフトに入った場合、正常にEEWの再現ができなくなることがあります。" FontSize="12" />
-                <CheckBox IsEnabled="False" Margin="0,2">
-                    <TextBlock Text="タイムシフト中に緊急地震速報が発表された場合すぐリアルタイムに戻る(未実装)" />
-                </CheckBox>
             </StackPanel>
         </Expander>
     </StackPanel>
