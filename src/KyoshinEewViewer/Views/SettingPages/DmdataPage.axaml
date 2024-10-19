@@ -87,7 +87,7 @@
 			<Grid ColumnDefinitions="45,*,auto" VerticalAlignment="Center">
 				<ui:FontIcon Glyph="&#xf0c1;" FontFamily="{StaticResource IconFont}" FontSize="20" HorizontalAlignment="Left" />
 				<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5">
-					<TextBlock Text="認証状況" />
+					<TextBlock Text="認証状況:" />
 					<TextBlock Text="{Binding DmdataStatusString}" Foreground="{DynamicResource SubForegroundColor}" />
 				</StackPanel>
 				<Panel Grid.Column="2">

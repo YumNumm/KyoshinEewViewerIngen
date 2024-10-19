@@ -19,9 +19,6 @@
 			<Setter Property="Margin" Value="10,3,10,0" />
 		</Style>
 	</UserControl.Styles>
-	<Design.DataContext>
-		<vm:SettingWindowViewModel />
-	</Design.DataContext>
 	<StackPanel>
 		<ui:SettingsExpander Header="揺れの検出を有効にする(実験中)" Description="この機能は現在開発中です。" IsExpanded="True">
 			<ui:SettingsExpander.IconSource>
@@ -42,49 +39,6 @@
 		</ui:SettingsExpander>
 		
 		<TextBlock Text="取得タイミング調整" FontWeight="Bold" Margin="10,20,10,5" />
-		<Expander Margin="10,3,10,0" IsExpanded="False">
-			<Expander.Header>
-				<Grid ColumnDefinitions="40,*" RowDefinitions="*,auto" Margin="0,15">
-					<ui:FontIcon Glyph="&#xf1da;" FontFamily="{StaticResource IconFont}" FontSize="20" HorizontalAlignment="Left" Grid.RowSpan="2" />
-					<TextBlock Grid.Column="1" Grid.Row="0" Text="タイムシフト" FontSize="14" />
-					<TextBlock Grid.Column="1" Grid.Row="1" Text="過去の強震モニタのデータを最大3時間まで遡ることが可能です。" FontSize="12" Foreground="{DynamicResource SubForegroundColor}" />
-				</Grid>
-			</Expander.Header>
-			<StackPanel HorizontalAlignment="Stretch">
-                <TextBlock Text="現状EEWの再現が正常にできません。ご了承ください。" FontSize="12" Margin="5,-3" Background="{DynamicResource DockBackgroundColor}"/>
-				<Grid Margin="0,5,0,-5">
-					<TextBlock Text="現在" FontSize="14" HorizontalAlignment="Right" />
-					<TextBlock Text="3時間前" FontSize="14" HorizontalAlignment="Left" />
-					<TextBlock Text="{Binding TimeshiftSecondsString}" HorizontalAlignment="Center" />
-				</Grid>
-				<Slider Margin="0,5" Value="{Binding Config.Timer.TimeshiftSeconds}"
-						Minimum="{Binding MinTimeshiftSeconds}" Maximum="{Binding MaxTimeshiftSeconds}" />
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,-15,0,0">
-					<StackPanel.Styles>
-						<Style Selector="Button">
-							<Setter Property="Width" Value="60" />
-							<Setter Property="HorizontalContentAlignment" Value="Center" />
-							<Setter Property="Command" Value="{Binding OffsetTimeshiftSeconds}" />
-						</Style>
-					</StackPanel.Styles>
-					<Button Content="-10m" CommandParameter="-600" />
-					<Button Content="-1m" CommandParameter="-60" />
-					<Button Content="-30s" CommandParameter="-30" />
-					<Button Content="-10s" CommandParameter="-10" />
-					<Button Content="+10s" CommandParameter="10" />
-					<Button Content="+30s" CommandParameter="30" />
-					<Button Content="+1m" CommandParameter="60" />
-					<Button Content="+10m" CommandParameter="600" />
-				</StackPanel>
-				<Button Content="リアルタイムに戻る" Command="{Binding BackToTimeshiftRealtime}"
-						HorizontalAlignment="Center" Margin="0,5" />
-				<TextBlock Text="※タイムシフト中は緊急地震速報周りの挙動について以下の制約があります。&#xA;　1.&#160;強震モニタ以外のソースは利用できません。&#xA;　2.&#160;EEW発表中にタイムシフトに入った場合、正常にEEWの再現ができなくなることがあります。" FontSize="12" />
-				<CheckBox IsEnabled="False" Margin="0,2">
-					<TextBlock Text="タイムシフト中に緊急地震速報が発表された場合すぐリアルタイムに戻る(未実装)" />
-				</CheckBox>
-			</StackPanel>
-		</Expander>
-
 		<ui:SettingsExpander Header="データ取得タイミング調整" Description="実際の時間から遅延させて強震モニタから取得します。" IsExpanded="True">
 			<ui:SettingsExpander.IconSource>
 				<ui:FontIconSource Glyph="&#xf2f2;" FontFamily="{StaticResource IconFont}" />

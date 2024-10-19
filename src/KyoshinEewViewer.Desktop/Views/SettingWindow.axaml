@@ -204,6 +204,18 @@
 			<TabItem.Header>
 				<StackPanel Orientation="Horizontal">
 					<TextBlock Text="├" Margin="5,0" />
+					<TextBlock Text="リプレイ" />
+				</StackPanel>
+			</TabItem.Header>
+			<ScrollViewer>
+				<pages:KyoshinMonitorReplayPage Margin="5" />
+			</ScrollViewer>
+		</TabItem>
+		<!-- 強震モニタ 地図設定 -->
+		<TabItem>
+			<TabItem.Header>
+				<StackPanel Orientation="Horizontal">
+					<TextBlock Text="├" Margin="5,0" />
 					<TextBlock Text="地図アイコン" />
 				</StackPanel>
 			</TabItem.Header>
