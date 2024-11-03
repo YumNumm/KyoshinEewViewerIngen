@@ -1,66 +1,70 @@
-using KyoshinEewViewer.Series.KyoshinMonitor.Services.Eew;
-using KyoshinEewViewer.Series.KyoshinMonitor.Services;
-using KyoshinEewViewer.Services;
+using KyoshinEewViewer.Core.Models;
 using System;
+using Splat;
+using KyoshinEewViewer.Services;
+using KyoshinEewViewer.Series.KyoshinMonitor.Services;
+using KyoshinEewViewer.Series.KyoshinMonitor.Services.Eew;
 using System.Collections.Generic;
 using System.Linq;
-using KyoshinEewViewer.Core.Models;
-using Splat;
+using KyoshinEewViewer.Map;
 using KyoshinEewViewer.CustomControl;
 using SkiaSharp;
-using KyoshinEewViewer.Map;
-using ReactiveUI;
+using System.Text;
 
 namespace KyoshinEewViewer.Series.KyoshinMonitor;
-
-public class RealtimeEarthquakeInformationHost : EarthquakeInformationHost
+public class TimeshiftEarthquakeInformationHost : EarthquakeInformationHost
 {
-	private bool IsRunning { get; set; }
-
-	private EewController EewController { get; }
-	public KyoshinMonitorWatchService KyoshinMonitorWatcher { get; }
-	private SignalNowFileWatcher SignalNowEewReceiver { get; }
-	public EewTelegramSubscriber EewTelegramSubscriber { get; }
+	private EewController EewController { get; set; }
+	private KyoshinMonitorWatchService KyoshinMonitorWatcher { get; }
 	private TimerService TimerService { get; }
+
+	private bool IsRunning { get; set; }
+	private int TimeshiftSeconds { get; set; } = 0;
 
 	private Dictionary<Guid, KyoshinEventLevel> KyoshinEventLevelCache { get; } = [];
 
 	public override DateTime CurrentTime =>
 		Config.Eew.SyncKyoshinMonitorPsWave ? KyoshinMonitorWatcher.CurrentDisplayTime : TimerService.CurrentTime;
 
-	public RealtimeEarthquakeInformationHost(
+	public TimeshiftEarthquakeInformationHost(
 		ILogManager logManager,
 		KyoshinEewViewerConfiguration config,
-		EewController eewController,
 		TimerService timerService,
-		TelegramProvideService telegramProvider
-	) : base(false, config)
+		NotificationService notificationService,
+		SoundPlayerService soundPlayer,
+		WorkflowService workflowService
+	) : base(true, config)
 	{
-		SplatRegistrations.RegisterLazySingleton<RealtimeEarthquakeInformationHost>();
-
-		ReplayDescription = "リアルタイム";
+		SplatRegistrations.RegisterLazySingleton<TimeshiftEarthquakeInformationHost>();
 
 		TimerService = timerService;
-		EewController = eewController;
-		EewController.EewUpdated += OnEewUpdated;
-		TimerService.TimerElapsed += t => EewController.TimerElapsed(t);
-		KyoshinMonitorWatcher = new KyoshinMonitorWatchService(logManager, Config, EewController);
-		KyoshinMonitorWatcher.RealtimeDataUpdated += OnRealtimeDataUpdated;
-		TimerService.DelayedTimerElapsed += t =>
-		{
-			if (!IsRunning)
-				return;
-			KyoshinMonitorWatcher.TimerElapsed(t).Wait();
+		EewController = new(logManager, config, notificationService, soundPlayer, workflowService) {
+			IsReplay = true
 		};
-		SignalNowEewReceiver = new SignalNowFileWatcher(logManager, config, EewController, TimerService);
-		EewTelegramSubscriber = new EewTelegramSubscriber(logManager, EewController, telegramProvider, TimerService);
-
-		EewTelegramSubscriber.WhenAnyValue(x => x.Enabled).Subscribe(x => DmdataReceiving = x);
-		EewTelegramSubscriber.WhenAnyValue(x => x.WarningOnlyEnabled).Subscribe(x => DmdataWarningOnlyReceiving = x);
-		EewTelegramSubscriber.WhenAnyValue(x => x.IsDisconnected).Subscribe(x => DmdataDisconnected = x);
+		EewController.EewUpdated += OnEewUpdated;
+		KyoshinMonitorWatcher = new(logManager, Config, EewController);
+		KyoshinMonitorWatcher.RealtimeDataUpdated += OnRealtimeDataUpdated;
 		KyoshinMonitorWatcher.WarningMessageUpdated += m => WarningMessage = m;
 		KyoshinMonitorWatcher.RealtimeDataParseProcessStarted += t => IsWorking = true;
 
+		TimerService.DelayedTimerElapsed += (time) =>
+		{
+			if (!IsRunning)
+				return;
+
+			var shiftedTime = time.AddSeconds(-TimeshiftSeconds);
+			KyoshinMonitorWatcher.TimerElapsed(shiftedTime).ConfigureAwait(false);
+		};
+		TimerService.TimerElapsed += (time) =>
+		{
+			if (!IsRunning)
+				return;
+
+			var shiftedTime = time.AddSeconds(-TimeshiftSeconds);
+			EewController.TimerElapsed(shiftedTime);
+		};
+
+		// TODO コピペになっているので微妙。なんとかしたい
 		// EEW受信
 		EewController.EewUpdated += (time, rawEews) =>
 		{
@@ -137,20 +141,37 @@ public class RealtimeEarthquakeInformationHost : EarthquakeInformationHost
 			UpateFocusPoint(e.time);
 			OnRealtimeDataUpdated(e);
 		};
-		IsSignalNowEewReceiving = SignalNowEewReceiver.CanReceive;
 	}
 
-	public void Start()
+	public void Start(int timeshiftSeconds)
 	{
-		if (IsRunning)
-			return;
+		// タイムシフト開始
+		TimeshiftSeconds = timeshiftSeconds;
+
+		var sb = new StringBuilder("タイムシフト ");
+		var time = TimeSpan.FromSeconds(TimeshiftSeconds);
+		if (time.TotalHours >= 1)
+			sb.Append((int)time.TotalHours + "時間");
+		if (time.Minutes > 0)
+			sb.Append(time.Minutes + "分");
+		if (time.Seconds > 0)
+			sb.Append(time.Seconds + "秒");
+		sb.Append('前');
+
+		ReplayDescription = sb.ToString();
+		IsRunning = true;
+
 		KyoshinMonitorWatcher.ResetHistories();
 		KyoshinEventLevelCache.Clear();
 		KyoshinMonitorWatcher.Initalize();
 		TimerService.StartMainTimer();
-		IsRunning = true;
 	}
 
 	public void Stop()
-		=> IsRunning = false;
+	{
+		IsRunning = false;
+		// タイムシフト終了
+		TimeshiftSeconds = 0;
+		ReplayDescription = "";
+	}
 }

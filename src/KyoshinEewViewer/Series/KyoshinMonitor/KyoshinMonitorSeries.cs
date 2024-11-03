@@ -2,10 +2,10 @@ using Avalonia.Controls;
 using FluentAvalonia.UI.Controls;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
+using KyoshinEewViewer.Core.Models.Events;
 using KyoshinEewViewer.Events;
 using KyoshinEewViewer.Series.KyoshinMonitor.Events;
 using KyoshinEewViewer.Series.KyoshinMonitor.Models;
-using KyoshinEewViewer.Series.KyoshinMonitor.Services.Eew;
 using KyoshinEewViewer.Series.KyoshinMonitor.Workflow;
 using KyoshinEewViewer.Services;
 using ReactiveUI;
@@ -35,6 +35,7 @@ public class KyoshinMonitorSeries : SeriesBase
 	public override Control DisplayControl => _control ?? throw new InvalidOperationException("初期化前にコントロールが呼ばれています");
 
 	private RealtimeEarthquakeInformationHost RealtimeInformationHost { get; }
+	private TimeshiftEarthquakeInformationHost TimeshiftInformationHost { get; }
 
 	private IDisposable? MapNavigationSubscription { get; set; }
 	private IDisposable? MapDisplayParameterSubscription { get; set; }
@@ -74,7 +75,8 @@ public class KyoshinMonitorSeries : SeriesBase
 		NotificationService notifyService,
 		SoundPlayerService soundPlayer,
 		WorkflowService workflowService,
-		RealtimeEarthquakeInformationHost realtimeHost) : base(MetaData)
+		RealtimeEarthquakeInformationHost realtimeHost,
+		TimeshiftEarthquakeInformationHost timeshiftHost) : base(MetaData)
 	{
 		SplatRegistrations.RegisterLazySingleton<KyoshinMonitorSeries>();
 
@@ -88,6 +90,16 @@ public class KyoshinMonitorSeries : SeriesBase
 		StrongerShakeDetectedSound = soundPlayer.RegisterSound(SoundCategory, "StrongerShakeDetected", "揺れ検出(震度5弱以上)", "震度上昇時にも鳴動します。\n鳴動させるためには揺れ検出の設定を有効にしている必要があります。");
 
 		CurrentInformationHost = RealtimeInformationHost = realtimeHost;
+		RealtimeInformationHost.KyoshinEventUpdated += e => {
+			if (Config.KyoshinMonitor.ReturnToRealtimeAtShakeDetected && e.isLevelUp)
+				ReturnToRealtime();
+		};
+		RealtimeInformationHost.EewUpdated += (t, e) =>
+		{
+			if (Config.KyoshinMonitor.ReturnToRealtimeAtEewReceived && e.Any(eew => eew.IsVisible))
+				ReturnToRealtime();
+		};
+		TimeshiftInformationHost = timeshiftHost;
 
 		KyoshinMonitorLayer = new(config, this);
 		MapDisplayParameter = new() { OverlayLayers = [KyoshinMonitorLayer] };
@@ -96,7 +108,27 @@ public class KyoshinMonitorSeries : SeriesBase
 		config.KyoshinMonitor.WhenAnyValue(x => x.ShowColorSample).Subscribe(x => ShowColorSample = x);
 	}
 	public override void Initialize()
-		=> RealtimeInformationHost.StartAsync();
+	{
+		RealtimeInformationHost.Start();
+
+		MessageBus.Current.Listen<KyoshinMonitorTimeshiftStartRequested>().Subscribe(e =>
+		{
+			if (!Config.KyoshinMonitor.KeepReceiveDuringReplay)
+				RealtimeInformationHost.Stop();
+			TimeshiftInformationHost.Start(e.TimeshiftSeconds);
+			CurrentInformationHost = TimeshiftInformationHost;
+		});
+		MessageBus.Current.Listen<KyoshinMonitorReplayStopRequest>().Subscribe(e => ReturnToRealtime());
+	}
+
+	private void ReturnToRealtime()
+	{
+		if (CurrentInformationHost == RealtimeInformationHost)
+			return;
+		TimeshiftInformationHost.Stop();
+		RealtimeInformationHost.Start();
+		CurrentInformationHost = RealtimeInformationHost;
+	}
 
 	public override void Activating()
 	{

@@ -24,6 +24,7 @@
 			Background="{DynamicResource ExpanderHeaderBackground}"
 			MinHeight="72"
 			Padding="{DynamicResource SettingsExpanderItemPadding}"
+            BorderThickness="1" BorderBrush="#19000000"
 			CornerRadius="4" Margin="10,3,10,0">
             <Grid ColumnDefinitions="45,*,auto" VerticalAlignment="Center">
                 <ui:FontIcon Glyph="&#xf201;" FontFamily="{StaticResource IconFont}" FontSize="20" HorizontalAlignment="Left" />
@@ -31,23 +32,24 @@
                     <TextBlock Text="表示中の情報:" />
                     <TextBlock Text="リアルタイム震度" Foreground="{DynamicResource SubForegroundColor}" />
                 </StackPanel>
-                <Button Grid.Column="2" Classes="accent" Content="リアルタイムに戻る" HorizontalAlignment="Center">
-                    <!-- Command="{Binding AuthorizeDmdata}" -->
-                    <!--
-                    <Button.IsVisible>
-                        <MultiBinding Converter="{x:Static BoolConverters.And}">
-                            <Binding Path="Config.Dmdata.RefreshToken" Converter="{x:Static ObjectConverters.IsNull}" />
-                            <Binding Path="AuthorizeCancellationTokenSource" Converter="{x:Static ObjectConverters.IsNull}" />
-                        </MultiBinding>
-                    </Button.IsVisible>
-                    -->
-                </Button>
+                <Button Grid.Column="2" Classes="accent" Content="リアルタイムに戻る" HorizontalAlignment="Center" Command="{Binding ReturnToRealtime}" />
             </Grid>
         </Border>
         <ui:SettingsExpander Header="リプレイ中もリアルタイム震度の受信を継続する"
-                                 Description="リプレイ終了後も揺れの検知処理に影響がないように裏でリアルタイム震度の受信を続けます。">
+                             Description="リプレイ終了後も揺れの検知処理に影響がないように裏でリアルタイム震度の受信を続けます。">
             <ui:SettingsExpander.Footer>
-                <ToggleSwitch OnContent="する" OffContent="しない" />
+                <ToggleSwitch OnContent="する" OffContent="しない" IsChecked="{Binding Config.KyoshinMonitor.KeepReceiveDuringReplay}" />
+            </ui:SettingsExpander.Footer>
+            <ui:SettingsExpanderItem Content="揺れの検知時にリアルタイムに戻す">
+                <ui:SettingsExpanderItem.Footer>
+                    <ToggleSwitch OnContent="する" OffContent="しない" IsChecked="{Binding Config.KyoshinMonitor.ReturnToRealtimeAtShakeDetected}"  />
+                </ui:SettingsExpanderItem.Footer>
+            </ui:SettingsExpanderItem>
+        </ui:SettingsExpander>
+        <ui:SettingsExpander Header="新たに緊急地震速報を受信した場合はリアルタイムに戻す"
+                             Description="上の設定でリアルタイム震度の受信を行っていない場合は強震モニタからのEEWの受信は停止します。">
+            <ui:SettingsExpander.Footer>
+                <ToggleSwitch OnContent="する" OffContent="しない" IsChecked="{Binding Config.KyoshinMonitor.ReturnToRealtimeAtEewReceived}" />
             </ui:SettingsExpander.Footer>
         </ui:SettingsExpander>
         <TextBlock Text="リプレイ開始" FontWeight="Bold" Margin="10,20,10,5" />
@@ -61,12 +63,12 @@
             </Expander.Header>
             <StackPanel HorizontalAlignment="Stretch">
                 <Grid Margin="0,5,0,-5">
-                    <TextBlock Text="現在" FontSize="14" HorizontalAlignment="Right" />
-                    <TextBlock Text="3時間前" FontSize="14" HorizontalAlignment="Left" />
+                    <TextBlock Text="現在" FontSize="14" HorizontalAlignment="Left" />
+                    <TextBlock Text="3時間前" FontSize="14" HorizontalAlignment="Right" />
                     <TextBlock Text="{Binding TimeshiftSecondsString}" HorizontalAlignment="Center" />
                 </Grid>
-                <Slider Margin="0,5" Value="{Binding Config.Timer.TimeshiftSeconds}"
-						Minimum="{Binding MinTimeshiftSeconds}" Maximum="{Binding MaxTimeshiftSeconds}" />
+                <Slider Margin="0,5" Value="{Binding TimeshiftSeconds}"
+						Minimum="1" Maximum="10800" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,-15,0,0">
                     <StackPanel.Styles>
                         <Style Selector="Button">
@@ -75,26 +77,26 @@
                             <Setter Property="Command" Value="{Binding OffsetTimeshiftSeconds}" />
                         </Style>
                     </StackPanel.Styles>
-                    <Button Content="-10m" CommandParameter="-600" />
-                    <Button Content="-1m" CommandParameter="-60" />
-                    <Button Content="-30s" CommandParameter="-30" />
-                    <Button Content="-10s" CommandParameter="-10" />
-                    <Button Content="+10s" CommandParameter="10" />
-                    <Button Content="+30s" CommandParameter="30" />
-                    <Button Content="+1m" CommandParameter="60" />
-                    <Button Content="+10m" CommandParameter="600" />
+                    <Button Content="+10m" CommandParameter="-600" />
+                    <Button Content="+1m" CommandParameter="-60" />
+                    <Button Content="+30s" CommandParameter="-30" />
+                    <Button Content="+10s" CommandParameter="-10" />
+                    <Button Content="-10s" CommandParameter="10" />
+                    <Button Content="-30s" CommandParameter="30" />
+                    <Button Content="-1m" CommandParameter="60" />
+                    <Button Content="-10m" CommandParameter="600" />
                 </StackPanel>
-                <Button Content="タイムシフト開始" Command="{Binding BackToTimeshiftRealtime}"
+                <Button Content="タイムシフト開始" Command="{Binding StartTimeshift}"
 						HorizontalAlignment="Center" Margin="0,5" />
                 <TextBlock Text="※タイムシフト中は強震モニタ以外の緊急地震速報のソースは利用できません。" FontSize="12" />
             </StackPanel>
         </Expander>
-        <Expander Margin="10,0" IsExpanded="True">
+        <Expander Margin="10,0" IsExpanded="True" IsVisible="{Binding IsDebug}">
             <Expander.Header>
                 <Grid ColumnDefinitions="40,*" RowDefinitions="*,auto" Margin="0,15">
                     <ui:FontIcon Glyph="&#xf15b;" FontFamily="{StaticResource IconFont}" FontSize="20" HorizontalAlignment="Left" Grid.RowSpan="2" />
                     <TextBlock Grid.Column="1" Grid.Row="0" Text="リプレイファイルを再生" FontSize="14" />
-                    <TextBlock Grid.Column="1" Grid.Row="1" Text="過去の強震モニタのデータを最大3時間まで遡ることが可能です。" FontSize="12" Foreground="{DynamicResource SubForegroundColor}" />
+                    <TextBlock Grid.Column="1" Grid.Row="1" Text="過去の強震モニタと緊急地震速報のデータを保存したファイルを再生します。" FontSize="12" Foreground="{DynamicResource SubForegroundColor}" />
                 </Grid>
             </Expander.Header>
             <StackPanel HorizontalAlignment="Stretch">

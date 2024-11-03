@@ -35,7 +35,9 @@ public class EewEvent(EewEventType subType) : WorkflowEvent("Eew")
 	public bool IsFinal { get; init; }
 	public bool IsCancelled { get; init; }
 
-	public static EewEvent FromEewModel(EewEventType type, IEew eew)
+	public bool IsReplay { get; init; }
+
+	public static EewEvent FromEewModel(EewEventType type, IEew eew, bool isReplay)
 		=> new(type)
 		{
 			OccurrenceAt = eew.OccurrenceTime,
@@ -55,6 +57,7 @@ public class EewEvent(EewEventType subType) : WorkflowEvent("Eew")
 			WarningAreaNames = eew.WarningAreaNames,
 			IsFinal = eew.IsFinal,
 			IsCancelled = eew.IsCancelled,
+			IsReplay = isReplay,
 		};
 }
 

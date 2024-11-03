@@ -139,6 +139,27 @@ public class KyoshinEewViewerConfiguration : ReactiveObject
 			get => _showColorSample;
 			set => this.RaiseAndSetIfChanged(ref _showColorSample, value);
 		}
+
+		private bool _keepReceiveDuringReplay = true;
+		public bool KeepReceiveDuringReplay
+		{
+			get => _keepReceiveDuringReplay;
+			set => this.RaiseAndSetIfChanged(ref _keepReceiveDuringReplay, value);
+		}
+
+		private bool _returnToRealtimeAtShakeDetected = true;
+		public bool ReturnToRealtimeAtShakeDetected
+		{
+			get => _returnToRealtimeAtShakeDetected;
+			set => this.RaiseAndSetIfChanged(ref _returnToRealtimeAtShakeDetected, value);
+		}
+
+		private bool _returnToRealtimeAtEewReceived = true;
+		public bool ReturnToRealtimeAtEewReceived
+		{
+			get => _returnToRealtimeAtEewReceived;
+			set => this.RaiseAndSetIfChanged(ref _returnToRealtimeAtEewReceived, value);
+		}
 	}
 
 	private EewConfig _eew = new();

@@ -94,20 +94,23 @@
                 <StackPanel Margin="5,2" HorizontalAlignment="Center">
                     <Panel VerticalAlignment="Center">
                         <Panel.Styles>
-                            <Style Selector="StackPanel.history">
+                            <Style Selector="StackPanel.replay">
                                 <Setter Property="TextElement.Foreground" Value="{DynamicResource EmphasisForegroundColor}" />
                             </Style>
                         </Panel.Styles>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <i:Interaction.Behaviors>
-                                <b:AddClassBehavior Class="history" IsEnabled="{Binding CurrentInformationHost.IsReplay}" />
+                                <b:AddClassBehavior Class="replay" IsEnabled="{Binding CurrentInformationHost.IsReplay}" />
                             </i:Interaction.Behaviors>
                             <TextBlock Text="{Binding CurrentInformationHost.CurrentDisplayTime, StringFormat={}{0:yyyy-MM-dd}}" FontSize="18" Margin="0,0,0,4" VerticalAlignment="Bottom" />
                             <TextBlock Text="{Binding CurrentInformationHost.CurrentDisplayTime, StringFormat={}{0:HH:mm:ss}}" FontSize="32" FontWeight="Bold" Margin="5,-2,5,0" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Top" Spacing="5">
+                            <i:Interaction.Behaviors>
+                                <b:AddClassBehavior Class="replay" IsEnabled="{Binding CurrentInformationHost.IsReplay}" />
+                            </i:Interaction.Behaviors>
                             <TextBlock FontSize="14" Text="表示時刻" Foreground="{DynamicResource SubForegroundColor}" />
-                            <TextBlock IsVisible="{Binding CurrentInformationHost.IsReplay}" ToolTip.Tip="リプレイ中です。&#xa;過去の情報が表示されています。" Text="&#xf1da;" Classes="icon" FontSize="10" Foreground="{DynamicResource SubForegroundColor}" VerticalAlignment="Center" />
+                            <TextBlock IsVisible="{Binding CurrentInformationHost.IsReplay}" ToolTip.Tip="{Binding CurrentInformationHost.ReplayDescription}" Text="&#xf1da;" Classes="icon" FontSize="10" Foreground="{DynamicResource SubForegroundColor}" VerticalAlignment="Center" />
                             <TextBlock IsVisible="{Binding CurrentInformationHost.IsWorking}" Text="&#xf017;" Classes="icon" FontSize="10" Foreground="{DynamicResource SubForegroundColor}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Panel>

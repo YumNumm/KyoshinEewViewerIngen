@@ -8,6 +8,7 @@ namespace KyoshinEewViewer.Series.KyoshinMonitor.Services;
 
 public static class TravelTimeTableService
 {
+	public static bool IsInitialized => TimeTable != null;
 	private static TravelTimeTableItem[]? TimeTable { get; set; }
 
 	public static (double? pDistance, double? sDistance) CalcDistance(DateTime occurranceTime, DateTime currentTime, int depth)

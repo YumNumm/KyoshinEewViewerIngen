@@ -90,6 +90,11 @@ public class SettingWindowViewModel : ViewModelBase
 			Config.Map.Location1 = new(45.619358f, 145.77399f);
 			Config.Map.Location2 = new(29.997368f, 128.22534f);
 		});
+		OffsetTimeshiftSeconds = ReactiveCommand.Create<string>(amountString =>
+		{
+			var amount = int.Parse(amountString);
+			TimeshiftSeconds += amount;
+		});
 
 		UpdateDmdataStatus();
 
@@ -175,49 +180,51 @@ public class SettingWindowViewModel : ViewModelBase
 		LpgmIntensity.Error,
 	];
 
-	//private int _minTimeshiftSeconds = -10800;
-	//public int MinTimeshiftSeconds
-	//{
-	//	get => _minTimeshiftSeconds;
-	//	set => this.RaiseAndSetIfChanged(ref _minTimeshiftSeconds, value);
-	//}
-	//private int _maxTimeshiftSeconds = 0;
-	//public int MaxTimeshiftSeconds
-	//{
-	//	get => _maxTimeshiftSeconds;
-	//	private set => this.RaiseAndSetIfChanged(ref _maxTimeshiftSeconds, value);
-	//}
-	//private string _timeshiftSecondsString = "リアルタイム";
-	//public string TimeshiftSecondsString
-	//{
-	//	get => _timeshiftSecondsString;
-	//	set => this.RaiseAndSetIfChanged(ref _timeshiftSecondsString, value);
-	//}
-	//private void UpdateTimeshiftString()
-	//{
-	//	if (Config.Timer.TimeshiftSeconds == 0)
-	//	{
-	//		TimeshiftSecondsString = "リアルタイム";
-	//		return;
-	//	}
+	private int _timeshiftSeconds = 0;
+	public int TimeshiftSeconds
+	{
+		get => _timeshiftSeconds;
+		set {
+			if (value > 10800)
+				value = 10800;
+			if (value < 0)
+				value = 0;
+			this.RaiseAndSetIfChanged(ref _timeshiftSeconds, value);
+			UpdateTimeshiftString();
+		}
+	}
+	private string _timeshiftSecondsString = "リアルタイム";
+	public string TimeshiftSecondsString
+	{
+		get => _timeshiftSecondsString;
+		set => this.RaiseAndSetIfChanged(ref _timeshiftSecondsString, value);
+	}
+	private void UpdateTimeshiftString()
+	{
+		if (TimeshiftSeconds == 0)
+		{
+			TimeshiftSecondsString = "リアルタイム";
+			return;
+		}
 
-	//	var sb = new StringBuilder();
-	//	var time = TimeSpan.FromSeconds(-Config.Timer.TimeshiftSeconds);
-	//	if (time.TotalHours >= 1)
-	//		sb.Append((int)time.TotalHours + "時間");
-	//	if (time.Minutes > 0)
-	//		sb.Append(time.Minutes + "分");
-	//	if (time.Seconds > 0)
-	//		sb.Append(time.Seconds + "秒");
-	//	sb.Append('前');
+		var sb = new StringBuilder();
+		var time = TimeSpan.FromSeconds(TimeshiftSeconds);
+		if (time.TotalHours >= 1)
+			sb.Append((int)time.TotalHours + "時間");
+		if (time.Minutes > 0)
+			sb.Append(time.Minutes + "分");
+		if (time.Seconds > 0)
+			sb.Append(time.Seconds + "秒");
+		sb.Append('前');
 
-	//	TimeshiftSecondsString = sb.ToString();
-	//}
+		TimeshiftSecondsString = sb.ToString();
+	}
 
-	//public ReactiveCommand<string, Unit> OffsetTimeshiftSeconds { get; }
-
-	//public void BackToTimeshiftRealtime()
-	//	=> Config.Timer.TimeshiftSeconds = 0;
+	public ReactiveCommand<string, Unit> OffsetTimeshiftSeconds { get; }
+	public void StartTimeshift()
+		=> KyoshinMonitorTimeshiftStartRequested.Request(TimeshiftSeconds);
+	public void ReturnToRealtime()
+		=> KyoshinMonitorReplayStopRequest.Request();
 
 	public SeriesViewModel[] Series { get; }
 

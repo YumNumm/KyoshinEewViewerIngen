@@ -26,6 +26,13 @@ public abstract class EarthquakeInformationHost(bool isReplay, KyoshinEewViewerC
 
 	public bool IsReplay { get; } = isReplay;
 
+	private string _replayDescription = "";
+	public string ReplayDescription
+	{
+		get => _replayDescription;
+		protected set => this.RaiseAndSetIfChanged(ref _replayDescription, value);
+	}
+
 	private MapNavigationRequest? _mapNavigationRequest;
 	/// <summary>
 	/// マップ表示位置のリクエスト

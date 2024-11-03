@@ -83,6 +83,7 @@
 			Background="{DynamicResource ExpanderHeaderBackground}"
 			MinHeight="72"
 			Padding="{DynamicResource SettingsExpanderItemPadding}"
+            BorderThickness="1" BorderBrush="#19000000"
 			CornerRadius="4" Margin="10,3,10,0">
 			<Grid ColumnDefinitions="45,*,auto" VerticalAlignment="Center">
 				<ui:FontIcon Glyph="&#xf0c1;" FontFamily="{StaticResource IconFont}" FontSize="20" HorizontalAlignment="Left" />
