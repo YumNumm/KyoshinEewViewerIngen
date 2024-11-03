@@ -2,7 +2,6 @@ using Avalonia.Controls;
 using ReactiveUI;
 using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
 using Location = KyoshinMonitorLib.Location;
 
 namespace KyoshinEewViewer.Core.Models;
@@ -110,6 +109,13 @@ public class KyoshinEewViewerConfiguration : ReactiveObject
 		{
 			get => _useExperimentalShakeDetect;
 			set => this.RaiseAndSetIfChanged(ref _useExperimentalShakeDetect, value);
+		}
+
+		private KyoshinEventLevel _eventNotificationLevel = KyoshinEventLevel.Medium;
+		public KyoshinEventLevel EventNotificationLevel
+		{
+			get => _eventNotificationLevel;
+			set => this.RaiseAndSetIfChanged(ref _eventNotificationLevel, value);
 		}
 
 		private int _fetchFrequency = 1;

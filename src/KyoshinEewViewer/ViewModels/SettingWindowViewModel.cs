@@ -16,7 +16,6 @@ using ReactiveUI;
 using Splat;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO.Ports;
 using System.Linq;
 using System.Reactive;
@@ -30,6 +29,15 @@ namespace KyoshinEewViewer.ViewModels;
 
 public class SettingWindowViewModel : ViewModelBase
 {
+	public static Dictionary<KyoshinEventLevel, string> KyoshinEventLevelNames { get; } = new()
+	{
+		// { KyoshinEventLevel.Weaker, "微弱" },
+		{ KyoshinEventLevel.Weak, "弱い(震度1未満)" },
+		{ KyoshinEventLevel.Medium, "普通(震度1程度以上)" },
+		{ KyoshinEventLevel.Strong, "強い(震度3程度以上)" },
+		{ KyoshinEventLevel.Stronger, "非常に強い(震度5弱程度以上)" },
+	};
+
 	public KyoshinEewViewerConfiguration Config { get; }
 	public SeriesController SeriesController { get; }
 	public SoundPlayerService SoundPlayerService { get; }

@@ -137,7 +137,7 @@ public abstract class EarthquakeInformationHost(bool isReplay, KyoshinEewViewerC
 	{
 		// 震度が不明でない、キャンセルされてない、最終報から1分未満、座標が設定されている場合のみズーム
 		var targetEews = Eews.Where(e => /*(e.Source == EewSource.SignalNowProfessional && e.Intensity != JmaIntensity.Unknown) &&*/ !e.IsCancelled && (!e.IsFinal || (time - e.ReceiveTime).Minutes < 1) && e.Location != null);
-		if (!targetEews.Any() && (!Config.KyoshinMonitor.UseExperimentalShakeDetect || !KyoshinEvents.Any(k => k.Level > KyoshinEventLevel.Weaker)))
+		if (!targetEews.Any() && (!Config.KyoshinMonitor.UseExperimentalShakeDetect || !KyoshinEvents.Any(k => k.Level > Config.KyoshinMonitor.EventNotificationLevel)))
 		{
 			MapNavigationRequest = null;
 			return;
@@ -187,7 +187,7 @@ public abstract class EarthquakeInformationHost(bool isReplay, KyoshinEewViewerC
 			CheckLocation(new(l.Latitude + 1, l.Longitude + 1));
 		}
 		// Event
-		foreach (var e in KyoshinEvents.Where(k => k.Level > KyoshinEventLevel.Weaker))
+		foreach (var e in KyoshinEvents.Where(k => k.Level > Config.KyoshinMonitor.EventNotificationLevel))
 		{
 			CheckLocation2(e.TopLeft);
 			CheckLocation2(e.BottomRight);

@@ -171,7 +171,7 @@ public class KyoshinMonitorSeries : SeriesBase
 				break;
 		}
 		MessageBus.Current.SendMessage(new KyoshinShakeDetected(e.e, e.isLevelUp));
-		if (Config.KyoshinMonitor.SwitchAtShakeDetect && e.e.Level >= KyoshinEventLevel.Weak)
+		if (Config.KyoshinMonitor.SwitchAtShakeDetect && e.e.Level >= Config.KyoshinMonitor.EventNotificationLevel)
 			ActiveRequest.Send(this);
 	}
 

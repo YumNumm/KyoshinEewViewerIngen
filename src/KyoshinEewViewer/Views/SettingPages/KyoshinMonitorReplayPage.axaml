@@ -68,7 +68,7 @@
                     <TextBlock Text="{Binding TimeshiftSecondsString}" HorizontalAlignment="Center" />
                 </Grid>
                 <Slider Margin="0,5" Value="{Binding TimeshiftSeconds}"
-						Minimum="1" Maximum="10800" />
+						Minimum="0" Maximum="10800" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,-15,0,0">
                     <StackPanel.Styles>
                         <Style Selector="Button">
