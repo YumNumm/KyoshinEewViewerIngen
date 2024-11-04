@@ -137,7 +137,7 @@ public abstract class EarthquakeInformationHost(bool isReplay, KyoshinEewViewerC
 	{
 		// 震度が不明でない、キャンセルされてない、最終報から1分未満、座標が設定されている場合のみズーム
 		var targetEews = Eews.Where(e => /*(e.Source == EewSource.SignalNowProfessional && e.Intensity != JmaIntensity.Unknown) &&*/ !e.IsCancelled && (!e.IsFinal || (time - e.ReceiveTime).Minutes < 1) && e.Location != null);
-		if (!targetEews.Any() && (!Config.KyoshinMonitor.UseExperimentalShakeDetect || !KyoshinEvents.Any(k => k.Level > Config.KyoshinMonitor.EventNotificationLevel)))
+		if (!targetEews.Any() && (!Config.KyoshinMonitor.UseExperimentalShakeDetect || !KyoshinEvents.Any(k => k.Level >= Config.KyoshinMonitor.EventNotificationLevel)))
 		{
 			MapNavigationRequest = null;
 			return;
@@ -187,7 +187,7 @@ public abstract class EarthquakeInformationHost(bool isReplay, KyoshinEewViewerC
 			CheckLocation(new(l.Latitude + 1, l.Longitude + 1));
 		}
 		// Event
-		foreach (var e in KyoshinEvents.Where(k => k.Level > Config.KyoshinMonitor.EventNotificationLevel))
+		foreach (var e in KyoshinEvents.Where(k => k.Level >= Config.KyoshinMonitor.EventNotificationLevel))
 		{
 			CheckLocation2(e.TopLeft);
 			CheckLocation2(e.BottomRight);
@@ -199,6 +199,9 @@ public abstract class EarthquakeInformationHost(bool isReplay, KyoshinEewViewerC
 		// MapPadding = targetEews.Any() ? new Thickness(310, 0, 0, 0) : new Thickness(0);
 
 		// 初回移動時は MustBound を設定しないようにしてズームを適切に動作させるようにする
-		MapNavigationRequest = new(new(minLat, minLng, maxLat - minLat, maxLng - minLng), MapNavigationRequest != null ? new(minLat2, minLng2, maxLat2 - minLat2, maxLng2 - minLng2) : null);
+		MapNavigationRequest = new(
+			new(minLat, minLng, maxLat - minLat, maxLng - minLng),
+			MapNavigationRequest != null ? new(minLat2, minLng2, maxLat2 - minLat2, maxLng2 - minLng2) : null
+		);
 	}
 }

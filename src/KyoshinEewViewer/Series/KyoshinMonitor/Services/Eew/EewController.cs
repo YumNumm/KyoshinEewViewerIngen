@@ -242,4 +242,10 @@ public class EewController
 
 		return isUpdated;
 	}
+
+	public void Clear()
+	{
+		lock (EewCache)
+			EewCache.Clear();
+	}
 }

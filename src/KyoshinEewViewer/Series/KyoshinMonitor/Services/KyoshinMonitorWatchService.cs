@@ -374,6 +374,7 @@ public class KyoshinMonitorWatchService
 			point.EventedExpireAt = DateTime.MinValue;
 		}
 		KyoshinEvents.Clear();
+		LatestEew = null;
 	}
 }
 

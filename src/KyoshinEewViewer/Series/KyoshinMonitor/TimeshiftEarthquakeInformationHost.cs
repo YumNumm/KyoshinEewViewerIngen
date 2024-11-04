@@ -24,7 +24,7 @@ public class TimeshiftEarthquakeInformationHost : EarthquakeInformationHost
 	private Dictionary<Guid, KyoshinEventLevel> KyoshinEventLevelCache { get; } = [];
 
 	public override DateTime CurrentTime =>
-		Config.Eew.SyncKyoshinMonitorPsWave ? KyoshinMonitorWatcher.CurrentDisplayTime : TimerService.CurrentTime;
+		Config.Eew.SyncKyoshinMonitorPsWave ? KyoshinMonitorWatcher.CurrentDisplayTime : TimerService.CurrentTime.AddSeconds(-TimeshiftSeconds);
 
 	public TimeshiftEarthquakeInformationHost(
 		ILogManager logManager,
@@ -53,7 +53,7 @@ public class TimeshiftEarthquakeInformationHost : EarthquakeInformationHost
 				return;
 
 			var shiftedTime = time.AddSeconds(-TimeshiftSeconds);
-			KyoshinMonitorWatcher.TimerElapsed(shiftedTime).ConfigureAwait(false);
+			KyoshinMonitorWatcher.TimerElapsed(shiftedTime).Wait();
 		};
 		TimerService.TimerElapsed += (time) =>
 		{
@@ -161,6 +161,8 @@ public class TimeshiftEarthquakeInformationHost : EarthquakeInformationHost
 		ReplayDescription = sb.ToString();
 		IsRunning = true;
 
+		MapNavigationRequest = null;
+		EewController.Clear();
 		KyoshinMonitorWatcher.ResetHistories();
 		KyoshinEventLevelCache.Clear();
 		KyoshinMonitorWatcher.Initalize();

@@ -59,12 +59,18 @@ public class KyoshinMonitorSeries : SeriesBase
 			value.EewUpdated += EewUpdated;
 			value.RealtimeDataUpdated += RealtimeDataUpdated;
 			value.KyoshinEventUpdated += KyoshinEventUpdated;
+			if (KyoshinMonitorLayer != null)
+			{
+				KyoshinMonitorLayer.CurrentEews = [];
+				KyoshinMonitorLayer.ObservationPoints = [];
+				KyoshinMonitorLayer.KyoshinEvents = [];
+			}
 
 			MapNavigationSubscription?.Dispose();
 			MapNavigationSubscription = value.WhenAnyValue(x => x.MapNavigationRequest).Subscribe(x => MapNavigationRequest = x);
 
 			MapDisplayParameterSubscription?.Dispose();
-			MapDisplayParameterSubscription = value.WhenAnyValue(x => x.MapDisplayParameter).Subscribe(x => MapDisplayParameter = x with { OverlayLayers = [KyoshinMonitorLayer] });
+			MapDisplayParameterSubscription = value.WhenAnyValue(x => x.MapDisplayParameter).Subscribe(x => MapDisplayParameter = x with { OverlayLayers = [KyoshinMonitorLayer!] });
 		}
 	}
 
