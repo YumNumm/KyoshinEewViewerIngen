@@ -11,6 +11,7 @@ using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
 using KyoshinEewViewer.Services.Voicevox;
 using KyoshinEewViewer.Services.Workflows;
 using KyoshinEewViewer.Services.Workflows.BuiltinActions;
+using KyoshinEewViewer.Views.SettingPages;
 using KyoshinMonitorLib;
 using ReactiveUI;
 using Splat;
@@ -47,6 +48,16 @@ public class SettingWindowViewModel : ViewModelBase
 	public VoicevoxService VoicevoxService { get; }
 
 	private ILogger Logger { get; }
+
+	public ISettingPage[] SettingPages { get; }
+	public class BasicSettingPage<T>(string icon, string title, ISettingPage[] subPages) : ISettingPage where T : Control, new()
+	{
+		public string Icon => icon;
+		public string Title => title;
+		public Control DisplayControl => new T();
+
+		public ISettingPage[] SubPages => subPages;
+	}
 
 	public SettingWindowViewModel(
 		KyoshinEewViewerConfiguration config,
@@ -130,6 +141,28 @@ public class SettingWindowViewModel : ViewModelBase
 				SingleStyleSpeaker ss => [ss],
 				_ => [],
 			}).FirstOrDefault(s => s.SpeakerId == config.Voicevox.SpeakerId)?.Name ?? "不明");
+
+		SettingPages = [
+			new BasicSettingPage<UpdatePage>("\xf071", "アプリの更新", []),
+			new BasicSettingPage<GeneralPage>("\xf53f", "外観･基本設定", []),
+			new BasicSettingPage<FeaturePage>("\xf085", "機能設定", []),
+			new BasicSettingPage<NotifyPage>("\xf075", "通知", []),
+			new BasicSettingPage<SoundPage>("\xf028", "音声", []),
+			new BasicSettingPage<WorkflowPage>("\xe289", "ワークフロー", []),
+			new BasicSettingPage<VoicevoxPage>("\xf075", "VOICEVOX", []),
+			new BasicSettingPage<KyoshinMonitorPage>("\xf108", "強震モニタ", []),
+			new BasicSettingPage<KyoshinMonitorReplayPage>("├", "リプレイ", []),
+			new BasicSettingPage<KyoshinMonitorMapPage>("├", "地図アイコン", []),
+			new BasicSettingPage<KyoshinMonitorEewPage>("└", "緊急地震速報", []),
+			new BasicSettingPage<EarthquakePage>("\xf09e", "地震･津波情報", []),
+			new BasicSettingPage<RadarPage>("\xf740", "雨雲レーダー", []),
+			new BasicSettingPage<DmdataPage>("\xf48b", "DM-D.S.S", []),
+			new BasicSettingPage<QzssPage>("\xf7bf", "みちびき 災危通報", []),
+			new BasicSettingPage<MapPage>("\xf5a0", "地図", []),
+			new BasicSettingPage<AboutPage>("\xf129", "このアプリについて", []),
+			new BasicSettingPage<LicencePage>("\xf2c2", "ライセンス", []),
+			new BasicSettingPage<DebugMenuPage>("\xf188", "デバッグメニュー", []),
+		];
 
 		if (Design.IsDesignMode)
 		{

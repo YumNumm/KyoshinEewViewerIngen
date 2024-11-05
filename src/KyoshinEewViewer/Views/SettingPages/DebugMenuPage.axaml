@@ -1,0 +1,52 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:vm="using:KyoshinEewViewer.ViewModels"
+			 xmlns:ui="using:FluentAvalonia.UI.Controls"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="600"
+			 x:DataType="vm:SettingWindowViewModel" x:CompileBindings="True"
+             x:Class="KyoshinEewViewer.Views.SettingPages.DebugMenuPage">
+    <StackPanel>
+        <HeaderedContentControl>
+            <HeaderedContentControl.Header>
+                <TextBlock Text="地震情報" FontSize="24" FontFamily="{DynamicResource MainMediumFont}" />
+            </HeaderedContentControl.Header>
+            <StackPanel Margin="2" HorizontalAlignment="Stretch">
+                <Grid ColumnDefinitions="auto,*,auto">
+                    <TextBlock Text="eventID:" Margin="0,0,5,0" />
+                    <TextBox Grid.Column="1" Text="{Binding JmaEqdbId}" Margin="0,0,5,0" />
+                    <Button Grid.Column="2" Content="取得" Command="{Binding ProcessJmaEqdbRequest}" />
+                </Grid>
+            </StackPanel>
+        </HeaderedContentControl>
+        <HeaderedContentControl>
+            <HeaderedContentControl.Header>
+                <TextBlock Text="災危通報" FontSize="24" FontFamily="{DynamicResource MainMediumFont}" />
+            </HeaderedContentControl.Header>
+            <StackPanel Margin="2" HorizontalAlignment="Stretch">
+                <Grid ColumnDefinitions="auto,*,auto">
+                    <TextBlock Text="HEX:" Margin="0,0,5,0" />
+                    <TextBox Grid.Column="1" Text="{Binding QzqsmHexString}" Margin="0,0,5,0" />
+                    <Button Grid.Column="2" Content="送信" Command="{Binding ProcessDCReportRequest}" />
+                </Grid>
+            </StackPanel>
+        </HeaderedContentControl>
+        <Button Content="アプリをクラッシュさせる" FontSize="24" Command="{Binding CrashApp}" HorizontalAlignment="Center">
+            <Button.Styles>
+                <Style>
+                    <Style.Resources>
+                        <SolidColorBrush x:Key="ThemeBorderMidBrush">Red</SolidColorBrush>
+                        <SolidColorBrush x:Key="ThemeControlHighBrush">DarkRed</SolidColorBrush>
+                        <SolidColorBrush x:Key="ButtonBackground">DarkRed</SolidColorBrush>
+                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver">Red</SolidColorBrush>
+                        <SolidColorBrush x:Key="ButtonBackgroundPressed">OrangeRed</SolidColorBrush>
+                        <SolidColorBrush x:Key="ButtonForeground">White</SolidColorBrush>
+                        <SolidColorBrush x:Key="ButtonForegroundPointerOver">White</SolidColorBrush>
+                        <SolidColorBrush x:Key="ButtonForegroundPressed">White</SolidColorBrush>
+                    </Style.Resources>
+                </Style>
+            </Button.Styles>
+        </Button>
+    </StackPanel>
+</UserControl>

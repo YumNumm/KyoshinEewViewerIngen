@@ -122,21 +122,7 @@
 				</StackPanel>
 			</TabItem.Header>
 			<ScrollViewer>
-                <StackPanel>
-                    <TextBlock Text="機能設定" FontWeight="Bold" Margin="10,20,10,5" />
-                    <TextBlock Text="利用機能の選択ができます。有効でない場合、通知などは行われません。再起動後反映されます。" Margin="10,0,10,5" />
-                    <ItemsControl ItemsSource="{Binding Series}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:SeriesViewModel">
-                                <ui:SettingsExpander Header="{Binding Meta.Name}" IconSource="{Binding Meta.Icon}" Description="{Binding Meta.Detail}">
-                                    <ui:SettingsExpander.Footer>
-                                        <ToggleSwitch IsChecked="{Binding IsEnabled}" OnContent="有効" OffContent="無効" />
-                                    </ui:SettingsExpander.Footer>
-                                </ui:SettingsExpander>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
+                <pages:FeaturePage />
 			</ScrollViewer>
 		</TabItem>
 		<!-- 通知設定 -->
@@ -304,25 +290,7 @@
 				</StackPanel>
 			</TabItem.Header>
 			<ScrollViewer>
-				<HeaderedContentControl>
-					<HeaderedContentControl.Header>
-						<TextBlock Text="KyoshinEewViewer for ingen" FontSize="24" FontFamily="{DynamicResource MainMediumFont}" />
-					</HeaderedContentControl.Header>
-					<md:MarkdownScrollViewer Margin="2" HorizontalAlignment="Stretch" Source="avares://KyoshinEewViewer/Assets/AboutText.md">
-						<md:MarkdownScrollViewer.Styles>
-							<Style Selector="ctxt|CTextBlock.Heading2">
-								<Setter Property="Foreground" Value="{DynamicResource SubForegroundColor}"/>
-								<Setter Property="FontFamily" Value="{DynamicResource MainMediumFont}"/>
-							</Style>
-							<Style Selector="ctxt|CHyperlink">
-								<Setter Property="Foreground" Value="{DynamicResource SubForegroundColor}"/>
-							</Style>
-							<Style Selector="ctxt|CHyperlink:hover">
-								<Setter Property="Foreground" Value="{DynamicResource ForegroundColor}"/>
-							</Style>
-						</md:MarkdownScrollViewer.Styles>
-					</md:MarkdownScrollViewer>
-				</HeaderedContentControl>
+				<pages:AboutPage />
 			</ScrollViewer>
 		</TabItem>
 		<!--ライセンス情報-->
@@ -334,29 +302,7 @@
 				</StackPanel>
 			</TabItem.Header>
 			<ScrollViewer>
-				<HeaderedContentControl>
-					<HeaderedContentControl.Header>
-						<TextBlock Text="LICENCE" FontSize="24" FontFamily="{DynamicResource MainMediumFont}" />
-					</HeaderedContentControl.Header>
-					<md:MarkdownScrollViewer HorizontalAlignment="Stretch" Source="avares://KyoshinEewViewer/Assets/Licenses.md">
-						<md:MarkdownScrollViewer.Styles>
-							<Style Selector="ctxt|CTextBlock.Heading2">
-								<Setter Property="Foreground" Value="{DynamicResource SubForegroundColor}"/>
-								<Setter Property="FontFamily" Value="{DynamicResource MainMediumFont}"/>
-							</Style>
-							<Style Selector="ctxt|CTextBlock.Heading3">
-								<Setter Property="Foreground" Value="{DynamicResource SubForegroundColor}"/>
-								<Setter Property="FontFamily" Value="{DynamicResource MainMediumFont}"/>
-							</Style>
-							<Style Selector="ctxt|CHyperlink">
-								<Setter Property="Foreground" Value="{DynamicResource SubForegroundColor}"/>
-							</Style>
-							<Style Selector="ctxt|CHyperlink:hover">
-								<Setter Property="Foreground" Value="{DynamicResource ForegroundColor}"/>
-							</Style>
-						</md:MarkdownScrollViewer.Styles>
-					</md:MarkdownScrollViewer>
-				</HeaderedContentControl>
+				<pages:LicencePage />
 			</ScrollViewer>
 		</TabItem>
 		<!-- デバッグメニュー -->
@@ -368,71 +314,7 @@
 				</StackPanel>
 			</TabItem.Header>
 			<ScrollViewer>
-				<StackPanel>
-                    <!--
-					<TextBlock Text="{Binding CurrentDirectory}" />
-					<HeaderedContentControl>
-						<HeaderedContentControl.Header>
-							<TextBlock Text="強震モニタ" FontSize="24" FontFamily="{DynamicResource MainMediumFont}" />
-						</HeaderedContentControl.Header>
-						<StackPanel Margin="2" HorizontalAlignment="Stretch">
-							<Grid ColumnDefinitions="auto,*">
-								<TextBlock Text="ベースパス" Margin="0,0,5,0" />
-								<TextBox Grid.Column="1" Text="{Binding ReplayBasePath}" />
-							</Grid>
-							<TextBlock Text="開始日時" />
-							<StackPanel Margin="0,5">
-								<DatePicker SelectedDate="{Binding ReplaySelectedDate}" />
-								<TimePicker SelectedTime="{Binding ReplaySelectedTime}" />
-							</StackPanel>
-							<StackPanel Orientation="Horizontal">
-								<Button Content="ローカルリプレイを開始する" Command="{Binding StartDebugReplay}" />
-								<Button Content="ローカルリプレイを終了する" Command="{Binding EndDebugReplay}" />
-							</StackPanel>
-						</StackPanel>
-					</HeaderedContentControl>
-                    -->
-					<HeaderedContentControl>
-						<HeaderedContentControl.Header>
-							<TextBlock Text="地震情報" FontSize="24" FontFamily="{DynamicResource MainMediumFont}" />
-						</HeaderedContentControl.Header>
-						<StackPanel Margin="2" HorizontalAlignment="Stretch">
-							<Grid ColumnDefinitions="auto,*,auto">
-								<TextBlock Text="eventID:" Margin="0,0,5,0" />
-								<TextBox Grid.Column="1" Text="{Binding JmaEqdbId}" Margin="0,0,5,0" />
-								<Button Grid.Column="2" Content="取得" Command="{Binding ProcessJmaEqdbRequest}" />
-							</Grid>
-						</StackPanel>
-					</HeaderedContentControl>
-					<HeaderedContentControl>
-						<HeaderedContentControl.Header>
-							<TextBlock Text="災危通報" FontSize="24" FontFamily="{DynamicResource MainMediumFont}" />
-						</HeaderedContentControl.Header>
-						<StackPanel Margin="2" HorizontalAlignment="Stretch">
-							<Grid ColumnDefinitions="auto,*,auto">
-								<TextBlock Text="HEX:" Margin="0,0,5,0" />
-								<TextBox Grid.Column="1" Text="{Binding QzqsmHexString}" Margin="0,0,5,0" />
-								<Button Grid.Column="2" Content="送信" Command="{Binding ProcessDCReportRequest}" />
-							</Grid>
-						</StackPanel>
-					</HeaderedContentControl>
-					<Button Content="アプリをクラッシュさせる" FontSize="24" Command="{Binding CrashApp}" HorizontalAlignment="Center">
-						<Button.Styles>
-							<Style>
-								<Style.Resources>
-									<SolidColorBrush x:Key="ThemeBorderMidBrush">Red</SolidColorBrush>
-									<SolidColorBrush x:Key="ThemeControlHighBrush">DarkRed</SolidColorBrush>
-									<SolidColorBrush x:Key="ButtonBackground">DarkRed</SolidColorBrush>
-									<SolidColorBrush x:Key="ButtonBackgroundPointerOver">Red</SolidColorBrush>
-									<SolidColorBrush x:Key="ButtonBackgroundPressed">OrangeRed</SolidColorBrush>
-									<SolidColorBrush x:Key="ButtonForeground">White</SolidColorBrush>
-									<SolidColorBrush x:Key="ButtonForegroundPointerOver">White</SolidColorBrush>
-									<SolidColorBrush x:Key="ButtonForegroundPressed">White</SolidColorBrush>
-								</Style.Resources>
-							</Style>
-						</Button.Styles>
-					</Button>
-				</StackPanel>
+                <pages:DebugMenuPage />
 			</ScrollViewer>
 		</TabItem>
 	</TabControl>
