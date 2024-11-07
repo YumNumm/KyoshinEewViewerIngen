@@ -71,9 +71,9 @@ public class KyoshinMonitorSeries : SeriesBase
 			value.KyoshinEventUpdated += KyoshinEventUpdated;
 			if (KyoshinMonitorLayer != null)
 			{
-				KyoshinMonitorLayer.CurrentEews = [];
+				EewUpdated(DateTime.MinValue, value.Eews);
 				KyoshinMonitorLayer.ObservationPoints = [];
-				KyoshinMonitorLayer.KyoshinEvents = [];
+				KyoshinMonitorLayer.KyoshinEvents = value.KyoshinEvents;
 			}
 
 			MapNavigationSubscription?.Dispose();
