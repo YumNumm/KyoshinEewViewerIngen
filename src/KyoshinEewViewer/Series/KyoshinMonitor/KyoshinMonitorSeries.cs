@@ -2,7 +2,6 @@ using Avalonia.Controls;
 using FluentAvalonia.UI.Controls;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
-using KyoshinEewViewer.Core.Models.Events;
 using KyoshinEewViewer.Events;
 using KyoshinEewViewer.Series.KyoshinMonitor.Events;
 using KyoshinEewViewer.Series.KyoshinMonitor.Models;

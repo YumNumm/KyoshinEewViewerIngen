@@ -1,5 +1,4 @@
 using KyoshinEewViewer.DCReportParser.Exceptions;
-using System;
 
 namespace KyoshinEewViewer.DCReportParser;
 

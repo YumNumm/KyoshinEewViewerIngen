@@ -6,7 +6,6 @@ using Avalonia.Rendering.SceneGraph;
 using Avalonia.Skia;
 using Avalonia.Threading;
 using KyoshinEewViewer.Core;
-using KyoshinEewViewer.CustomControl;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;

@@ -5,7 +5,6 @@ using KyoshinEewViewer;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.CustomControl;
-using KyoshinEewViewer.Series;
 using ReactiveUI;
 using Splat;
 using System;

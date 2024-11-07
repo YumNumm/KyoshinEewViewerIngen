@@ -12,7 +12,6 @@ using ReactiveUI;
 using Splat;
 using System;
 using System.Reactive.Linq;
-using System.Runtime.InteropServices;
 
 namespace KyoshinEewViewer.Browser;
 

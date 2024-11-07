@@ -1,16 +1,12 @@
-using DynamicData.Binding;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Core.Models.Events;
 using KyoshinEewViewer.DCReportParser;
 using KyoshinEewViewer.DCReportParser.Exceptions;
-using KyoshinEewViewer.Services;
 using KyoshinMonitorLib;
 using ReactiveUI;
 using Splat;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO.Ports;
 using System.Reactive.Linq;
 using System.Text;

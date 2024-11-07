@@ -4,7 +4,6 @@ using KyoshinEewViewer.Map;
 using KyoshinEewViewer.Map.Layers;
 using KyoshinEewViewer.Series.KyoshinMonitor.Models;
 using KyoshinEewViewer.Series.KyoshinMonitor.Services;
-using KyoshinEewViewer.Services;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;

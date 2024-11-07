@@ -1,14 +1,11 @@
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Skia;
 using Avalonia.Skia.Helpers;
-using KyoshinEewViewer.CustomControl;
 using KyoshinEewViewer.Map.Data;
 using KyoshinEewViewer.Map.Layers;
 using KyoshinEewViewer.Map.Layers.ImageTile;
 using ReactiveUI;
 using SkiaSharp;
-using Splat;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
