@@ -5,7 +5,7 @@
 			 xmlns:vm="using:KyoshinEewViewer.Series.KyoshinMonitor.SettingPages"
 			 xmlns:ui="using:FluentAvalonia.UI.Controls"
              mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="1000"
-			 x:DataType="vm:KyoshinMonitorReplaySettingPage" x:CompileBindings="False"
+			 x:DataType="vm:KyoshinMonitorReplaySettingPage"
              x:Class="KyoshinEewViewer.Series.KyoshinMonitor.SettingPages.KyoshinMonitorReplayPage">
     <UserControl.Styles>
         <Style Selector="Label">
@@ -31,9 +31,10 @@
                     <ui:FontIcon Glyph="&#xf201;" FontFamily="{StaticResource IconFont}" FontSize="20" HorizontalAlignment="Left" />
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5">
                         <TextBlock Text="表示中の情報:" />
-                        <TextBlock Text="リアルタイム震度" Foreground="{DynamicResource SubForegroundColor}" />
+                        <TextBlock Text="{Binding Series.CurrentInformationHost.ReplayDescription}" Foreground="{DynamicResource SubForegroundColor}" />
                     </StackPanel>
-                    <Button Grid.Column="2" Classes="accent" Content="リアルタイムに戻る" HorizontalAlignment="Center" Command="{Binding ReturnToRealtime}" />
+                    <Button Grid.Column="2" Classes="accent" Content="リアルタイムに戻る" HorizontalAlignment="Center"
+                            IsVisible="{Binding Series.NowReplaying}" Command="{Binding Series.ReturnToRealtime}" />
                 </Grid>
             </Border>
             <ui:SettingsExpander Header="リプレイ中もリアルタイム震度の受信を継続する"
@@ -63,11 +64,12 @@
                     </Grid>
                 </Expander.Header>
                 <StackPanel HorizontalAlignment="Stretch">
-                    <Grid Margin="0,5,0,-5">
+                    <Panel Margin="0,5,0,-5">
                         <TextBlock Text="現在" FontSize="14" HorizontalAlignment="Left" />
                         <TextBlock Text="3時間前" FontSize="14" HorizontalAlignment="Right" />
                         <TextBlock Text="{Binding TimeshiftSecondsString}" HorizontalAlignment="Center" />
-                    </Grid>
+                        <TextBlock Text="{Binding TimeshiftedDateTime, StringFormat={}yyyy/MM/dd hh:mm:ss}" HorizontalAlignment="Center" Margin="0,-28,0,0" />
+                    </Panel>
                     <Slider Margin="0,5" Value="{Binding TimeshiftSeconds}"
                             Minimum="0" Maximum="10800" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,-15,0,0">
@@ -87,12 +89,12 @@
                         <Button Content="-1m" CommandParameter="60" />
                         <Button Content="-10m" CommandParameter="600" />
                     </StackPanel>
-                    <Button Content="タイムシフト開始" Command="{Binding StartTimeshift}"
+                    <Button Content="タイムシフト開始" Command="{Binding Series.StartTimeshift}"
                             HorizontalAlignment="Center" Margin="0,5" />
                     <TextBlock Text="※タイムシフト中は強震モニタ以外の緊急地震速報のソースは利用できません。" FontSize="12" />
                 </StackPanel>
             </Expander>
-            <Expander Margin="10,0" IsExpanded="True" IsVisible="{Binding IsDebug}">
+            <Expander Margin="10,0" IsExpanded="True" IsVisible="False">
                 <Expander.Header>
                     <Grid ColumnDefinitions="40,*" RowDefinitions="*,auto" Margin="0,15">
                         <ui:FontIcon Glyph="&#xf15b;" FontFamily="{StaticResource IconFont}" FontSize="20" HorizontalAlignment="Left" Grid.RowSpan="2" />

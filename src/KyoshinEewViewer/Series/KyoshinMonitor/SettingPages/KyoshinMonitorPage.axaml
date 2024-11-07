@@ -5,7 +5,7 @@
 			 xmlns:vm="using:KyoshinEewViewer.ViewModels"
 			 xmlns:ui="using:FluentAvalonia.UI.Controls"
              mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="1000"
-			 x:DataType="vm:SettingWindowViewModel" x:CompileBindings="False"
+			 x:DataType="vm:SettingWindowViewModel"
              x:Class="KyoshinEewViewer.Series.KyoshinMonitor.SettingPages.KyoshinMonitorPage">
     <UserControl.Styles>
         <Style Selector="Label">
@@ -81,7 +81,7 @@
                                 Value="{Binding Config.KyoshinMonitor.FetchFrequency}" VerticalAlignment="Center" />
                     </DockPanel>
                 </ui:SettingsExpander.Footer>
-                <CheckBox Content="EEW受信中は受信間隔を1秒毎にする" IsChecked="{Binding $parent[UserControl].DataContext.Config.KyoshinMonitor.ForcefetchOnEew}" Margin="0,4" />
+                <CheckBox Content="EEW受信中は受信間隔を1秒毎にする" IsChecked="{Binding Config.KyoshinMonitor.ForcefetchOnEew}" Margin="0,4" />
             </ui:SettingsExpander>
 
             <ui:SettingsExpander Header="色の例を表示する" Description="Rt震度 は リアルタイム震度 の省略表記です。">

@@ -34,9 +34,11 @@ public class KyoshinMonitorSeries : SeriesBase
 
 	private KyoshinMonitorView? _control;
 	public override Control DisplayControl => _control ?? throw new InvalidOperationException("初期化前にコントロールが呼ばれています");
+	
+	private KyoshinMonitorReplaySettingPage ReplaySettingPage { get; }
 	public override ISettingPage[] SettingPages => [
 		new BasicSettingPage<KyoshinMonitorPage>("\xf108", "強震モニタ", [
-			new KyoshinMonitorReplaySettingPage(Config, this),
+			ReplaySettingPage,
 			new BasicSettingPage<KyoshinMonitorMapPage>(null, "地図アイコン", []),
 			new BasicSettingPage<KyoshinMonitorEewPage>(null, "緊急地震速報", []),
 		]),
@@ -79,7 +81,33 @@ public class KyoshinMonitorSeries : SeriesBase
 
 			MapDisplayParameterSubscription?.Dispose();
 			MapDisplayParameterSubscription = value.WhenAnyValue(x => x.MapDisplayParameter).Subscribe(x => MapDisplayParameter = x with { OverlayLayers = [KyoshinMonitorLayer!] });
+
+			NowReplaying = value.IsReplay;
 		}
+	}
+
+	private bool _nowReplaying;
+	public bool NowReplaying
+	{
+		get => _nowReplaying;
+		set => this.RaiseAndSetIfChanged(ref _nowReplaying, value);
+	}
+
+	public void StartTimeshift()
+	{
+		if (!Config.KyoshinMonitor.KeepReceiveDuringReplay)
+			RealtimeInformationHost.Stop();
+		TimeshiftInformationHost.Start(ReplaySettingPage.TimeshiftSeconds);
+		CurrentInformationHost = TimeshiftInformationHost;
+	}
+
+	public void ReturnToRealtime()
+	{
+		if (CurrentInformationHost == RealtimeInformationHost)
+			return;
+		TimeshiftInformationHost.Stop();
+		RealtimeInformationHost.Start();
+		CurrentInformationHost = RealtimeInformationHost;
 	}
 
 	public DateTime CurrentDisplayTime => _currentInformationHost?.CurrentTime ?? DateTime.Now;
@@ -90,7 +118,8 @@ public class KyoshinMonitorSeries : SeriesBase
 		SoundPlayerService soundPlayer,
 		WorkflowService workflowService,
 		RealtimeEarthquakeInformationHost realtimeHost,
-		TimeshiftEarthquakeInformationHost timeshiftHost) : base(MetaData)
+		TimeshiftEarthquakeInformationHost timeshiftHost,
+		TimerService timerService) : base(MetaData)
 	{
 		SplatRegistrations.RegisterLazySingleton<KyoshinMonitorSeries>();
 
@@ -102,6 +131,8 @@ public class KyoshinMonitorSeries : SeriesBase
 		MediumShakeDetectedSound = soundPlayer.RegisterSound(SoundCategory, "MediumShakeDetected", "揺れ検出(震度1以上3未満)", "震度上昇時にも鳴動します。\n鳴動させるためには揺れ検出の設定を有効にしている必要があります。");
 		StrongShakeDetectedSound = soundPlayer.RegisterSound(SoundCategory, "StrongShakeDetected", "揺れ検出(震度3以上5弱未満)", "震度上昇時にも鳴動します。\n鳴動させるためには揺れ検出の設定を有効にしている必要があります。");
 		StrongerShakeDetectedSound = soundPlayer.RegisterSound(SoundCategory, "StrongerShakeDetected", "揺れ検出(震度5弱以上)", "震度上昇時にも鳴動します。\n鳴動させるためには揺れ検出の設定を有効にしている必要があります。");
+
+		ReplaySettingPage = new KyoshinMonitorReplaySettingPage(Config, this, timerService);
 
 		CurrentInformationHost = RealtimeInformationHost = realtimeHost;
 		RealtimeInformationHost.KyoshinEventUpdated += e => {
@@ -124,24 +155,6 @@ public class KyoshinMonitorSeries : SeriesBase
 	public override void Initialize()
 	{
 		RealtimeInformationHost.Start();
-
-		MessageBus.Current.Listen<KyoshinMonitorTimeshiftStartRequested>().Subscribe(e =>
-		{
-			if (!Config.KyoshinMonitor.KeepReceiveDuringReplay)
-				RealtimeInformationHost.Stop();
-			TimeshiftInformationHost.Start(e.TimeshiftSeconds);
-			CurrentInformationHost = TimeshiftInformationHost;
-		});
-		MessageBus.Current.Listen<KyoshinMonitorReplayStopRequest>().Subscribe(e => ReturnToRealtime());
-	}
-
-	private void ReturnToRealtime()
-	{
-		if (CurrentInformationHost == RealtimeInformationHost)
-			return;
-		TimeshiftInformationHost.Stop();
-		RealtimeInformationHost.Start();
-		CurrentInformationHost = RealtimeInformationHost;
 	}
 
 	public override void Activating()

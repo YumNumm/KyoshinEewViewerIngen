@@ -5,6 +5,7 @@ using ReactiveUI;
 using System.Text;
 using System;
 using System.Reactive;
+using KyoshinEewViewer.Services;
 
 namespace KyoshinEewViewer.Series.KyoshinMonitor.SettingPages;
 
@@ -21,7 +22,8 @@ public class KyoshinMonitorReplaySettingPage : ReactiveObject, ISettingPage
 	public ISettingPage[] SubPages => [];
 
 	public KyoshinMonitorSeries Series { get; }
-	private KyoshinEewViewerConfiguration Config { get; }
+	public KyoshinEewViewerConfiguration Config { get; }
+	private TimerService TimerService { get; }
 
 
 	private int _timeshiftSeconds = 0;
@@ -35,20 +37,26 @@ public class KyoshinMonitorReplaySettingPage : ReactiveObject, ISettingPage
 				value = 0;
 			this.RaiseAndSetIfChanged(ref _timeshiftSeconds, value);
 			UpdateTimeshiftString();
+			TimeshiftedDateTime = TimerService.CurrentDisplayTime.AddSeconds(-TimeshiftSeconds);
 		}
 	}
 	private string _timeshiftSecondsString = "リアルタイム";
 
-	public KyoshinMonitorReplaySettingPage(KyoshinEewViewerConfiguration config, KyoshinMonitorSeries series)
+	public KyoshinMonitorReplaySettingPage(KyoshinEewViewerConfiguration config, KyoshinMonitorSeries series, TimerService timerService)
     {
 		Series = series;
 		Config = config;
+		TimerService = timerService;
 
 		OffsetTimeshiftSeconds = ReactiveCommand.Create<string>(amountString =>
 		{
-			var amount = int.Parse(amountString);
-			TimeshiftSeconds += amount;
+			TimeshiftSeconds += int.Parse(amountString);
 		});
+
+		TimerService.DelayedTimerElapsed += t =>
+		{
+			TimeshiftedDateTime = t.AddSeconds(-TimeshiftSeconds);
+		};
 	}
 
 	public string TimeshiftSecondsString
@@ -77,9 +85,12 @@ public class KyoshinMonitorReplaySettingPage : ReactiveObject, ISettingPage
 		TimeshiftSecondsString = sb.ToString();
 	}
 
+	private DateTime _timeshiftedDateTime;
+	public DateTime TimeshiftedDateTime
+	{
+		get => _timeshiftedDateTime;
+		set => this.RaiseAndSetIfChanged(ref _timeshiftedDateTime, value);
+	}
+
 	public ReactiveCommand<string, Unit> OffsetTimeshiftSeconds { get; }
-	public void StartTimeshift()
-		=> KyoshinMonitorTimeshiftStartRequested.Request(TimeshiftSeconds);
-	public void ReturnToRealtime()
-		=> KyoshinMonitorReplayStopRequest.Request();
 }

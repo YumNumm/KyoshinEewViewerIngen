@@ -204,6 +204,7 @@ Jsonの場合先頭は小文字になります。
 |WarningAreaNames|string[]|警報地域名の配列|`aaa`|
 |IsFinal|bool|最終報か|`false`|
 |IsCancelled|bool|キャンセル報か|`false`|
+|IsReplay (0.18.13 より利用可)|bool|リプレイ中(タイムシフト再生など)か|`false`|
 
 ### EewEventType
 
