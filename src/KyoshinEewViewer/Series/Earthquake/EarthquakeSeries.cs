@@ -397,7 +397,7 @@ public class EarthquakeSeries : SeriesBase
 			var size = .1f;
 			if (evt.Magnitude >= 4)
 				size = .3f;
-			if (evt.Magnitude >= 6 && evt.IsForeign)
+			if ((evt.Magnitude >= 6 && evt.IsForeign) || evt.IsVolcano)
 				size = 30;
 
 			zoomPoints.Add(new Location(hypocenter.Latitude - size, hypocenter.Longitude - size));

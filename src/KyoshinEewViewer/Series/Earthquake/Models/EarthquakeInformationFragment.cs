@@ -6,11 +6,15 @@ using KyoshinMonitorLib;
 using ReactiveUI;
 using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace KyoshinEewViewer.Series.Earthquake.Models;
 
-public abstract class EarthquakeInformationFragment : ReactiveObject
+public abstract partial class EarthquakeInformationFragment : ReactiveObject
 {
+	[GeneratedRegex("(.+)（日本時間）に(.+)で大規模な噴火が発生しました")]
+	private static partial Regex VolcanoMatchRegex();
+
 	// メモ　取り消しは上位でやる
 	public static EarthquakeInformationFragment CreateFromJmxXmlDocument(Telegram telegram, JmaXmlDocument report)
 	{
@@ -121,6 +125,10 @@ public abstract class EarthquakeInformationFragment : ReactiveObject
 						depth = CoordinateConverter.GetDepth(c.Value) ?? -1;
 					}
 
+					MatchCollection? volcanoMatches = null;
+					if (report.EarthquakeBody.Comments?.FreeFormComment is string fc)
+						volcanoMatches = VolcanoMatchRegex().Matches(fc);
+
 					return new HypocenterAndIntensityInformationFragment
 					{
 						ArrivedTime = report.Head.ReportDateTime.DateTime,
@@ -141,6 +149,8 @@ public abstract class EarthquakeInformationFragment : ReactiveObject
 
 						MaxIntensity = report.EarthquakeBody.Intensity?.Observation?.MaxInt?.ToJmaIntensity() ?? JmaIntensity.Unknown,
 						IsForeign = report.Head.Title == "遠地地震に関する情報",
+						IsVolcano = (volcanoMatches?.Count ?? 0) > 0,
+						VolcanoName = volcanoMatches?.FirstOrDefault()?.Groups[2].Value,
 
 						Comment = report.EarthquakeBody.Comments?.ForecastCommentText,
 						FreeFormComment = report.EarthquakeBody.Comments?.FreeFormComment,
@@ -186,6 +196,7 @@ public abstract class EarthquakeInformationFragment : ReactiveObject
 						MaxIntensity = report.EarthquakeBody.Intensity?.Observation?.MaxInt?.ToJmaIntensity() ?? JmaIntensity.Unknown,
 						MaxLpgmIntensity = report.EarthquakeBody.Intensity?.Observation?.MaxLgInt?.ToLpgmIntensity() ?? LpgmIntensity.Unknown,
 						IsForeign = false,
+						IsVolcano = false,
 
 						Comment = report.EarthquakeBody.Comments?.ForecastCommentText,
 						FreeFormComment = report.EarthquakeBody.Comments?.FreeFormComment,
@@ -359,6 +370,16 @@ public class HypocenterAndIntensityInformationFragment : HypocenterInformationFr
 	/// 海外で発生した地震か
 	/// </summary>
 	public required bool IsForeign { get; init; }
+
+	/// <summary>
+	/// 大規模な噴火か
+	/// </summary>
+	public required bool IsVolcano { get; init; }
+
+	/// <summary>
+	/// 噴火の場合の火山名
+	/// </summary>
+	public string? VolcanoName { get; init; }
 }
 
 /// <summary>

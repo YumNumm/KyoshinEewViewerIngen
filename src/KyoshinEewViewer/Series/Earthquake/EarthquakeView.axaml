@@ -20,9 +20,6 @@
         <conv:IntensityToColorConverter x:Key="IntensityToColor" />
         <conv:LpgmIntensityToColorConverter x:Key="LpgmIntensityToColor" />
     </UserControl.Resources>
-    <Design.DataContext>
-        <local:EarthquakeSeries />
-    </Design.DataContext>
     <Grid ColumnDefinitions="240,*,auto">
         <Grid RowDefinitions="auto,*">
             <!-- 選択した地震情報 -->
@@ -79,15 +76,35 @@
                             </StackPanel>
 
                             <StackPanel IsVisible="{Binding CurrentEvent.IsHypocenterAvailable}">
-                                <TextBlock Text="震央" FontSize="14" Margin="0,0,0,-16"
-											IsVisible="{Binding CurrentEvent.Place, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                <TextBlock Text="震央" FontSize="14" Margin="0,0,0,-16">
+                                    <TextBlock.IsVisible>
+                                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                            <Binding Path="CurrentEvent.Place" Converter="{x:Static StringConverters.IsNotNullOrEmpty}" />
+                                            <Binding Path="!CurrentEvent.IsVolcano" />
+                                        </MultiBinding>
+                                    </TextBlock.IsVisible>
+                                </TextBlock>
+                                <TextBlock Text="地域" FontSize="14" IsVisible="{Binding CurrentEvent.IsVolcano}" Margin="0,0,0,-16"/>
                                 <Viewbox Stretch="Fill" StretchDirection="DownOnly" Height="35" MaxWidth="175" HorizontalAlignment="Right"
 											IsVisible="{Binding CurrentEvent.Place, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                                     <TextBlock x:Name="HypocenterName" Text="{Binding CurrentEvent.Place}"
 												FontSize="24" FontWeight="Bold" />
                                 </Viewbox>
+                                
+                                <Viewbox Stretch="Fill" StretchDirection="DownOnly" Height="30" MaxWidth="230" HorizontalAlignment="Right" Margin="0,-8,0,0"
+											IsVisible="{Binding CurrentEvent.VolcanoName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Text="{Binding CurrentEvent.VolcanoName}" FontSize="20" FontWeight="Bold" />
+                                </Viewbox>
+                                
 
-                                <Panel IsVisible="{Binding CurrentEvent.IsHypocenterAvailable}">
+                                <Panel>
+                                    <Panel.IsVisible>
+                                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                            <Binding Path="CurrentEvent.IsHypocenterAvailable" />
+                                            <Binding Path="!CurrentEvent.IsVolcano" />
+                                        </MultiBinding>
+                                    </Panel.IsVisible>
+                                    
                                     <TextBlock Text="規模" FontSize="14" VerticalAlignment="Top" />
                                     <StackPanel
 										IsVisible="{Binding CurrentEvent.MagnitudeAlternativeText, Converter={x:Static StringConverters.IsNullOrEmpty}}"
@@ -207,7 +224,7 @@
         </StackPanel>
         <!-- 試験電文表示 -->
         <StackPanel Grid.Column="1" IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}" Opacity=".5">
-            <TextBlock IsVisible="{Binding CurrentEvent.IsTest}" Foreground="{DynamicResource SubForegroundColor}" FontSize="52" Text="  T  E  S  T" FontWeight="Bold" Margin="0,0,0,-50" />
+            <TextBlock IsVisible="{Binding CurrentEvent.IsTest}" Foreground="{DynamicResource SubForegroundColor}" FontSize="52" Text="D  R  I  L  L" FontWeight="Bold" Margin="0,0,0,-50" />
             <TextBlock IsVisible="{Binding CurrentEvent.IsTest}" Foreground="{DynamicResource SubForegroundColor}" FontSize="125" Text="試験" FontWeight="Bold" />
         </StackPanel>
 
@@ -318,11 +335,14 @@
                     </ListBox.Styles>
                     <ListBox.ItemTemplate>
                         <DataTemplate DataType="models:EarthquakeEvent">
-                            <Panel>
+                            <Panel Height="40">
                                 <Grid Classes="pointer" ColumnDefinitions="53,*" Background="Transparent">
                                     <controls:IntensityIcon Intensity="{Binding Intensity}" WideMode="True"
                                                             VerticalAlignment="Top"
-                                                            HorizontalAlignment="Left" />
+                                                            HorizontalAlignment="Left"
+                                                            IsVisible="{Binding !IsVolcano}" />
+                                    <TextBlock Text="&#xf770;" IsVisible="{Binding IsVolcano}" FontSize="32" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                    
                                     <Border Classes="selectBorder" Grid.Column="1"
                                             BorderBrush="{Binding Intensity, Converter={StaticResource IntensityToColor}, ConverterParameter=Background}"
                                             Cursor="Hand">
