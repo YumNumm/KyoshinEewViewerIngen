@@ -2,22 +2,12 @@ using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Series.Earthquake;
 using KyoshinEewViewer.Series.KyoshinMonitor;
 using KyoshinEewViewer.Series.Tsunami;
-using ReactiveUI;
 using Splat;
-using System.Collections.Generic;
 
 namespace KyoshinEewViewer.ViewModels;
 public class SetupWizardWindowViewModel : ViewModelBase
 {
 	public KyoshinEewViewerConfiguration Config { get; }
-
-	private KeyValuePair<string, string> _selectedRealtimeDataRenderMode;
-
-	public KeyValuePair<string, string> SelectedRealtimeDataRenderMode
-	{
-		get => _selectedRealtimeDataRenderMode;
-		set => this.RaiseAndSetIfChanged(ref _selectedRealtimeDataRenderMode, value);
-	}
 
 	public bool IsKyoshinMonitorEnabled
 	{

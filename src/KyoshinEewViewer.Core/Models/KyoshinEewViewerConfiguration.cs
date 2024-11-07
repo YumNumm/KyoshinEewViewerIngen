@@ -2,7 +2,6 @@ using Avalonia.Controls;
 using ReactiveUI;
 using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
 using Location = KyoshinMonitorLib.Location;
 
 namespace KyoshinEewViewer.Core.Models;
@@ -95,14 +94,6 @@ public class KyoshinEewViewerConfiguration : ReactiveObject
 			get => _autoOffsetIncrement;
 			set => this.RaiseAndSetIfChanged(ref _autoOffsetIncrement, value);
 		}
-
-		private int _timeshiftSeconds;
-		[JsonIgnore]
-		public int TimeshiftSeconds
-		{
-			get => _timeshiftSeconds;
-			set => this.RaiseAndSetIfChanged(ref _timeshiftSeconds, value);
-		}
 	}
 
 	private KyoshinMonitorConfig _kyoshinMonitor = new();
@@ -118,6 +109,13 @@ public class KyoshinEewViewerConfiguration : ReactiveObject
 		{
 			get => _useExperimentalShakeDetect;
 			set => this.RaiseAndSetIfChanged(ref _useExperimentalShakeDetect, value);
+		}
+
+		private KyoshinEventLevel _eventNotificationLevel = KyoshinEventLevel.Medium;
+		public KyoshinEventLevel EventNotificationLevel
+		{
+			get => _eventNotificationLevel;
+			set => this.RaiseAndSetIfChanged(ref _eventNotificationLevel, value);
 		}
 
 		private int _fetchFrequency = 1;
@@ -146,6 +144,27 @@ public class KyoshinEewViewerConfiguration : ReactiveObject
 		{
 			get => _showColorSample;
 			set => this.RaiseAndSetIfChanged(ref _showColorSample, value);
+		}
+
+		private bool _keepReceiveDuringReplay = true;
+		public bool KeepReceiveDuringReplay
+		{
+			get => _keepReceiveDuringReplay;
+			set => this.RaiseAndSetIfChanged(ref _keepReceiveDuringReplay, value);
+		}
+
+		private bool _returnToRealtimeAtShakeDetected = true;
+		public bool ReturnToRealtimeAtShakeDetected
+		{
+			get => _returnToRealtimeAtShakeDetected;
+			set => this.RaiseAndSetIfChanged(ref _returnToRealtimeAtShakeDetected, value);
+		}
+
+		private bool _returnToRealtimeAtEewReceived = true;
+		public bool ReturnToRealtimeAtEewReceived
+		{
+			get => _returnToRealtimeAtEewReceived;
+			set => this.RaiseAndSetIfChanged(ref _returnToRealtimeAtEewReceived, value);
 		}
 	}
 
@@ -654,28 +673,6 @@ public class KyoshinEewViewerConfiguration : ReactiveObject
 		{
 			get => _allowMultiPlay;
 			set => this.RaiseAndSetIfChanged(ref _allowMultiPlay, value);
-		}
-	}
-
-	private EventHookConfig _eventHook = new();
-	public EventHookConfig EventHook
-	{
-		get => _eventHook;
-		set => this.RaiseAndSetIfChanged(ref _eventHook, value);
-	}
-	public class EventHookConfig : ReactiveObject
-	{
-		private bool _enabled = false;
-		public bool Enabled
-		{
-			get => _enabled;
-			set => this.RaiseAndSetIfChanged(ref _enabled, value);
-		}
-		private string _folderPath = "";
-		public string FolderPath
-		{
-			get => _folderPath;
-			set => this.RaiseAndSetIfChanged(ref _folderPath, value);
 		}
 	}
 

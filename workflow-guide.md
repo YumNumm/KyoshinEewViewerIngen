@@ -204,6 +204,7 @@ Jsonの場合先頭は小文字になります。
 |WarningAreaNames|string[]|警報地域名の配列|`aaa`|
 |IsFinal|bool|最終報か|`false`|
 |IsCancelled|bool|キャンセル報か|`false`|
+|IsReplay (0.18.13 より利用可)|bool|リプレイ中(タイムシフト再生など)か|`false`|
 
 ### EewEventType
 
@@ -279,6 +280,8 @@ Jsonの場合先頭は小文字になります。
 |Hypocenter|EarthquakeInformationEventHypocenter?|震源情報 震度速報など、存在しない場合は `null`||
 |Comment|string|電文のコメント|`この地震による津波の心配はありません。`|
 |FreeFormComment|string|電文の自由記述のコメント||
+|IsVolcano (0.18.13 より利用可)|bool|大規模な噴火情報か|`true`|
+|VolcanoName (0.18.13 より利用可)|string?|噴火名 上手く抽出できないことがあります|`レウォトビ火山`|
 
 ### EarthquakeInformationEventHypocenter
 

@@ -1,5 +1,3 @@
-using KyoshinEewViewer.DCReportParser.Exceptions;
-
 namespace KyoshinEewViewer.DCReportParser;
 
 public class OtherOrganizationDCReport(byte[] rawData, Preamble preamble, byte messageType, ReportClassification reportClassification, byte oc) : DCReport(rawData, preamble, messageType)

@@ -4,16 +4,15 @@ using DmdataSharp.ApiResponses.V2.Parameters;
 using FluentAvalonia.UI.Controls;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
-using KyoshinEewViewer.DCReportParser;
 using KyoshinEewViewer.Events;
 using KyoshinEewViewer.JmaXmlParser;
-using KyoshinEewViewer.JmaXmlParser.Data.Tsunami;
 using KyoshinEewViewer.Map;
 using KyoshinEewViewer.Map.Data;
 using KyoshinEewViewer.Series.Earthquake;
 using KyoshinEewViewer.Series.Tsunami.Events;
 using KyoshinEewViewer.Series.Tsunami.MapLayers;
 using KyoshinEewViewer.Series.Tsunami.Models;
+using KyoshinEewViewer.Series.Tsunami.SettingPages;
 using KyoshinEewViewer.Series.Tsunami.Workflow;
 using KyoshinEewViewer.Services;
 using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
@@ -21,7 +20,6 @@ using ReactiveUI;
 using Splat;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -190,6 +188,9 @@ public class TsunamiSeries : SeriesBase
 
 	private TsunamiView? _control;
 	public override Control DisplayControl => _control ?? throw new InvalidOperationException("初期化前にコントロールが呼ばれています");
+	public override ISettingPage[] SettingPages => [
+		new BasicSettingPage<TsunamiPage>("\xe515", "津波情報", []),
+	];
 
 	private string? _sourceName;
 	/// <summary>

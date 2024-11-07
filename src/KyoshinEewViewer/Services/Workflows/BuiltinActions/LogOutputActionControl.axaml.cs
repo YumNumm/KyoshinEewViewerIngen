@@ -1,7 +1,5 @@
-using System;
 using Avalonia.Controls;
 using AvaloniaEdit.TextMate;
-using ReactiveUI;
 using TextMateSharp.Grammars;
 
 namespace KyoshinEewViewer.Services.Workflows.BuiltinActions;

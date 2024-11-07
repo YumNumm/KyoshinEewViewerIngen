@@ -10,7 +10,6 @@ using KyoshinEewViewer.CustomControl;
 using KyoshinEewViewer.Desktop.Services;
 using KyoshinEewViewer.Desktop.Views;
 using KyoshinEewViewer.Series;
-using KyoshinEewViewer.Services;
 using KyoshinEewViewer.ViewModels;
 using KyoshinEewViewer.Views;
 using ReactiveUI;

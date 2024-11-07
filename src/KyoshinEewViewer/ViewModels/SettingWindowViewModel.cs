@@ -11,18 +11,17 @@ using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
 using KyoshinEewViewer.Services.Voicevox;
 using KyoshinEewViewer.Services.Workflows;
 using KyoshinEewViewer.Services.Workflows.BuiltinActions;
+using KyoshinEewViewer.Views.SettingPages;
 using KyoshinMonitorLib;
 using ReactiveUI;
 using Splat;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO.Ports;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -30,6 +29,15 @@ namespace KyoshinEewViewer.ViewModels;
 
 public class SettingWindowViewModel : ViewModelBase
 {
+	public static Dictionary<KyoshinEventLevel, string> KyoshinEventLevelNames { get; } = new()
+	{
+		// { KyoshinEventLevel.Weaker, "微弱" },
+		{ KyoshinEventLevel.Weak, "弱い(震度1未満)" },
+		{ KyoshinEventLevel.Medium, "普通(震度1程度以上)" },
+		{ KyoshinEventLevel.Strong, "強い(震度3程度以上)" },
+		{ KyoshinEventLevel.Stronger, "非常に強い(震度5弱程度以上)" },
+	};
+
 	public KyoshinEewViewerConfiguration Config { get; }
 	public SeriesController SeriesController { get; }
 	public SoundPlayerService SoundPlayerService { get; }
@@ -39,6 +47,15 @@ public class SettingWindowViewModel : ViewModelBase
 	public VoicevoxService VoicevoxService { get; }
 
 	private ILogger Logger { get; }
+
+	private ISettingPage _selectedSettingPage;
+	public ISettingPage SelectedSettingPage
+	{
+		get => _selectedSettingPage;
+		set => this.RaiseAndSetIfChanged(ref _selectedSettingPage, value);
+	}
+	private BasicSettingPage<UpdatePage> UpdatePage { get; }
+	public ISettingPage[] SettingPages { get; }
 
 	public SettingWindowViewModel(
 		KyoshinEewViewerConfiguration config,
@@ -90,22 +107,19 @@ public class SettingWindowViewModel : ViewModelBase
 			Config.Map.Location1 = new(45.619358f, 145.77399f);
 			Config.Map.Location2 = new(29.997368f, 128.22534f);
 		});
-		OffsetTimeshiftSeconds = ReactiveCommand.Create<string>(amountString =>
-		{
-			var amount = int.Parse(amountString);
-			Config.Timer.TimeshiftSeconds = Math.Clamp(Config.Timer.TimeshiftSeconds + amount, MinTimeshiftSeconds, MaxTimeshiftSeconds);
-		});
 
-		Config.Timer.WhenAnyValue(c => c.TimeshiftSeconds).Subscribe(x => UpdateTimeshiftString());
 		UpdateDmdataStatus();
 
 		updateCheckService.Updated += a =>
 		{
 			VersionInfos = a;
-			UpdateAvailable = (a?.Length ?? 0) > 0;
+			if ((a?.Length ?? 0) > 0 && UpdatePage != null)
+			{
+				UpdatePage.IsVisible = true;
+				SelectedSettingPage = UpdatePage;
+			}
 		};
 		VersionInfos = updateCheckService.AvailableUpdateVersions;
-		UpdateAvailable = updateCheckService.AvailableUpdateVersions?.Any() ?? false;
 
 		updateCheckService.WhenAnyValue(x => x.IsUpdateIndeterminate).Subscribe(x => IsUpdateIndeterminate = x);
 		updateCheckService.WhenAnyValue(x => x.UpdateProgress).Subscribe(x => UpdateProgress = x);
@@ -123,6 +137,31 @@ public class SettingWindowViewModel : ViewModelBase
 				SingleStyleSpeaker ss => [ss],
 				_ => [],
 			}).FirstOrDefault(s => s.SpeakerId == config.Voicevox.SpeakerId)?.Name ?? "不明");
+
+		UpdatePage = new BasicSettingPage<UpdatePage>("\xf071", "アプリの更新", []) { IsVisible = false };
+		SettingPages = [
+			UpdatePage,
+			new BasicSettingPage<GeneralPage>("\xf53f", "外観･基本設定", []),
+			new BasicSettingPage<FeaturePage>("\xf085", "機能設定", []),
+			new BasicSettingPage<NotifyPage>("\xf075", "通知", []),
+			new BasicSettingPage<SoundPage>("\xf028", "音声", []),
+			new BasicSettingPage<WorkflowPage>("\xe289", "ワークフロー", []),
+			new BasicSettingPage<VoicevoxPage>("\xf075", "VOICEVOX", []),
+			..SeriesController.EnabledSeries.SelectMany(s => s.SettingPages),
+			new BasicSettingPage<DmdataPage>("\xf48b", "DM-D.S.S", []),
+			new BasicSettingPage<MapPage>("\xf5a0", "地図", []),
+			new BasicSettingPage<AboutPage>("\xf129", "このアプリについて", []),
+			new BasicSettingPage<LicencePage>("\xf2c2", "ライセンス", []),
+#if DEBUG
+			new BasicSettingPage<DebugMenuPage>("\xf188", "デバッグメニュー", []),
+#endif
+		];
+		_selectedSettingPage = SettingPages[1];
+		if ((updateCheckService.AvailableUpdateVersions?.Length ?? 0) > 0)
+		{
+			UpdatePage.IsVisible = true;
+			SelectedSettingPage = UpdatePage;
+		}
 
 		if (Design.IsDesignMode)
 		{
@@ -181,57 +220,6 @@ public class SettingWindowViewModel : ViewModelBase
 		LpgmIntensity.Error,
 	];
 
-	private KeyValuePair<string, string> _selectedRealtimeDataRenderMode;
-	public KeyValuePair<string, string> SelectedRealtimeDataRenderMode
-	{
-		get => _selectedRealtimeDataRenderMode;
-		set => this.RaiseAndSetIfChanged(ref _selectedRealtimeDataRenderMode, value);
-	}
-
-	private int _minTimeshiftSeconds = -10800;
-	public int MinTimeshiftSeconds
-	{
-		get => _minTimeshiftSeconds;
-		set => this.RaiseAndSetIfChanged(ref _minTimeshiftSeconds, value);
-	}
-	private int _maxTimeshiftSeconds = 0;
-	public int MaxTimeshiftSeconds
-	{
-		get => _maxTimeshiftSeconds;
-		private set => this.RaiseAndSetIfChanged(ref _maxTimeshiftSeconds, value);
-	}
-	private string _timeshiftSecondsString = "リアルタイム";
-	public string TimeshiftSecondsString
-	{
-		get => _timeshiftSecondsString;
-		set => this.RaiseAndSetIfChanged(ref _timeshiftSecondsString, value);
-	}
-	private void UpdateTimeshiftString()
-	{
-		if (Config.Timer.TimeshiftSeconds == 0)
-		{
-			TimeshiftSecondsString = "リアルタイム";
-			return;
-		}
-
-		var sb = new StringBuilder();
-		var time = TimeSpan.FromSeconds(-Config.Timer.TimeshiftSeconds);
-		if (time.TotalHours >= 1)
-			sb.Append((int)time.TotalHours + "時間");
-		if (time.Minutes > 0)
-			sb.Append(time.Minutes + "分");
-		if (time.Seconds > 0)
-			sb.Append(time.Seconds + "秒");
-		sb.Append('前');
-
-		TimeshiftSecondsString = sb.ToString();
-	}
-
-	public ReactiveCommand<string, Unit> OffsetTimeshiftSeconds { get; }
-
-	public void BackToTimeshiftRealtime()
-		=> Config.Timer.TimeshiftSeconds = 0;
-
 	public SeriesViewModel[] Series { get; }
 
 	public bool IsSoundActivated => SoundPlayerService.IsAvailable;
@@ -271,7 +259,7 @@ public class SettingWindowViewModel : ViewModelBase
 	}
 
 	public void LoadWorkflows()
-	{ 
+	{
 		WorkflowService.LoadWorkflows();
 		SelectedWorkflow = WorkflowService.Workflows.FirstOrDefault(w => w.Id == SelectedWorkflow?.Id)
 			?? WorkflowService.Workflows.FirstOrDefault();
@@ -429,13 +417,6 @@ public class SettingWindowViewModel : ViewModelBase
 
 	#region Update
 
-	private bool _updateAvailable = false;
-	public bool UpdateAvailable
-	{
-		get => _updateAvailable;
-		set => this.RaiseAndSetIfChanged(ref _updateAvailable, value);
-	}
-
 	private VersionInfo[]? _versionInfos;
 	public VersionInfo[]? VersionInfos
 	{
@@ -537,12 +518,6 @@ public class SettingWindowViewModel : ViewModelBase
 		get => _replaySelectedTime;
 		set => this.RaiseAndSetIfChanged(ref _replaySelectedTime, value);
 	}
-
-	public void StartDebugReplay()
-		=> KyoshinMonitorReplayRequested.Request(ReplayBasePath, ReplaySelectedDate.Date + ReplaySelectedTime);
-
-	public void EndDebugReplay()
-		=> KyoshinMonitorReplayRequested.Request(null, null);
 
 	private string _jmaEqdbId = "20180618075834";
 	public string JmaEqdbId

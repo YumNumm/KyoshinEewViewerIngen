@@ -1,6 +1,3 @@
-using Avalonia.Controls;
-using Avalonia.Media;
-using Avalonia.Skia;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Map;
 using KyoshinEewViewer.Map.Data;

@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Threading;
 using KyoshinMonitorLib;
-using ReactiveUI;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;

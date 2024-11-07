@@ -13,12 +13,13 @@ namespace KyoshinEewViewer.Series.KyoshinMonitor.Services.Eew;
 
 public class EewController
 {
-	private ILogger Logger { get; }
+	public bool IsReplay { get; set; }
+	protected ILogger Logger { get; }
+
 	private KyoshinEewViewerConfiguration Config { get; }
+	private WorkflowService WorkflowService { get; }
 	private NotificationService NotificationService { get; }
-	private EventHookService EventHook { get; }
-	public WorkflowService WorkflowService { get; }
-	public SoundCategory SoundCategory { get; } = new("Eew", "緊急地震速報");
+	private SoundCategory SoundCategory { get; } = new("Eew", "緊急地震速報");
 
 	private Dictionary<string, IEew> EewCache { get; } = [];
 	/// <summary>
@@ -31,65 +32,70 @@ public class EewController
 	private Sound EewFinalReceivedSound { get; }
 	private Sound EewCanceledSound { get; }
 
-	public event Action<(DateTime time, IEew[] eews)>? EewUpdated;
+	public event Action<DateTime, IEew[]>? EewUpdated;
 
-	public EewController(ILogManager logManager, KyoshinEewViewerConfiguration config, TimerService timer, NotificationService notificationService, SoundPlayerService soundPlayer, EventHookService eventHook, WorkflowService workflowService)
+	public EewController(
+		ILogManager logManager,
+		KyoshinEewViewerConfiguration config,
+		NotificationService notificationService,
+		SoundPlayerService soundPlayer,
+		WorkflowService workflowService)
 	{
 		SplatRegistrations.RegisterLazySingleton<EewController>();
 
 		Logger = logManager.GetLogger<EewController>();
 		Config = config;
-		NotificationService = notificationService;
-		EventHook = eventHook;
 		WorkflowService = workflowService;
-		// 古い EEW を消すためのタイマー
-		timer.TimerElapsed += t =>
-		{
-			lock (EewCache)
-			{
-				var isUpdated = false;
-				foreach (var e in EewCache.Values.Where(e => e.IsVisible))
-				{
-					var diff = t - e.UpdatedTime;
-					// 最終orキャンセルから2分経過
-					// もしくは3分経過していれば削除
-					if (((e.IsFinal || e.IsCancelled) && diff >= TimeSpan.FromMinutes(2)) || diff >= TimeSpan.FromMinutes(3))
-					{
-						Logger.LogInfo($"EEW終了(期限切れ): {e.Id} {diff.TotalSeconds:0.000}s");
-						e.IsVisible = false;
-						isUpdated = true;
-					}
-					else if (e is KyoshinMonitorEew && (t - TimeSpan.FromSeconds(-Config.Timer.TimeshiftSeconds) - e.UpdatedTime) < TimeSpan.FromMilliseconds(-Config.Timer.Offset))
-					{
-						Logger.LogInfo($"EEW終了(kmoni): {e.Id} {(t - TimeSpan.FromSeconds(-Config.Timer.TimeshiftSeconds) - e.UpdatedTime).TotalSeconds:0.000}s");
-						e.IsVisible = false;
-						isUpdated = true;
-					}
-				}
-
-				// 10件以上ある場合は古いものから削除
-				if (EewCache.Count > 10)
-				{
-					var removes = new List<string>();
-					foreach (var e in EewCache.OrderBy(e => e.Value.OccurrenceTime).Take(EewCache.Count - 10)
-								 .Select(e => e.Key))
-					{
-						removes.Add(e);
-						isUpdated = true;
-					}
-					foreach (var r in removes)
-						EewCache.Remove(r);
-				}
-
-				if (isUpdated)
-					EewUpdated?.Invoke((t, EewCache.Values.ToArray()));
-			}
-		};
+		NotificationService = notificationService;
 
 		EewReceivedSound = soundPlayer.RegisterSound(SoundCategory, "EewReceived", "緊急地震速報受信", "{int}: 最大震度 [？,0,1,...,6-,6+,7]", new() { { "int", "4" }, });
 		EewBeginReceivedSound = soundPlayer.RegisterSound(SoundCategory, "EewBeginReceived", "緊急地震速報受信(初回)", "{int}: 最大震度 [-,0,1,...,6-,6+,7]", new() { { "int", "5+" }, });
 		EewFinalReceivedSound = soundPlayer.RegisterSound(SoundCategory, "EewFinalReceived", "緊急地震速報受信(最終)", "{int}: 最大震度 [-,0,1,...,6-,6+,7]", new() { { "int", "-" }, });
 		EewCanceledSound = soundPlayer.RegisterSound(SoundCategory, "EewCanceled", "緊急地震速報受信(キャンセル)");
+	}
+
+	// 古い EEW を消すためのタイマーが発火するイベント
+	public void TimerElapsed(DateTime t)
+	{
+		lock (EewCache)
+		{
+			var isUpdated = false;
+			foreach (var e in EewCache.Values.Where(e => e.IsVisible))
+			{
+				var diff = t - e.UpdatedTime;
+				// 最終orキャンセルから2分経過
+				// もしくは3分経過していれば削除
+				if (((e.IsFinal || e.IsCancelled) && diff >= TimeSpan.FromMinutes(2)) || diff >= TimeSpan.FromMinutes(3))
+				{
+					Logger.LogInfo($"EEW終了(期限切れ): {e.Id} {diff.TotalSeconds:0.000}s");
+					e.IsVisible = false;
+					isUpdated = true;
+				}
+				else if (e is KyoshinMonitorEew && (t - e.UpdatedTime) < TimeSpan.FromMilliseconds(-Config.Timer.Offset))
+				{
+					Logger.LogInfo($"EEW終了(kmoni): {e.Id} {(t - e.UpdatedTime).TotalSeconds:0.000}s");
+					e.IsVisible = false;
+					isUpdated = true;
+				}
+			}
+
+			// 10件以上ある場合は古いものから削除
+			if (EewCache.Count > 10)
+			{
+				var removes = new List<string>();
+				foreach (var e in EewCache.OrderBy(e => e.Value.OccurrenceTime).Take(EewCache.Count - 10)
+							 .Select(e => e.Key))
+				{
+					removes.Add(e);
+					isUpdated = true;
+				}
+				foreach (var r in removes)
+					EewCache.Remove(r);
+			}
+
+			if (isUpdated)
+				EewUpdated?.Invoke(t, EewCache.Values.ToArray());
+		}
 	}
 
 	/// <summary>
@@ -102,7 +108,7 @@ public class EewController
 			if (!EewCache.TryGetValue(eew.Id, out var cEew))
 			{
 				EewCache.Add(eew.Id, eew);
-				WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.NewWarning, eew));
+				WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.NewWarning, eew, IsReplay));
 			}
 			else
 			{
@@ -110,7 +116,7 @@ public class EewController
 				cEew.WarningAreaCodes = eew.WarningAreaCodes;
 				cEew.WarningAreaNames = eew.WarningAreaNames;
 			}
-			EewUpdated?.Invoke((updatedTime, EewCache.Values.ToArray()));
+			EewUpdated?.Invoke(updatedTime, EewCache.Values.ToArray());
 		}
 	}
 
@@ -123,7 +129,7 @@ public class EewController
 	{
 		lock (EewCache)
 			if (UpdateInternal(eew, updatedTime))
-				EewUpdated?.Invoke((updatedTime, EewCache.Values.ToArray()));
+				EewUpdated?.Invoke(updatedTime, EewCache.Values.ToArray());
 	}
 
 	private bool UpdateInternal(IEew? eew, DateTime updatedTime)
@@ -144,7 +150,7 @@ public class EewController
 
 				if (!EewCanceledSound.Play())
 					EewReceivedSound.Play(new() { { "int", "？" } });
-				WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.Cancel, e));
+				WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.Cancel, e, IsReplay));
 			}
 			return isUpdated;
 		}
@@ -183,7 +189,7 @@ public class EewController
 					{
 						if (!EewFinalReceivedSound.Play(new() { { "int", intStr } }))
 							EewReceivedSound.Play(new() { { "int", intStr } });
-						WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.Final, eew));
+						WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.Final, eew, IsReplay));
 					}
 				}
 				else if (eew.IsCancelled)
@@ -192,36 +198,36 @@ public class EewController
 					{
 						if (!EewCanceledSound.Play())
 							EewReceivedSound.Play(new() { { "int", "？" } });
-						WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.Cancel, eew));
+						WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.Cancel, eew, IsReplay));
 					}
 				}
 				else if (isNewerSerial)
 				{
 					EewReceivedSound.Play(new() { { "int", intStr } });
-					WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.UpdateNewSerial, eew));
+					WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.UpdateNewSerial, eew, IsReplay));
 				}
 				else if (isPriorityUpdated)
-					WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.UpdateWithMoreAccurate, eew));
+					WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.UpdateWithMoreAccurate, eew, IsReplay));
 
 				// 警報状態になっていた場合
 				if (!cEew!.IsWarning && eew.IsWarning)
-					WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.NewWarning, eew));
+					WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.NewWarning, eew, IsReplay));
 
 				// 予想最大震度変更
 				if (cEew.Intensity < eew.Intensity)
-					WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.IncreaseMaxIntensity, eew));
+					WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.IncreaseMaxIntensity, eew, IsReplay));
 				else if (cEew.Intensity > eew.Intensity)
-					WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.DecreaseMaxIntensity, eew));
+					WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.DecreaseMaxIntensity, eew, IsReplay));
 			}
 			else
 			{
 				// 新規に受信した場合
 				if (!EewBeginReceivedSound.Play(new() { { "int", intStr } }))
 					EewReceivedSound.Play(new() { { "int", intStr } });
-				WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.New, eew));
+				WorkflowService.PublishEvent(EewEvent.FromEewModel(EewEventType.New, eew, IsReplay));
 			}
 
-			if (Config.Notification.EewReceived && Config.Timer.TimeshiftSeconds == 0)
+			if (Config.Notification.EewReceived)
 			{
 				if (eew.IsCancelled)
 					NotificationService?.Notify($"緊急地震速報({eew.Count:00}報)", eew.IsTrueCancelled ? "キャンセルされました" : "キャンセルされたか、受信範囲外になりました");
@@ -229,22 +235,17 @@ public class EewController
 					NotificationService?.Notify($"緊急地震速報({eew.Count:00}報)", $"最大{eew.Intensity.ToLongString()}/{eew.Place}/M{eew.Magnitude:0.0}/{eew.Depth}km\n{eew.SourceDisplay}");
 			}
 
-			EventHook.Run("EEW_RECEIVED", new()
-			{
-				{ "EEW_SOURCE", eew.SourceDisplay },
-				{ "EEW_EVENT_ID", eew.Id },
-				{ "EEW_COUNT", eew.Count.ToString() },
-				{ "EEW_PLACE", eew.Place ?? "" },
-				{ "EEW_INTENSITY", eew.Intensity.ToShortString() },
-				{ "EEW_IS_FINAL", eew.IsFinal.ToString() },
-				{ "EEW_IS_CANCEL", eew.IsCancelled.ToString() },
-			}).ConfigureAwait(false);
-
 			Logger.LogInfo($"EEWを更新しました {eew.ToDetailString()}");
 			EewCache[eew.Id] = eew;
 			isUpdated = true;
 		}
 
 		return isUpdated;
+	}
+
+	public void Clear()
+	{
+		lock (EewCache)
+			EewCache.Clear();
 	}
 }

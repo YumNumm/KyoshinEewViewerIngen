@@ -1,6 +1,3 @@
-using Avalonia.Controls;
-using Avalonia.Media;
-using Avalonia.Skia;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.CustomControl;
@@ -8,7 +5,6 @@ using KyoshinEewViewer.Map;
 using KyoshinEewViewer.Map.Layers;
 using KyoshinMonitorLib;
 using SkiaSharp;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Location = KyoshinMonitorLib.Location;

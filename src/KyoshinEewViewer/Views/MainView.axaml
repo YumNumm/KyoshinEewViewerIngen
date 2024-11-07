@@ -33,7 +33,7 @@
                             CornerRadius="{TemplateBinding CornerRadius}"
                             Margin="4 2"
                             TemplatedControl.IsTemplateFocusTarget="True">
-                        <Panel>
+                        <Panel Name="PresenterContentRootGrid">
                             <Panel HorizontalAlignment="Left"
                                    VerticalAlignment="Center">
 
@@ -103,9 +103,6 @@
             <Setter Property="Foreground" Value="{DynamicResource AccentFillColorDefaultBrush}" />
         </Style>
     </UserControl.Styles>
-    <Design.DataContext>
-        <vm:MainViewModel />
-    </Design.DataContext>
     <LayoutTransformControl HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
         <LayoutTransformControl.LayoutTransform>
             <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}" />

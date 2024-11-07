@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Media;
 using System;
-using System.Collections.Generic;
 
 namespace KyoshinEewViewer.Core.Models;
 

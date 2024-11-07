@@ -1,10 +1,11 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace KyoshinEewViewer.Views.SettingPages;
-public partial class KyoshinMonitorMapPage : UserControl
+namespace KyoshinEewViewer.Series.Earthquake.SettingPages;
+
+public partial class EarthquakePage : UserControl
 {
-	public KyoshinMonitorMapPage()
+	public EarthquakePage()
 	{
 		InitializeComponent();
 	}

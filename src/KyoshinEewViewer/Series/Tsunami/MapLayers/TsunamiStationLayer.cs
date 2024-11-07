@@ -4,11 +4,6 @@ using KyoshinEewViewer.Map;
 using KyoshinEewViewer.Map.Layers;
 using KyoshinEewViewer.Series.Tsunami.Models;
 using SkiaSharp;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace KyoshinEewViewer.Series.Tsunami.MapLayers;
 public class TsunamiStationLayer : MapLayer

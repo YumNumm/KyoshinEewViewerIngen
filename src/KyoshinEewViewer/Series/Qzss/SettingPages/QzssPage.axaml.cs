@@ -1,10 +1,10 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace KyoshinEewViewer.Views.SettingPages;
-public partial class EventHookPage : UserControl
+namespace KyoshinEewViewer.Series.Qzss.SettingPages;
+public partial class QzssPage : UserControl
 {
-	public EventHookPage()
+	public QzssPage()
 	{
 		InitializeComponent();
 	}

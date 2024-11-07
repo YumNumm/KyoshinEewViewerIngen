@@ -21,6 +21,11 @@ public abstract class SeriesBase(SeriesMeta meta) : ReactiveObject, IDisposable
 	/// </summary>
 	public abstract Control DisplayControl { get; }
 
+	/// <summary>
+	/// 設定画面のページ
+	/// </summary>
+	public abstract ISettingPage[] SettingPages { get; }
+
 	private MapNavigationRequest? _mapNavigationRequest;
 	/// <summary>
 	/// マップ表示位置のリクエスト

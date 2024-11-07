@@ -1,10 +1,10 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace KyoshinEewViewer.Views.SettingPages;
-public partial class QzssPage : UserControl
+namespace KyoshinEewViewer.Series.KyoshinMonitor.SettingPages;
+public partial class KyoshinMonitorMapPage : UserControl
 {
-	public QzssPage()
+	public KyoshinMonitorMapPage()
 	{
 		InitializeComponent();
 	}

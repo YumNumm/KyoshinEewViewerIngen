@@ -5,7 +5,6 @@ using KyoshinEewViewer.Series.Tsunami.Workflow;
 using KyoshinEewViewer.Services.Workflows.BuiltinTriggers;
 using ReactiveUI;
 using System;
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace KyoshinEewViewer.Services.Workflows;
