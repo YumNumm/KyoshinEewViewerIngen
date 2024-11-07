@@ -49,15 +49,14 @@ public class SettingWindowViewModel : ViewModelBase
 
 	private ILogger Logger { get; }
 
-	public ISettingPage[] SettingPages { get; }
-	public class BasicSettingPage<T>(string icon, string title, ISettingPage[] subPages) : ISettingPage where T : Control, new()
+	private ISettingPage _selectedSettingPage;
+	public ISettingPage SelectedSettingPage
 	{
-		public string Icon => icon;
-		public string Title => title;
-		public Control DisplayControl => new T();
-
-		public ISettingPage[] SubPages => subPages;
+		get => _selectedSettingPage;
+		set => this.RaiseAndSetIfChanged(ref _selectedSettingPage, value);
 	}
+	private BasicSettingPage<UpdatePage> UpdatePage { get; }
+	public ISettingPage[] SettingPages { get; }
 
 	public SettingWindowViewModel(
 		KyoshinEewViewerConfiguration config,
@@ -109,21 +108,19 @@ public class SettingWindowViewModel : ViewModelBase
 			Config.Map.Location1 = new(45.619358f, 145.77399f);
 			Config.Map.Location2 = new(29.997368f, 128.22534f);
 		});
-		OffsetTimeshiftSeconds = ReactiveCommand.Create<string>(amountString =>
-		{
-			var amount = int.Parse(amountString);
-			TimeshiftSeconds += amount;
-		});
 
 		UpdateDmdataStatus();
 
 		updateCheckService.Updated += a =>
 		{
 			VersionInfos = a;
-			UpdateAvailable = (a?.Length ?? 0) > 0;
+			if ((a?.Length ?? 0) > 0 && UpdatePage != null)
+			{
+				UpdatePage.IsVisible = true;
+				SelectedSettingPage = UpdatePage;
+			}
 		};
 		VersionInfos = updateCheckService.AvailableUpdateVersions;
-		UpdateAvailable = updateCheckService.AvailableUpdateVersions?.Any() ?? false;
 
 		updateCheckService.WhenAnyValue(x => x.IsUpdateIndeterminate).Subscribe(x => IsUpdateIndeterminate = x);
 		updateCheckService.WhenAnyValue(x => x.UpdateProgress).Subscribe(x => UpdateProgress = x);
@@ -142,27 +139,30 @@ public class SettingWindowViewModel : ViewModelBase
 				_ => [],
 			}).FirstOrDefault(s => s.SpeakerId == config.Voicevox.SpeakerId)?.Name ?? "不明");
 
+		UpdatePage = new BasicSettingPage<UpdatePage>("\xf071", "アプリの更新", []) { IsVisible = false };
 		SettingPages = [
-			new BasicSettingPage<UpdatePage>("\xf071", "アプリの更新", []),
+			UpdatePage,
 			new BasicSettingPage<GeneralPage>("\xf53f", "外観･基本設定", []),
 			new BasicSettingPage<FeaturePage>("\xf085", "機能設定", []),
 			new BasicSettingPage<NotifyPage>("\xf075", "通知", []),
 			new BasicSettingPage<SoundPage>("\xf028", "音声", []),
 			new BasicSettingPage<WorkflowPage>("\xe289", "ワークフロー", []),
 			new BasicSettingPage<VoicevoxPage>("\xf075", "VOICEVOX", []),
-			new BasicSettingPage<KyoshinMonitorPage>("\xf108", "強震モニタ", []),
-			new BasicSettingPage<KyoshinMonitorReplayPage>("├", "リプレイ", []),
-			new BasicSettingPage<KyoshinMonitorMapPage>("├", "地図アイコン", []),
-			new BasicSettingPage<KyoshinMonitorEewPage>("└", "緊急地震速報", []),
-			new BasicSettingPage<EarthquakePage>("\xf09e", "地震･津波情報", []),
-			new BasicSettingPage<RadarPage>("\xf740", "雨雲レーダー", []),
+			..SeriesController.EnabledSeries.SelectMany(s => s.SettingPages),
 			new BasicSettingPage<DmdataPage>("\xf48b", "DM-D.S.S", []),
-			new BasicSettingPage<QzssPage>("\xf7bf", "みちびき 災危通報", []),
 			new BasicSettingPage<MapPage>("\xf5a0", "地図", []),
 			new BasicSettingPage<AboutPage>("\xf129", "このアプリについて", []),
 			new BasicSettingPage<LicencePage>("\xf2c2", "ライセンス", []),
+#if DEBUG
 			new BasicSettingPage<DebugMenuPage>("\xf188", "デバッグメニュー", []),
+#endif
 		];
+		_selectedSettingPage = SettingPages[1];
+		if ((updateCheckService.AvailableUpdateVersions?.Length ?? 0) > 0)
+		{
+			UpdatePage.IsVisible = true;
+			SelectedSettingPage = UpdatePage;
+		}
 
 		if (Design.IsDesignMode)
 		{
@@ -221,52 +221,6 @@ public class SettingWindowViewModel : ViewModelBase
 		LpgmIntensity.Error,
 	];
 
-	private int _timeshiftSeconds = 0;
-	public int TimeshiftSeconds
-	{
-		get => _timeshiftSeconds;
-		set {
-			if (value > 10800)
-				value = 10800;
-			if (value < 0)
-				value = 0;
-			this.RaiseAndSetIfChanged(ref _timeshiftSeconds, value);
-			UpdateTimeshiftString();
-		}
-	}
-	private string _timeshiftSecondsString = "リアルタイム";
-	public string TimeshiftSecondsString
-	{
-		get => _timeshiftSecondsString;
-		set => this.RaiseAndSetIfChanged(ref _timeshiftSecondsString, value);
-	}
-	private void UpdateTimeshiftString()
-	{
-		if (TimeshiftSeconds == 0)
-		{
-			TimeshiftSecondsString = "リアルタイム";
-			return;
-		}
-
-		var sb = new StringBuilder();
-		var time = TimeSpan.FromSeconds(TimeshiftSeconds);
-		if (time.TotalHours >= 1)
-			sb.Append((int)time.TotalHours + "時間");
-		if (time.Minutes > 0)
-			sb.Append(time.Minutes + "分");
-		if (time.Seconds > 0)
-			sb.Append(time.Seconds + "秒");
-		sb.Append('前');
-
-		TimeshiftSecondsString = sb.ToString();
-	}
-
-	public ReactiveCommand<string, Unit> OffsetTimeshiftSeconds { get; }
-	public void StartTimeshift()
-		=> KyoshinMonitorTimeshiftStartRequested.Request(TimeshiftSeconds);
-	public void ReturnToRealtime()
-		=> KyoshinMonitorReplayStopRequest.Request();
-
 	public SeriesViewModel[] Series { get; }
 
 	public bool IsSoundActivated => SoundPlayerService.IsAvailable;
@@ -306,7 +260,7 @@ public class SettingWindowViewModel : ViewModelBase
 	}
 
 	public void LoadWorkflows()
-	{ 
+	{
 		WorkflowService.LoadWorkflows();
 		SelectedWorkflow = WorkflowService.Workflows.FirstOrDefault(w => w.Id == SelectedWorkflow?.Id)
 			?? WorkflowService.Workflows.FirstOrDefault();
@@ -463,13 +417,6 @@ public class SettingWindowViewModel : ViewModelBase
 	}
 
 	#region Update
-
-	private bool _updateAvailable = false;
-	public bool UpdateAvailable
-	{
-		get => _updateAvailable;
-		set => this.RaiseAndSetIfChanged(ref _updateAvailable, value);
-	}
 
 	private VersionInfo[]? _versionInfos;
 	public VersionInfo[]? VersionInfos

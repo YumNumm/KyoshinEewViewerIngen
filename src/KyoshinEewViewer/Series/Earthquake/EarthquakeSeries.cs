@@ -13,6 +13,7 @@ using KyoshinEewViewer.Map.Data;
 using KyoshinEewViewer.Series.Earthquake.Events;
 using KyoshinEewViewer.Series.Earthquake.Models;
 using KyoshinEewViewer.Series.Earthquake.Services;
+using KyoshinEewViewer.Series.Earthquake.SettingPages;
 using KyoshinEewViewer.Services;
 using KyoshinEewViewer.Services.TelegramPublishers;
 using KyoshinMonitorLib;
@@ -130,6 +131,9 @@ public class EarthquakeSeries : SeriesBase
 
 	private EarthquakeView? _control;
 	public override Control DisplayControl => _control ?? throw new InvalidOperationException("初期化前にコントロールが呼ばれています");
+	public override ISettingPage[] SettingPages => [
+		new BasicSettingPage<EarthquakePage>("\xf05a", "地震情報", []),
+	];
 
 	public override void Initialize()
 	{

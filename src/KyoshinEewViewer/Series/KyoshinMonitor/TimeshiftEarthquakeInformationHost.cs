@@ -161,8 +161,11 @@ public class TimeshiftEarthquakeInformationHost : EarthquakeInformationHost
 		ReplayDescription = sb.ToString();
 		IsRunning = true;
 
+		Eews = [];
+		KyoshinEvents = [];
 		MapNavigationRequest = null;
 		EewController.Clear();
+		OnEewUpdated(DateTime.Now, []);
 		KyoshinMonitorWatcher.ResetHistories();
 		KyoshinEventLevelCache.Clear();
 		KyoshinMonitorWatcher.Initalize();

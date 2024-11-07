@@ -1,10 +1,10 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace KyoshinEewViewer.Views.SettingPages;
-public partial class KyoshinMonitorEewPage : UserControl
+namespace KyoshinEewViewer.Series.Radar;
+public partial class RadarPage : UserControl
 {
-	public KyoshinMonitorEewPage()
+	public RadarPage()
 	{
 		InitializeComponent();
 	}

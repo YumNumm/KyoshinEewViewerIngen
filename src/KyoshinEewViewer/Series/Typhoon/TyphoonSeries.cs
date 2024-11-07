@@ -141,6 +141,7 @@ internal class TyphoonSeries : SeriesBase
 
 	private TyphoonView? _control;
 	public override Control DisplayControl => _control ?? throw new Exception();
+	public override ISettingPage[] SettingPages => [];
 
 	private TyphoonItem[]? _typhoons;
 	public TyphoonItem[]? Typhoons

@@ -20,6 +20,7 @@ public class LightningSeries : SeriesBase
 
 	private LightningView? _control;
 	public override Control DisplayControl => _control ?? throw new InvalidOperationException("初期化前にコントロールが呼ばれています");
+	public override ISettingPage[] SettingPages => [];
 	private LightningMapConnection Connection { get; } = new LightningMapConnection();
 
 	private float _delay = 0;

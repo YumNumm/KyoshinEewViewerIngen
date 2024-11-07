@@ -2,12 +2,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:KyoshinEewViewer.ViewModels"
 		xmlns:ui="using:FluentAvalonia.UI.Controls"
+		xmlns:uip="using:FluentAvalonia.UI.Controls.Primitives"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:md="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
 		xmlns:ctxt="clr-namespace:ColorTextBlock.Avalonia;assembly=ColorTextBlock.Avalonia"
 
         xmlns:pages="clr-namespace:KyoshinEewViewer.Views.SettingPages;assembly=KyoshinEewViewer"
+		xmlns:series="clr-namespace:KyoshinEewViewer.Series;assembly=KyoshinEewViewer"
 		
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="800"
         x:Class="KyoshinEewViewer.Desktop.Views.SettingWindow"
@@ -17,7 +19,7 @@
         Width="800" Height="600"
         FontSize="16"
         WindowStartupLocation="CenterOwner"
-        Background="{DynamicResource MainBackgroundColor}" Foreground="{DynamicResource SubForegroundColor}"
+        Background="{DynamicResource TitleBackgroundColor}" Foreground="{DynamicResource MainForegroundColor}"
         FontFamily="{StaticResource MainFont}" FontWeight="Regular"
         Icon="/Assets/logo.ico"
         Title="{Binding Title}">
@@ -87,235 +89,34 @@
         <Style Selector="ui|SettingsExpander">
             <Setter Property="Margin" Value="10,3,10,0" />
         </Style>
+        <Style Selector="ui|NavigationView">
+            <Setter Property="MenuItemTemplate">
+                <DataTemplate x:DataType="series:ISettingPage">
+                    <ui:NavigationViewItem IsVisible="{Binding IsVisible}" Content="{Binding Title}" IconSource="{Binding Icon}" MenuItemsSource="{Binding SubPages}" IsExpanded="True" />
+                </DataTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ui|NavigationViewItem uip|NavigationViewItemPresenter">
+            <Setter Property="Height" Value="32" />
+        </Style>
     </Window.Styles>
-	<TabControl TabStripPlacement="Left" Padding="0" Background="{DynamicResource TitleBackgroundColor}">
-		<!-- アップデート -->
-		<TabItem IsVisible="{Binding UpdateAvailable}" Background="{DynamicResource SystemAccentColor}">
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="&#xf071;" Classes="icon" VerticalAlignment="Center" />
-					<TextBlock Text="アプリの更新" VerticalAlignment="Center" />
-				</StackPanel>
-			</TabItem.Header>
-			<Panel Background="{DynamicResource MainBackgroundColor}">
-				<pages:UpdatePage Margin="5" />
-			</Panel>
-		</TabItem>
-		<!-- 基本設定 -->
-		<TabItem IsSelected="{Binding !UpdateAvailable, Mode=OneWay}">
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="&#xf53f;" Classes="icon" VerticalAlignment="Center" />
-					<TextBlock Text="外観･基本設定" VerticalAlignment="Center" />
-				</StackPanel>
-			</TabItem.Header>
-			<ScrollViewer>
-				<pages:GeneralPage Margin="5" />
-			</ScrollViewer>
-		</TabItem>
-		<!-- 有効･無効設定 -->
-		<TabItem>
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="&#xf085;" Classes="icon" VerticalAlignment="Center" />
-					<TextBlock Text="機能設定" VerticalAlignment="Center" />
-				</StackPanel>
-			</TabItem.Header>
-			<ScrollViewer>
-                <pages:FeaturePage />
-			</ScrollViewer>
-		</TabItem>
-		<!-- 通知設定 -->
-		<TabItem IsVisible="{Binding !IsMacOs}">
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="&#xf075;" Classes="icon" VerticalAlignment="Center" />
-					<TextBlock Text="通知" VerticalAlignment="Center" />
-				</StackPanel>
-			</TabItem.Header>
-			<ScrollViewer>
-				<pages:NotifyPage Margin="5" />
-			</ScrollViewer>
-		</TabItem>
-		<!-- 音声設定 -->
-		<TabItem>
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="&#xf028;" Classes="icon" VerticalAlignment="Center" />
-					<TextBlock Text="音声" VerticalAlignment="Center" />
-				</StackPanel>
-			</TabItem.Header>
-			<Panel Background="{DynamicResource MainBackgroundColor}">
-				<pages:SoundPage />
-			</Panel>
-		</TabItem>
-		<!--ワークフロー-->
-		<TabItem>
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="&#xe289;" Classes="icon" />
-					<TextBlock Text="ワークフロー" />
-				</StackPanel>
-			</TabItem.Header>
-            <Panel Background="{DynamicResource MainBackgroundColor}">
-				<pages:WorkflowPage />
-            </Panel>
-        </TabItem>
-        <!-- VOICEVOX -->
-		<TabItem>
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="&#xf075;" Classes="icon" VerticalAlignment="Center" />
-					<TextBlock Text="VOICEVOX" VerticalAlignment="Center" />
-				</StackPanel>
-			</TabItem.Header>
-            <ScrollViewer>
-                <pages:VoicevoxPage />
-            </ScrollViewer>
-		</TabItem>
-		<!-- 強震モニタ -->
-		<TabItem>
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="&#xf108;" Classes="icon" />
-					<TextBlock Text="強震モニタ" />
-				</StackPanel>
-			</TabItem.Header>
-			<ScrollViewer>
-				<pages:KyoshinMonitorPage Margin="5" />
-			</ScrollViewer>
-		</TabItem>
-		<!-- 強震モニタ 地図設定 -->
-		<TabItem>
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="├" Margin="5,0" />
-					<TextBlock Text="リプレイ" />
-				</StackPanel>
-			</TabItem.Header>
-			<ScrollViewer>
-				<pages:KyoshinMonitorReplayPage Margin="5" />
-			</ScrollViewer>
-		</TabItem>
-		<!-- 強震モニタ 地図設定 -->
-		<TabItem>
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="├" Margin="5,0" />
-					<TextBlock Text="地図アイコン" />
-				</StackPanel>
-			</TabItem.Header>
-			<ScrollViewer>
-				<pages:KyoshinMonitorMapPage Margin="5" />
-			</ScrollViewer>
-		</TabItem>
-		<!-- 強震モニタ EEW設定 -->
-		<TabItem>
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="└" Margin="5,0" />
-					<TextBlock Text="緊急地震速報" />
-				</StackPanel>
-			</TabItem.Header>
-			<ScrollViewer>
-				<pages:KyoshinMonitorEewPage Margin="5" />
-			</ScrollViewer>
-		</TabItem>
-		<!-- 地震･津波情報 -->
-		<TabItem>
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="&#xf09e;" Classes="icon" />
-					<TextBlock Text="地震･津波情報" />
-				</StackPanel>
-			</TabItem.Header>
-			<ScrollViewer>
-				<pages:EarthquakePage Margin="5" />
-			</ScrollViewer>
-		</TabItem>
-		<!-- 雨雲レーダー -->
-		<TabItem>
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="&#xf740;" Classes="icon" />
-					<TextBlock Text="雨雲レーダー" />
-				</StackPanel>
-			</TabItem.Header>
-			<ScrollViewer>
-				<pages:RadarPage Margin="5" />
-			</ScrollViewer>
-		</TabItem>
-		<!--dmdata-->
-		<TabItem>
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="&#xf48b;" Classes="icon" />
-					<TextBlock Text="DM-D.S.S" />
-				</StackPanel>
-			</TabItem.Header>
-			<ScrollViewer>
-				<pages:DmdataPage Margin="5" />
-			</ScrollViewer>
-		</TabItem>
-		<!--災危通報-->
-		<TabItem>
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="&#xf7bf;" Classes="icon" />
-					<TextBlock Text="みちびき 災危通報" />
-				</StackPanel>
-			</TabItem.Header>
-			<ScrollViewer>
-				<pages:QzssPage Margin="5" />
-			</ScrollViewer>
-		</TabItem>
-		<!--地図設定-->
-		<TabItem>
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="&#xf5a0;" Classes="icon" />
-					<TextBlock Text="地図" />
-				</StackPanel>
-			</TabItem.Header>
-			<ScrollViewer>
-				<pages:MapPage Margin="5" />
-			</ScrollViewer>
-		</TabItem>
-		<!--アプリの情報-->
-		<TabItem>
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="&#xf129;" Classes="icon" />
-					<TextBlock Text="このアプリについて" />
-				</StackPanel>
-			</TabItem.Header>
-			<ScrollViewer>
-				<pages:AboutPage />
-			</ScrollViewer>
-		</TabItem>
-		<!--ライセンス情報-->
-		<TabItem>
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="&#xf2c2;" Classes="icon" />
-					<TextBlock Text="ライセンス" />
-				</StackPanel>
-			</TabItem.Header>
-			<ScrollViewer>
-				<pages:LicencePage />
-			</ScrollViewer>
-		</TabItem>
-		<!-- デバッグメニュー -->
-		<TabItem IsVisible="{Binding IsDebug}">
-			<TabItem.Header>
-				<StackPanel Orientation="Horizontal">
-					<TextBlock Text="&#xf188;" Classes="icon" />
-					<TextBlock Text="デバッグメニュー" />
-				</StackPanel>
-			</TabItem.Header>
-			<ScrollViewer>
-                <pages:DebugMenuPage />
-			</ScrollViewer>
-		</TabItem>
-	</TabControl>
+    <Window.Resources>
+        <ResourceDictionary>
+            <x:Double x:Key="NavigationViewItemOnLeftIconBoxHeight">24</x:Double>
+        </ResourceDictionary>
+    </Window.Resources>
+    <ui:NavigationView Name="SettingNavigationView"
+                       AlwaysShowHeader="False"
+					   IsSettingsVisible="False"
+                       PaneDisplayMode="Left"
+					   IsPaneOpen="True"
+                       IsPaneToggleButtonVisible="False"
+                       IsBackEnabled="False"
+					   IsBackButtonVisible="False"
+                       OpenPaneLength="200"
+                       MenuItemsSource="{Binding SettingPages}"
+                       SelectedItem="{Binding SelectedSettingPage}">
+        <ui:Frame Background="{DynamicResource MainBackgroundColor}"
+                  Content="{Binding #SettingNavigationView.((series:ISettingPage)SelectedItem).DisplayControl}"/>
+    </ui:NavigationView>
 </Window>

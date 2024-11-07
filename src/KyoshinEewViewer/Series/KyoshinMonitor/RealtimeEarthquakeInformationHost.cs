@@ -144,6 +144,7 @@ public class RealtimeEarthquakeInformationHost : EarthquakeInformationHost
 	{
 		if (IsRunning)
 			return;
+		KyoshinEvents = [];
 		KyoshinMonitorWatcher.ResetHistories();
 		KyoshinEventLevelCache.Clear();
 		KyoshinMonitorWatcher.Initalize();

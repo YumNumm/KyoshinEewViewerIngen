@@ -6,6 +6,7 @@ using KyoshinEewViewer.Core.Models.Events;
 using KyoshinEewViewer.Events;
 using KyoshinEewViewer.Series.KyoshinMonitor.Events;
 using KyoshinEewViewer.Series.KyoshinMonitor.Models;
+using KyoshinEewViewer.Series.KyoshinMonitor.SettingPages;
 using KyoshinEewViewer.Series.KyoshinMonitor.Workflow;
 using KyoshinEewViewer.Services;
 using ReactiveUI;
@@ -33,6 +34,13 @@ public class KyoshinMonitorSeries : SeriesBase
 
 	private KyoshinMonitorView? _control;
 	public override Control DisplayControl => _control ?? throw new InvalidOperationException("初期化前にコントロールが呼ばれています");
+	public override ISettingPage[] SettingPages => [
+		new BasicSettingPage<KyoshinMonitorPage>("\xf108", "強震モニタ", [
+			new KyoshinMonitorReplaySettingPage(Config, this),
+			new BasicSettingPage<KyoshinMonitorMapPage>(null, "地図アイコン", []),
+			new BasicSettingPage<KyoshinMonitorEewPage>(null, "緊急地震速報", []),
+		]),
+	];
 
 	private RealtimeEarthquakeInformationHost RealtimeInformationHost { get; }
 	private TimeshiftEarthquakeInformationHost TimeshiftInformationHost { get; }

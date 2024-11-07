@@ -14,9 +14,11 @@ using KyoshinEewViewer.Series.Earthquake;
 using KyoshinEewViewer.Series.Tsunami.Events;
 using KyoshinEewViewer.Series.Tsunami.MapLayers;
 using KyoshinEewViewer.Series.Tsunami.Models;
+using KyoshinEewViewer.Series.Tsunami.SettingPages;
 using KyoshinEewViewer.Series.Tsunami.Workflow;
 using KyoshinEewViewer.Services;
 using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
+using KyoshinEewViewer.Views.SettingPages;
 using ReactiveUI;
 using Splat;
 using System;
@@ -190,6 +192,9 @@ public class TsunamiSeries : SeriesBase
 
 	private TsunamiView? _control;
 	public override Control DisplayControl => _control ?? throw new InvalidOperationException("初期化前にコントロールが呼ばれています");
+	public override ISettingPage[] SettingPages => [
+		new BasicSettingPage<TsunamiPage>("\xe515", "津波情報", []),
+	];
 
 	private string? _sourceName;
 	/// <summary>
