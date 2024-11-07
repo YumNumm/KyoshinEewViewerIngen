@@ -179,7 +179,7 @@ public class KyoshinMonitorSeries : SeriesBase
 
 	public void KyoshinEventUpdated((DateTime time, KyoshinEvent e, bool isLevelUp) e)
 	{
-		WorkflowService.PublishEvent(new ShakeDetectedEvent(e.time, e.e));
+		WorkflowService.PublishEvent(new ShakeDetectedEvent(e.time, e.e, NowReplaying));
 
 		switch (e.e.Level)
 		{
@@ -196,7 +196,7 @@ public class KyoshinMonitorSeries : SeriesBase
 				StrongerShakeDetectedSound.Play();
 				break;
 		}
-		MessageBus.Current.SendMessage(new KyoshinShakeDetected(e.e, e.isLevelUp));
+		MessageBus.Current.SendMessage(new KyoshinShakeDetected(e.e, e.isLevelUp, NowReplaying));
 		if (Config.KyoshinMonitor.SwitchAtShakeDetect && e.e.Level >= Config.KyoshinMonitor.EventNotificationLevel)
 			ActiveRequest.Send(this);
 	}

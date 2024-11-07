@@ -69,7 +69,8 @@ public class ShakeDetectTrigger : WorkflowTrigger
 			)
 			{
 				Level = IsExact ? Level : random.Next(KyoshinEventLevel.Stronger - Level) + Level,
-			}
+			},
+			random.Next() % 2 == 0
 		)
 		{
 			IsTest = true,

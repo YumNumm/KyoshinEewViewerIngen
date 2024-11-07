@@ -110,6 +110,7 @@
 |KyoshinEventId|Guid|**揺れ検知イベント**区別のためのUUID|`a5142d28-8c81-4179-acf7-1b2116791a10`|
 |Level|KyoshinEventLevel|イベントの揺れの強さ|`weak`|
 |Regions|string[]|イベントに含まれている地域一覧||
+|IsReplay (0.19.0 より利用可)|bool|リプレイ中(タイムシフト再生など)か|`false`|
 
 #### KyoshinEventLevel
 
