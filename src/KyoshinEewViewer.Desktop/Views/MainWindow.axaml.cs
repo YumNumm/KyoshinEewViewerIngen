@@ -86,13 +86,16 @@ public partial class MainWindow : Window
 			LastWindowState = s;
 		}));
 
-		MessageBus.Current.Listen<Core.Models.Events.ShowSettingWindowRequested>().Subscribe(x => Locator.Current.GetService<SubWindowsService>()?.ShowSettingWindow());
+		MessageBus.Current.Listen<Core.Models.Events.ShowSettingWindowRequested>().Subscribe(x => Dispatcher.UIThread.Post(() => Locator.Current.GetService<SubWindowsService>()?.ShowSettingWindow()));
 		MessageBus.Current.Listen<Core.Models.Events.ShowMainWindowRequested>().Subscribe(x =>
 		{
-			Topmost = true;
-			Show();
-			WindowState = LastWindowState;
-			Topmost = false;
+			Dispatcher.UIThread.Post(() =>
+			{
+				Topmost = true;
+				Show();
+				WindowState = LastWindowState;
+				Topmost = false;
+			});
 		});
 
 		SaveTimer = new Timer(_ => Dispatcher.UIThread.Post(SaveConfig), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(10));
