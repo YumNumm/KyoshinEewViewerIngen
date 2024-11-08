@@ -4,8 +4,9 @@
 <img src="https://raw.githubusercontent.com/ingen084/KyoshinEewViewerIngen/develop/kevi_icon.png" width="128">
 </p>
 
-![downloads](https://img.shields.io/github/downloads/ingen084/KyoshinEewViewerIngen/latest/total)
-![downloads](https://img.shields.io/github/downloads/ingen084/KyoshinEewViewerIngen/total)
+![downloads-latest](https://img.shields.io/github/downloads/ingen084/KyoshinEewViewerIngen/latest/total)
+![downloads-pre](https://img.shields.io/github/downloads-pre/ingen084/KyoshinEewViewerIngen/latest/total)
+![downloads-total](https://img.shields.io/github/downloads/ingen084/KyoshinEewViewerIngen/total)
 
 ![image](https://github.com/ingen084/KyoshinEewViewerIngen/assets/5910959/4c35a365-fa94-46e5-b84f-9d73a946e2cb)
 
