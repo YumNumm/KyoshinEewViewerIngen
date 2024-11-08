@@ -104,6 +104,12 @@ public class EarthquakeEvent : ReactiveObject
 		return fragment;
 	}
 
+	public void AddFragment(EarthquakeInformationFragment fragment)
+	{
+		Fragments.Add(fragment);
+		SyncProperties();
+	}
+
 	/// <summary>
 	/// 震源・震度情報の同期
 	/// </summary>

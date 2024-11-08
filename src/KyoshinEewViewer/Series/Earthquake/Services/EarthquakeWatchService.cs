@@ -156,15 +156,16 @@ public class EarthquakeWatchService : ReactiveObject
 			return;
 
 		var fragments = EarthquakeInformationFragment.CreateFromTsunamiJmxXmlDocument(telegram, report);
-		foreach (var (EventId, Fragment) in fragments)
+		foreach (var (eventId, fragment) in fragments)
 		{
-			var eq = Earthquakes.FirstOrDefault(e => e.EventId == EventId);
+			// TODO 作成できるようにしておいた方がよさそう
+			var eq = Earthquakes.FirstOrDefault(e => e.EventId == eventId);
 			if (eq == null)
 			{
-				Logger.LogWarning($"イベントID {EventId} が見つからなかったため津波情報による震源情報の更新を行いませんでした。");
+				Logger.LogWarning($"イベントID {eventId} が見つからなかったため津波情報による震源情報の更新を行いませんでした。");
 				continue;
 			}
-			eq.ProcessTelegram(telegram, report);
+			eq.AddFragment(fragment);
 			if (!hideNotice)
 				EarthquakeUpdated?.Invoke(eq, false);
 		}
