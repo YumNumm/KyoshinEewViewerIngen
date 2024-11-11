@@ -68,7 +68,7 @@
                         <TextBlock Text="現在" FontSize="14" HorizontalAlignment="Left" />
                         <TextBlock Text="3時間前" FontSize="14" HorizontalAlignment="Right" />
                         <TextBlock Text="{Binding TimeshiftSecondsString}" HorizontalAlignment="Center" />
-                        <TextBlock Text="{Binding TimeshiftedDateTime, StringFormat={}yyyy/MM/dd hh:mm:ss}" HorizontalAlignment="Center" Margin="0,-28,0,0" />
+                        <TextBlock Text="{Binding TimeshiftedDateTime, StringFormat={}yyyy/MM/dd HH:mm:ss}" HorizontalAlignment="Center" Margin="0,-28,0,0" Foreground="{DynamicResource SubForegroundColor}" FontSize="14" />
                     </Panel>
                     <Slider Margin="0,5" Value="{Binding TimeshiftSeconds}"
                             Minimum="0" Maximum="10800" />
