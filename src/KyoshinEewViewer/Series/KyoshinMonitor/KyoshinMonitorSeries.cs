@@ -168,8 +168,13 @@ public class KyoshinMonitorSeries : SeriesBase
 	}
 
 	public void EewUpdated(DateTime updatedTime, IEew[] eews)
-		=> KyoshinMonitorLayer.CurrentEews = eews.Where(eew => eew.IsVisible)
+	{
+		KyoshinMonitorLayer.CurrentEews = eews.Where(eew => eew.IsVisible)
 			.OrderByDescending(eew => eew.OccurrenceTime).ToArray();
+
+		if (Config.Eew.SwitchAtAnnounce && eews.Any(e => e.IsVisible))
+			ActiveRequest.Send(this);
+	}
 
 	public void RealtimeDataUpdated((DateTime time, RealtimeObservationPoint[] data, KyoshinEvent[] events) e)
 	{
