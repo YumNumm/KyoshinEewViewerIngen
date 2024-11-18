@@ -17,9 +17,9 @@
 
 	<ItemGroup>
         <PackageReference Include="ManagedBass" Version="3.1.1" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.1" />
-		<PackageReference Include="System.IO.Ports" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
+		<PackageReference Include="System.IO.Ports" Version="9.0.0" />
 		<PackageReference Include="Sentry.Extensions.Logging" Version="4.12.2" />
         <PackageReference Include="Splat.Microsoft.Extensions.Logging" Version="15.2.22" />
 
@@ -28,11 +28,9 @@
         <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.1.0" />
         <PackageReference Include="AvaloniaEdit.TextMate" Version="11.1.0" />
         
-		<PackageReference Include="System.ServiceModel.Syndication" Version="8.0.0" />
+		<PackageReference Include="System.ServiceModel.Syndication" Version="9.0.0" />
         
-		<PackageReference Include="Scriban" Version="5.11.0" />
-        
-		<PackageReference Include="System.Text.Json" Version="8.0.5" />
+		<PackageReference Include="Scriban" Version="5.12.0" />
 	</ItemGroup>
 
 	<ItemGroup>

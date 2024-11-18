@@ -17,7 +17,6 @@ public class RegionCenterLocations
 		CenterLocations = MessagePackSerializer.Deserialize<IImmutableDictionary<int, IImmutableDictionary<int, FloatVector>>>(
 			centerLocationStream,
 			MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray)
-				.WithResolver(GeneratedMessagePackResolver.InstanceWithStandardAotResolver)
 		);
 	}
 

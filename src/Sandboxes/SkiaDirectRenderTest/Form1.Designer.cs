@@ -50,7 +50,7 @@ partial class Form1
 		ClientSize = new Size(800, 450);
 		Controls.Add(skglControl1);
 		Name = "Form1";
-		Text = "Form1";
+		Text = "KEVi MapRender Test";
 		ResumeLayout(false);
 	}
 

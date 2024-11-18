@@ -1,19 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
-    <UseWindowsForms>true</UseWindowsForms>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net9.0-windows</TargetFramework>
+        <Nullable>enable</Nullable>
+        <UseWindowsForms>true</UseWindowsForms>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="SkiaSharp.Views.WindowsForms" Version="3.0.0-preview.3.1" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="SkiaSharp.Views.WindowsForms" Version="3.118.0-preview.1.2" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\KyoshinEewViewer.Map\KyoshinEewViewer.Map.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\KyoshinEewViewer.Map\KyoshinEewViewer.Map.csproj" />
+    </ItemGroup>
 
 </Project>

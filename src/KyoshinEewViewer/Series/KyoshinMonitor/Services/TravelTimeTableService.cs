@@ -64,7 +64,6 @@ public static class TravelTimeTableService
 		TimeTable = MessagePackSerializer.Deserialize<ImmutableArray<TravelTimeTableItem>>(
 			stream,
 			MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray)
-				.WithResolver(GeneratedMessagePackResolver.InstanceWithStandardAotResolver)
 		).ToArray();
 	}
 }

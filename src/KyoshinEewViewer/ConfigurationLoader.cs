@@ -134,9 +134,8 @@ public static class ConfigurationLoader
 		{
 			SaveWorkflowsPrivate(config, true);
 		}
-		catch(Exception ex)
+		catch
 		{
-			;
 		}
 	}
 

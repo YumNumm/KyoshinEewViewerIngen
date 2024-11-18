@@ -25,9 +25,9 @@ public class TopologyMap
 	internal void OnAsyncObjectGenerated(int zoom) => AsyncObjectGenerated?.Invoke(zoom);
 
 	public static TopologyMap Load(byte[] data)
-		=> MessagePackSerializer.Deserialize<TopologyMap>(data, MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray).WithResolver(GeneratedMessagePackResolver.InstanceWithStandardAotResolver));
+		=> MessagePackSerializer.Deserialize<TopologyMap>(data, MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray));
 	public static IImmutableDictionary<int, TopologyMap> LoadCollection(Stream stream)
-		=> MessagePackSerializer.Deserialize<IImmutableDictionary<int, TopologyMap>>(stream, MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray).WithResolver(GeneratedMessagePackResolver.InstanceWithStandardAotResolver));
+		=> MessagePackSerializer.Deserialize<IImmutableDictionary<int, TopologyMap>>(stream, MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray));
 }
 [MessagePackObject]
 public class TopologyArc

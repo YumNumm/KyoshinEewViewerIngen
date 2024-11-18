@@ -6,6 +6,7 @@ using KyoshinEewViewer.Series.KyoshinMonitor.Services.Eew;
 using KyoshinMonitorLib;
 using KyoshinMonitorLib.SkiaImages;
 using KyoshinMonitorLib.UrlGenerator;
+using MessagePack;
 using Sentry;
 using SkiaSharp;
 using Splat;
@@ -68,7 +69,7 @@ public class KyoshinMonitorWatchService
 			Logger.LogInfo("観測点情報を読み込んでいます。");
 			using (var stream = AssetLoader.Open(new Uri("avares://KyoshinEewViewer/Assets/ShindoObsPoints.mpk.lz4", UriKind.Absolute)) ?? throw new Exception("観測点情報が読み込めません"))
 			{
-				var points = ObservationPoint.LoadFromMpk(stream, true);
+				var points = MessagePackSerializer.Deserialize<ObservationPoint[]>(stream, options: MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4Block));
 				Points = points.Where(p => p.Point != null && !p.IsSuspended).Select(p => new RealtimeObservationPoint(p)).ToArray();
 			}
 			Logger.LogInfo($"観測点情報を読み込みました。");

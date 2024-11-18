@@ -31,4 +31,8 @@
 	<ItemGroup>
 		<AvaloniaResource Include="Assets\**" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Update="Microsoft.Extensions.Logging" Version="9.0.0" />
+	</ItemGroup>
 </Project>
