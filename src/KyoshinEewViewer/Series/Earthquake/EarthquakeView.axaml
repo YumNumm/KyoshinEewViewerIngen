@@ -219,12 +219,12 @@
 
         <!-- 訓練電文表示 -->
         <StackPanel Grid.Column="1" IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}" Opacity=".5">
-            <TextBlock IsVisible="{Binding CurrentEvent.IsTraining}" Foreground="{DynamicResource SubForegroundColor}" FontSize="52" Text="TRAINING" FontWeight="Bold" Margin="0,0,0,-50" />
+            <TextBlock IsVisible="{Binding CurrentEvent.IsTraining}" Foreground="{DynamicResource SubForegroundColor}" FontSize="52" Text="D  R  I  L  L" FontWeight="Bold" Margin="0,0,0,-50" />
             <TextBlock IsVisible="{Binding CurrentEvent.IsTraining}" Foreground="{DynamicResource SubForegroundColor}" FontSize="125" Text="訓練" FontWeight="Bold" />
         </StackPanel>
         <!-- 試験電文表示 -->
         <StackPanel Grid.Column="1" IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}" Opacity=".5">
-            <TextBlock IsVisible="{Binding CurrentEvent.IsTest}" Foreground="{DynamicResource SubForegroundColor}" FontSize="52" Text="D  R  I  L  L" FontWeight="Bold" Margin="0,0,0,-50" />
+            <TextBlock IsVisible="{Binding CurrentEvent.IsTest}" Foreground="{DynamicResource SubForegroundColor}" FontSize="52" Text="  T  E  S  T" FontWeight="Bold" Margin="0,0,0,-50" />
             <TextBlock IsVisible="{Binding CurrentEvent.IsTest}" Foreground="{DynamicResource SubForegroundColor}" FontSize="125" Text="試験" FontWeight="Bold" />
         </StackPanel>
 
@@ -393,8 +393,8 @@
                                             </Panel>
                                         </Panel>
                                     </Border>
-                                    <TextBlock IsVisible="{Binding IsTraining}" Text="訓練" Foreground="{DynamicResource WarningForegroundColor}" Background="{DynamicResource WarningBackgroundColor}"  FontSize="24" FontWeight="Bold" Margin="0,-5" VerticalAlignment="Center" />
-                                    <TextBlock IsVisible="{Binding IsTest}" Text="試験" Foreground="{DynamicResource WarningForegroundColor}" Background="{DynamicResource WarningBackgroundColor}"  FontSize="24" FontWeight="Bold" Margin="0,-5" VerticalAlignment="Center" />
+                                    <TextBlock IsVisible="{Binding IsTraining}" Text="訓練" Foreground="{DynamicResource WarningForegroundColor}" Background="{DynamicResource WarningBackgroundColor}"  FontSize="24" FontWeight="Bold" Margin="0,-5" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                    <TextBlock IsVisible="{Binding IsTest}" Text="試験" Foreground="{DynamicResource WarningForegroundColor}" Background="{DynamicResource WarningBackgroundColor}"  FontSize="24" FontWeight="Bold" Margin="0,-5" VerticalAlignment="Center" HorizontalAlignment="Center" />
                                 </Grid>
                                 <Grid Background="#55000000" IsVisible="{Binding IsCancelled}">
                                     <TextBlock Text="取り消されました" FontSize="18" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center" />

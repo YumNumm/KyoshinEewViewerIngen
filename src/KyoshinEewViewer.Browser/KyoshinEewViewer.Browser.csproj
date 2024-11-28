@@ -13,6 +13,7 @@
 
     <ItemGroup>
         <PackageReference Include="Avalonia.Browser" Version="$(AvaloniaVersion)" />
+        <PackageReference Include="System.Private.Uri" Version="4.3.2" />
     </ItemGroup>
 
     <!-- プロジェクト参照 -->
