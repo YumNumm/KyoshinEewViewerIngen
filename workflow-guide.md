@@ -271,7 +271,7 @@ Jsonの場合先頭は小文字になります。
 |EventId|Guid|イベント区別のためのUUID|`a5142d28-8c81-4179-acf7-1b2116791a10`|
 |IsTest|bool|テストイベントかどうか|`true`|
 |UpdatedAt|DateTime|地震情報の更新時刻|`2024-04-25T06:36:06`|
-|LastInformationName|string|最後に受信した地震情報の名前|`震度速報` `震源に関する情報` `震源・震度に関する情報` `顕著な地震の震源要素更新のお知らせ` `津波警報・注意報・予報a` `長周期地震動に関する観測情報`|
+|LatestInformationName|string|最後に受信した地震情報の名前|`震度速報` `震源に関する情報` `震源・震度に関する情報` `顕著な地震の震源要素更新のお知らせ` `津波警報・注意報・予報a` `長周期地震動に関する観測情報`|
 |EarthquakeId|string|地震情報のID|`20240425063606`|
 |IsTrainingOrTest|bool|訓練かテストか|`false`|
 |DetectedAt|DateTime?|揺れの検知時刻 震源情報が存在しない場合のみ|`2024-04-25T06:36:06`|
