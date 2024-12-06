@@ -70,6 +70,9 @@ internal static class NativeMethods
 	public const int WmLbuttondblclk = 0x0203;
 	public const int WmRbuttonup = 0x0205;
 
+	public const uint NinBalloonTimeout = 0x404;
+	public const uint NinBalloonUserclick = 0x405;
+
 	public const uint NimAdd = 0;
 	public const uint NimModify = 1;
 	public const uint NimDelete = 2;
