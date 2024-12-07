@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 
 namespace KyoshinEewViewer.Notification.Windows;
@@ -61,6 +61,7 @@ internal static class NativeMethods
 	[DllImport("user32.dll")]
 	public static extern bool DestroyIcon(IntPtr hIcon);
 
+	public const int WmCreate = 0x0001;
 	public const int WmQuit = 0x0012;
 	public const int WmUser = 0x0400;
 	public const int WmTrayCallbackMessage = WmUser + 1;
@@ -70,12 +71,12 @@ internal static class NativeMethods
 	public const int WmLbuttondblclk = 0x0203;
 	public const int WmRbuttonup = 0x0205;
 
-	public const uint NinBalloonTimeout = 0x404;
-	public const uint NinBalloonUserclick = 0x405;
+	public const int NinBalloonTimeout = 0x404;
+	public const int NinBalloonUserclick = 0x405;
 
-	public const uint NimAdd = 0;
-	public const uint NimModify = 1;
-	public const uint NimDelete = 2;
+	public const int NimAdd = 0;
+	public const int NimModify = 1;
+	public const int NimDelete = 2;
 
 	[Flags]
 	public enum Nif
@@ -191,4 +192,6 @@ internal static class NativeMethods
 		public Point pt;
 		public int lPrivate;
 	}
+	[DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+	public static extern uint RegisterWindowMessage(string lpString);
 }

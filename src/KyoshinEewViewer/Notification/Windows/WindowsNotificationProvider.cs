@@ -24,6 +24,7 @@ public class WindowsNotificationProvider : NotificationProvider
 	private Notifyicondata _notifyIconData;
 	private IntPtr _hWnd = IntPtr.Zero;
 	private IntPtr _hMenu = IntPtr.Zero;
+	private uint _uTaskbarRestart = 0;
 
 	public override void InitializeTrayIcon(TrayMenuItem[] menuItems)
 	{
@@ -124,7 +125,6 @@ public class WindowsNotificationProvider : NotificationProvider
 				break;
 			if (msg.message == WmQuit)
 				break;
-			//TranslateMessage(ref msg);
 			DispatchMessage(ref msg);
 		}
 
@@ -144,40 +144,48 @@ public class WindowsNotificationProvider : NotificationProvider
 
 	private IntPtr WndProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam)
 	{
-		//Debug.WriteLine($"WndProc: {uMsg}");
+		Debug.WriteLine($"WndProc: {uMsg}");
 		if (ShutdownRequested)
 			return IntPtr.Zero;
 
-		if (uMsg == WmTrayCallbackMessage)
-			return WndProcTrayCallback(hWnd, uMsg, wParam, lParam);
-		if (uMsg == WmCommand)
+		switch (uMsg)
 		{
-			Debug.WriteLine($"WMCommand: w{wParam} l{lParam}");
-			Dispatcher.UIThread.Post(() => TrayMenuItems?.FirstOrDefault(i => i.Id == (uint)wParam)?.OnClicked());
-			return IntPtr.Zero;
+			case WmCreate:
+				_uTaskbarRestart = RegisterWindowMessage("TaskbarCreated");
+				return IntPtr.Zero;
+			case WmTrayCallbackMessage:
+				return WndProcTrayCallback(hWnd, uMsg, wParam, lParam);
+			case WmCommand:
+				//Debug.WriteLine($"WMCommand: w{wParam} l{lParam}");
+				Dispatcher.UIThread.Post(() => TrayMenuItems?.FirstOrDefault(i => i.Id == (uint)wParam)?.OnClicked());
+				return IntPtr.Zero;
+			default:
+				if (uMsg == _uTaskbarRestart)
+				{
+					Shell_NotifyIcon(NimAdd, ref _notifyIconData);
+					return IntPtr.Zero;
+				}
+				return DefWindowProc(hWnd, uMsg, wParam, lParam);
 		}
-		return DefWindowProc(hWnd, uMsg, wParam, lParam);
 	}
 	private IntPtr WndProcTrayCallback(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam)
 	{
-		if (lParam.ToInt32() == WmLbuttondblclk)
+		switch (lParam.ToInt32())
 		{
-			Dispatcher.UIThread.Post(() => MessageBus.Current.SendMessage(new ShowMainWindowRequested()));
-			return IntPtr.Zero;
+			case WmLbuttondblclk:
+			case NinBalloonUserclick:
+				Dispatcher.UIThread.Post(() => MessageBus.Current.SendMessage(new ShowMainWindowRequested()));
+				return IntPtr.Zero;
+			case WmRbuttonup:
+				if (_hMenu == IntPtr.Zero)
+					return IntPtr.Zero;
+				GetCursorPos(out var p);
+				SetForegroundWindow(hWnd);
+				var pp = TrackPopupMenu(_hMenu, (uint)(TpmFlag.Leftalign | TpmFlag.Rightbutton | TpmFlag.Returncmd | TpmFlag.Nonotify), p.X, p.Y, 0, hWnd, IntPtr.Zero);
+				SendMessage(hWnd, WmCommand, pp, IntPtr.Zero);
+				return IntPtr.Zero;
+			default:
+				return DefWindowProc(hWnd, uMsg, wParam, lParam);
 		}
-		if (lParam.ToInt32() == NinBalloonUserclick)
-		{
-			Dispatcher.UIThread.Post(() => MessageBus.Current.SendMessage(new ShowMainWindowRequested()));
-			return IntPtr.Zero;
-		}
-		if (lParam.ToInt32() != WmRbuttonup)
-			return DefWindowProc(hWnd, uMsg, wParam, lParam);
-		if (_hMenu == IntPtr.Zero)
-			return IntPtr.Zero;
-		GetCursorPos(out var p);
-		SetForegroundWindow(hWnd);
-		var pp = TrackPopupMenu(_hMenu, (uint)(TpmFlag.Leftalign | TpmFlag.Rightbutton | TpmFlag.Returncmd | TpmFlag.Nonotify), p.X, p.Y, 0, hWnd, IntPtr.Zero);
-		SendMessage(hWnd, WmCommand, pp, IntPtr.Zero);
-		return IntPtr.Zero;
 	}
 }
