@@ -12,6 +12,7 @@ namespace KyoshinEewViewer.Services.Workflows;
 public record WorkflowTriggerInfo(Type Type, string DisplayName, Func<WorkflowTrigger> Create);
 
 [JsonDerivedType(typeof(DummyTrigger), typeDiscriminator: "Dummy")]
+[JsonDerivedType(typeof(AllTrigger), typeDiscriminator: "All")]
 [JsonDerivedType(typeof(ShakeDetectTrigger), typeDiscriminator: "KyoshinShakeDetected")]
 [JsonDerivedType(typeof(EewTrigger), typeDiscriminator: "Eew")]
 [JsonDerivedType(typeof(ApplicationStartupTrigger), typeDiscriminator: "ApplicationStartup")]
@@ -23,6 +24,7 @@ public abstract class WorkflowTrigger : ReactiveObject
 	static WorkflowTrigger()
 	{
 		WorkflowService.RegisterTrigger<DummyTrigger>("何もしない");
+		WorkflowService.RegisterTrigger<AllTrigger>("すべて");
 		WorkflowService.RegisterTrigger<ApplicationStartupTrigger>("アプリケーション起動時");
 		WorkflowService.RegisterTrigger<UpdateAvailableTrigger>("アプリケーションの更新存在時");
 		WorkflowService.RegisterTrigger<ShakeDetectTrigger>("(強震モニタ)揺れ検知");
