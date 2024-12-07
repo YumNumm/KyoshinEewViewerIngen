@@ -165,6 +165,11 @@ public class WindowsNotificationProvider : NotificationProvider
 			Dispatcher.UIThread.Post(() => MessageBus.Current.SendMessage(new ShowMainWindowRequested()));
 			return IntPtr.Zero;
 		}
+		if (lParam.ToInt32() == NinBalloonUserclick)
+		{
+			Dispatcher.UIThread.Post(() => MessageBus.Current.SendMessage(new ShowMainWindowRequested()));
+			return IntPtr.Zero;
+		}
 		if (lParam.ToInt32() != WmRbuttonup)
 			return DefWindowProc(hWnd, uMsg, wParam, lParam);
 		if (_hMenu == IntPtr.Zero)
