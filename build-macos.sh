@@ -24,7 +24,7 @@ dotnet build -f net10.0-macos -r "$RID" --no-restore
 # ステップ2: Desktop プロジェクトをビルド
 echo "🔨 Building Desktop..."
 cd ../KyoshinEewViewer.Desktop
-dotnet build -f net10.0-macos -r "$RID" --no-restore
+dotnet build -f net10.0-macos -r "$RID"
 
 echo "✅ Build completed!"
 echo "📦 Output: src/KyoshinEewViewer.Desktop/bin/Debug/net10.0-macos/$RID/"
