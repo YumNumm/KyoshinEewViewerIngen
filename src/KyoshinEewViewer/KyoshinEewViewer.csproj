@@ -2,7 +2,9 @@
 	<Import Project="..\..\common.props" />
 
 	<PropertyGroup>
-        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<!-- マルチターゲット化 -->
+		<TargetFrameworks>net10.0;net10.0-macos</TargetFrameworks>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 
 	<!-- プロジェクト参照 -->
