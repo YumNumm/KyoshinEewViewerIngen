@@ -53,9 +53,13 @@
         <DefineConstants Condition="$(RuntimeIdentifier.StartsWith('osx'))">MACOS</DefineConstants>
     </PropertyGroup>
 
-    <!-- macOS ターゲットフレームワーク用のコンパイル定数 -->
+    <!-- macOS ターゲットフレームワーク用のコンパイル定数とリンク設定 -->
     <PropertyGroup Condition="$(TargetFramework.Contains('macos'))">
         <DefineConstants>$(DefineConstants);MACOS</DefineConstants>
+        <!-- macOS ではトリミングを無効化 -->
+        <PublishTrimmed>true</PublishTrimmed>
+        <TrimMode>partial</TrimMode>
+        <LinkMode>None</LinkMode>
     </PropertyGroup>
 
     <PropertyGroup>
