@@ -50,6 +50,12 @@
         <EnableWindowsTargeting>true</EnableWindowsTargeting>
 
         <DefineConstants Condition="$(RuntimeIdentifier.StartsWith('linux'))">LINUX</DefineConstants>
+        <DefineConstants Condition="$(RuntimeIdentifier.StartsWith('osx'))">MACOS</DefineConstants>
+    </PropertyGroup>
+
+    <!-- macOS ターゲットフレームワーク用のコンパイル定数 -->
+    <PropertyGroup Condition="$(TargetFramework.Contains('macos'))">
+        <DefineConstants>$(DefineConstants);MACOS</DefineConstants>
     </PropertyGroup>
 
     <PropertyGroup>
