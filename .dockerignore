@@ -1,0 +1,8 @@
+# Build artifacts (dotnet publish はコンテナ内で実行)
+**/bin/
+**/obj/
+
+# テスト・VCS
+tests/
+.git/
+.github/

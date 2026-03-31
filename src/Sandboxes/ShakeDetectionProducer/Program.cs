@@ -3,14 +3,13 @@ using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Linq;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Core.ShakeDetection;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Metrics;
@@ -108,9 +107,9 @@ internal class Program
 
 		// Kestrel設定
 		var port = int.Parse(Environment.GetEnvironmentVariable("PORT") ?? "5000");
-		builder.WebHost.ConfigureKestrel(serverOptions =>
+		builder.Services.Configure<KestrelServerOptions>(options =>
 		{
-			serverOptions.Listen(IPAddress.Any, port);
+			options.ListenAnyIP(port);
 		});
 
 		var app = builder.Build();

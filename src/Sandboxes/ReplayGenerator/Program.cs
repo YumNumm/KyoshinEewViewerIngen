@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Prometheus;
@@ -18,11 +19,12 @@ internal class Program
 		CultureInfo.CurrentCulture = new CultureInfo("ja-JP");
 
 		var port = int.Parse(Environment.GetEnvironmentVariable("PORT") ?? "5000");
-		Environment.SetEnvironmentVariable(
-			"ASPNETCORE_URLS",
-			$"http://0.0.0.0:{port}");
 
 		var builder = WebApplication.CreateBuilder(args);
+		builder.Services.Configure<KestrelServerOptions>(options =>
+		{
+			options.ListenAnyIP(port);
+		});
 
 		var redisUrl = Environment.GetEnvironmentVariable("REDIS_URL") ?? "localhost:6379";
 		var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL") ?? "";

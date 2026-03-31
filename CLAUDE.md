@@ -193,9 +193,9 @@ var mockResponse = new SocketStartResponse
 };
 
 // ❌ BAD - Real production URL that could trigger requests
-var badResponse = new SocketStartResponse 
+var badResponse = new SocketStartResponse
 {
-    Websocket = new SocketStartResponse.Info 
+    Websocket = new SocketStartResponse.Info
     {
         Url = "wss://ws.api.dmdata.jp/v2/socket"  // Real URL - FORBIDDEN
     }
@@ -305,7 +305,7 @@ await new ContentDialog
 public class SampleService : ReactiveObject, IDisposable
 {
     private ILogger Logger { get; }
-    
+
     public SampleService(ILogManager logManager)
     {
         Logger = logManager.GetLogger<SampleService>();
@@ -316,12 +316,12 @@ public class SampleService : ReactiveObject, IDisposable
 public class SampleService : ReactiveObject, IDisposable
 {
     private ILogger<SampleService> Logger { get; }
-    
+
     public SampleService(ILogger<SampleService> logger)
     {
         Logger = logger;
     }
-    
+
     public async Task ProcessAsync()
     {
         try
@@ -378,7 +378,7 @@ Propose adding instructions that could be useful elsewhere to CLAUDE.md for cont
 
 ### Notification Template Design
 - **Detailed Guide**: `docs/notification-design-guidelines.md`
-- **Implementation Examples**: `src/KyoshinEewViewer/Series/*/Templates/*Templates.cs`  
+- **Implementation Examples**: `src/KyoshinEewViewer/Series/*/Templates/*Templates.cs`
 - **Test Patterns**: `tests/KyoshinEewViewer.Tests/Templates/`
 
 ## File Format Rules

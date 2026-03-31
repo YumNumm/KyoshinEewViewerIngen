@@ -10,8 +10,7 @@ using System.Globalization;
 using System.Threading;
 using KyoshinEewViewer.Map.Data;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using System.Net;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using KyoshinEewViewer.Series;
@@ -42,9 +41,9 @@ namespace SlackBot
 			var logger = Locator.Current.RequireService<ILogManager>().GetLogger<Program>();
 
 			var webBuilder = WebApplication.CreateSlimBuilder(args);
-			webBuilder.WebHost.ConfigureKestrel((context, serverOptions) =>
+			webBuilder.Services.Configure<KestrelServerOptions>(options =>
 			{
-				serverOptions.Listen(IPAddress.Any, 5000);
+				options.ListenAnyIP(5000);
 			});
 			var webApp = webBuilder.Build();
 			async Task SwitchAndCaptureAndResponseAsync(HttpContext context, SeriesBase series)
