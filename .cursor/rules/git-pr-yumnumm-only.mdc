@@ -1,0 +1,11 @@
+---
+description: GitHub PR は常に YumNumm（origin）向けのみ。upstream（ingen084）へ PR を作らない
+alwaysApply: true
+---
+
+# Git / GitHub PR（厳守）
+
+- **ingen084/KyoshinEewViewerIngen は upstream** である。ここへ **Pull Request を作成してはならない**。
+- PR は **常に `YumNumm/KyoshinEewViewerIngen`（このリポジトリの `origin`）** に対してのみ作成する。
+- `gh pr create` を使うときは、取り違え防止のため **必ず `--repo YumNumm/KyoshinEewViewerIngen` を明示する**。デフォルトや認証コンテキストに任せない。
+- 実行前に `git remote -v` で `origin` が `YumNumm` を指していることを確認してよい。
