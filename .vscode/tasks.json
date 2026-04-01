@@ -1,55 +1,55 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"label": "build",
-			"command": "dotnet",
-			"type": "process",
-			"args": [
-				"build",
-				"${workspaceFolder}/src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj",
-				"/property:GenerateFullPaths=true",
-				"/consoleloggerparameters:NoSummary"
-			],
-			"problemMatcher": "$msCompile"
-		},
-		{
-			"label": "build-shake-detection-producer",
-			"command": "dotnet",
-			"type": "process",
-			"args": [
-				"build",
-				"${workspaceFolder}/src/Sandboxes/ShakeDetectionProducer/ShakeDetectionProducer.csproj",
-				"/property:GenerateFullPaths=true",
-				"/consoleloggerparameters:NoSummary",
-				"--debug"
-			],
-			"problemMatcher": "$msCompile"
-		},
-		{
-			"label": "publish",
-			"command": "dotnet",
-			"type": "process",
-			"args": [
-				"publish",
-				"${workspaceFolder}/src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj",
-				"/property:GenerateFullPaths=true",
-				"/consoleloggerparameters:NoSummary"
-			],
-			"problemMatcher": "$msCompile"
-		},
-		{
-			"label": "watch",
-			"command": "dotnet",
-			"type": "process",
-			"args": [
-				"watch",
-				"run",
-				"${workspaceFolder}/src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj",
-				"/property:GenerateFullPaths=true",
-				"/consoleloggerparameters:NoSummary"
-			],
-			"problemMatcher": "$msCompile"
-		}
-	]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "build-shake-detection-producer",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/src/Sandboxes/ShakeDetectionProducer/ShakeDetectionProducer.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary",
+        "--debug"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "publish",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "publish",
+        "${workspaceFolder}/src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "watch",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "watch",
+        "run",
+        "${workspaceFolder}/src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "problemMatcher": "$msCompile"
+    }
+  ]
 }

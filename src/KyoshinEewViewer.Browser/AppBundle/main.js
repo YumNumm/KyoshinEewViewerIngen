@@ -1,13 +1,15 @@
-﻿import { dotnet } from './dotnet.js'
+import { dotnet } from './dotnet.js';
 
-const is_browser = typeof globalThis.window !== "undefined";
+const is_browser = globalThis.window !== undefined;
 if (!is_browser) throw new Error(`Expected to be running in a browser`);
 
 const dotnetRuntime = await dotnet
-    .withDiagnosticTracing(false)
-    .withApplicationArgumentsFromQuery()
-    .create();
+  .withDiagnosticTracing(false)
+  .withApplicationArgumentsFromQuery()
+  .create();
 
 const config = dotnetRuntime.getConfig();
 
-await dotnetRuntime.runMainAndExit(config.mainAssemblyName, [globalThis.location.search]);
+await dotnetRuntime.runMainAndExit(config.mainAssemblyName, [
+  globalThis.location.search,
+]);

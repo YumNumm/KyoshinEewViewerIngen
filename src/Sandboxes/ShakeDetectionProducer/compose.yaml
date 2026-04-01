@@ -1,34 +1,34 @@
 services:
-    shake-detection-producer:
-        # https://github.com/YumNumm/KyoshinEewViewerIngen/pkgs/container/shake-detection-producer
-        image: ghcr.io/yumnumm/shake-detection-producer:latest
-        build:
-            context: ../../..
-            dockerfile: src/Sandboxes/ShakeDetectionProducer/Dockerfile
-        ports:
-            - "5000:5000"
-        platform: linux/amd64
-        environment:
-            - TIMER_OFFSET_MS=${TIMER_OFFSET_MS:-1100}
-            - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}
-            - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-shake-detection-producer}
-            - PORT=5000
-            - VALKEY_CONNECTION_STRING=${VALKEY_CONNECTION_STRING:-valkey:6379}
-            - VALKEY_STREAM_KEY=${VALKEY_STREAM_KEY:-shake-detect-events}
-            - VALKEY_STREAM_MAXLEN=${VALKEY_STREAM_MAXLEN:-10000}
-        restart: unless-stopped
-        depends_on:
-            - valkey
+  shake-detection-producer:
+    # https://github.com/YumNumm/KyoshinEewViewerIngen/pkgs/container/shake-detection-producer
+    image: ghcr.io/yumnumm/shake-detection-producer:latest
+    build:
+      context: ../../..
+      dockerfile: src/Sandboxes/ShakeDetectionProducer/Dockerfile
+    ports:
+      - '5000:5000'
+    platform: linux/amd64
+    environment:
+      - TIMER_OFFSET_MS=${TIMER_OFFSET_MS:-1100}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-shake-detection-producer}
+      - PORT=5000
+      - VALKEY_CONNECTION_STRING=${VALKEY_CONNECTION_STRING:-valkey:6379}
+      - VALKEY_STREAM_KEY=${VALKEY_STREAM_KEY:-shake-detect-events}
+      - VALKEY_STREAM_MAXLEN=${VALKEY_STREAM_MAXLEN:-10000}
+    restart: unless-stopped
+    depends_on:
+      - valkey
 
-    valkey:
-        # https://hub.docker.com/r/valkey/valkey
-        image: valkey/valkey:8
-        ports:
-            - "6379:6379"
-        volumes:
-            - valkey-data:/data
-        command: valkey-server --appendonly yes
-        restart: always
+  valkey:
+    # https://hub.docker.com/r/valkey/valkey
+    image: valkey/valkey:8
+    ports:
+      - '6379:6379'
+    volumes:
+      - valkey-data:/data
+    command: valkey-server --appendonly yes
+    restart: always
 
 volumes:
-    valkey-data:
+  valkey-data:

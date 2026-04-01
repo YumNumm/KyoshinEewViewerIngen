@@ -11,10 +11,18 @@ RUN dotnet restore src/Sandboxes/ReplayGenerator/ReplayGenerator.csproj
 
 COPY . .
 
+# buildx の --platform に合わせた RID（常に linux-x64 だと arm64 イメージが壊れる／ビルドが失敗することがある）
 ARG TARGETARCH
-RUN dotnet publish src/Sandboxes/ReplayGenerator/ReplayGenerator.csproj \
+RUN set -eux; \
+    RID=linux-x64; \
+    case "${TARGETARCH:-amd64}" in \
+      amd64) RID=linux-x64 ;; \
+      arm64) RID=linux-arm64 ;; \
+      *) echo "unsupported TARGETARCH=${TARGETARCH}" >&2; exit 1 ;; \
+    esac; \
+    dotnet publish src/Sandboxes/ReplayGenerator/ReplayGenerator.csproj \
         -c Release \
-        -r linux-x64 \
+        -r "${RID}" \
         --self-contained true \
         -p:PublishSingleFile=true \
         -o /app/publish

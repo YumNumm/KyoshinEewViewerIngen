@@ -29,78 +29,78 @@ json のファイル形式、カラーコード(`#FFFFFF`等)の知識が前提�
 
 以下の形式です。
 
-|プロパティ名|型|解説|
-|:--|:--|:--|
-|Name|string|テーマ名 設定ファイル上でも使用されます|
-|TitleBackgroundColor|Color|タイトルバーの色 左ペインの配色(Windows のみタイトルバーの色も変化します)|
-|IsDark|bool|ダークテーマか UIの基本色が変化します|
-||||
-|OverseasLandColor|Color|地図配色 海外地形(ボーダーは設定不可)|
-|LandColor|Color|地図配色 地形|
-|LandStrokeThickness|double|地図配色 海岸線の太さ 0 にすることで軽量化できる|
-|PrefStrokeColor|Color|地図配色 都道府県境界線|
-|PrefStrokeThickness|double|地図配色 都道府県境界線の太さ|
-|AreaStrokeColor|Color|地図配色 地域境界線|
-|AreaStrokeThickness|double|地図配色 地域境界線の太さ|
-||||
-|MainBackgroundColor|Color|メイン背景色|
-|ForegroundColor|Color|メイン文字色|
-|SubForegroundColor|Color|サブ文字色(補足等)|
-|EmphasisForegroundColor|Color|強調文字(現状では強震モニタリプレイ時の時刻色)|
-||||
-|DockBackgroundColor|Color|ドック(要素ウィンドウ)背景色|
-|DockTitleBackgroundColor|Color|ドック(要素ウィンドウ)タイトル部分背景色|
-|DockWarningBackgroundColor|Color|ドックエラー･警告配色背景色|
-|DockWarningTitleBackgroundColor|Color|ドックエラー･警告配色タイトル部分背景色|
-||||
-|WarningForegroundColor|Color|エラー･警告文字色|
-|WarningSubForegroundColor|Color|エラー･警告サブ文字色|
-|WarningBackgroundColor|Color|エラー･警告背景色|
-||||
-|TsunamiForecastColor|Color|津波予報色|
-|TsunamiForecastForegroundColor|Color|津波予報文字色|
-|TsunamiAdvisoryColor|Color|津波注意報色|
-|TsunamiAdvisoryForegroundColor|Color|津波注意報文字色|
-|TsunamiWarningColor|Color|津波警報色|
-|TsunamiWarningForegroundColor|Color|津波警報文字色|
-|TsunamiMajorWarningColor|Color|津波大津波警報色|
-|TsunamiMajorWarningForegroundColor|Color|津波大津波警報文字色|
-||||
-|EarthquakeHypocenterBorderColor|Color|震央アイコンボーダー色(地震情報)|
-|EarthquakeHypocenterColor|Color|震央アイコン塗りつぶし色(地震情報)|
-||||
-|EewForecastHypocenterBorderColor|Color|震央アイコンボーダー色(緊急地震速報 予報)|
-|EewForecastHypocenterColor|Color|震央アイコン塗りつぶし色(緊急地震速報 予報)|
-|EewWarningHypocenterBorderColor|Color|震央アイコンボーダー色(緊急地震速報 警報)|
-|EewWarningHypocenterColor|Color|震央アイコン中央色(緊急地震速報 警報)|
-||||
-|IsEewHypocenterBlinkAnimation|bool|緊急地震速報震央アイコンの点滅アニメーションを有効にするか|
-||||
-|EewForecastPWaveColor|Color|緊急地震速報(予報)P波色|
-|EewForecastSWaveColor|Color|緊急地震速報(予報)S波色|
-|IsEewForecastSWaveGradient|bool|緊急地震速報(予報)のS波色をグラデーションにするか|
-||||
-|EewWarningPWaveColor|Color|緊急地震速報(警報)P波色|
-|EewWarningSWaveColor|Color|緊急地震速報(警報)S波色|
-|IsEewWarningSWaveGradient|bool|緊急地震速報(警報)のS波色をグラデーションにするか|
-||||
-|AshfallLight|Color|降灰予報における『少量の降灰』|
-|AshfallLightForeground|Color|降灰予報における『少量の降灰』文字色|
-|AshfallModerate|Color|降灰予報における『やや多量の降灰』|
-|AshfallModerateForeground|Color|降灰予報における『やや多量の降灰』文字色|
-|AshfallHeavy|Color|降灰予報における『多量の降灰』|
-|AshfallHeavyForeground|Color|降灰予報における『多量の降灰』文字色|
-|SmallVolcanicBombFall|Color|降灰予報における『小さな噴石の落下』|
-|SmallVolcanicBombFallForeground|Color|降灰予報における『小さな噴石の落下』文字色|
+| プロパティ名                       | 型     | 解説                                                                      |
+| :--------------------------------- | :----- | :------------------------------------------------------------------------ |
+| Name                               | string | テーマ名 設定ファイル上でも使用されます                                   |
+| TitleBackgroundColor               | Color  | タイトルバーの色 左ペインの配色(Windows のみタイトルバーの色も変化します) |
+| IsDark                             | bool   | ダークテーマか UIの基本色が変化します                                     |
+|                                    |        |                                                                           |
+| OverseasLandColor                  | Color  | 地図配色 海外地形(ボーダーは設定不可)                                     |
+| LandColor                          | Color  | 地図配色 地形                                                             |
+| LandStrokeThickness                | double | 地図配色 海岸線の太さ 0 にすることで軽量化できる                          |
+| PrefStrokeColor                    | Color  | 地図配色 都道府県境界線                                                   |
+| PrefStrokeThickness                | double | 地図配色 都道府県境界線の太さ                                             |
+| AreaStrokeColor                    | Color  | 地図配色 地域境界線                                                       |
+| AreaStrokeThickness                | double | 地図配色 地域境界線の太さ                                                 |
+|                                    |        |                                                                           |
+| MainBackgroundColor                | Color  | メイン背景色                                                              |
+| ForegroundColor                    | Color  | メイン文字色                                                              |
+| SubForegroundColor                 | Color  | サブ文字色(補足等)                                                        |
+| EmphasisForegroundColor            | Color  | 強調文字(現状では強震モニタリプレイ時の時刻色)                            |
+|                                    |        |                                                                           |
+| DockBackgroundColor                | Color  | ドック(要素ウィンドウ)背景色                                              |
+| DockTitleBackgroundColor           | Color  | ドック(要素ウィンドウ)タイトル部分背景色                                  |
+| DockWarningBackgroundColor         | Color  | ドックエラー･警告配色背景色                                               |
+| DockWarningTitleBackgroundColor    | Color  | ドックエラー･警告配色タイトル部分背景色                                   |
+|                                    |        |                                                                           |
+| WarningForegroundColor             | Color  | エラー･警告文字色                                                         |
+| WarningSubForegroundColor          | Color  | エラー･警告サブ文字色                                                     |
+| WarningBackgroundColor             | Color  | エラー･警告背景色                                                         |
+|                                    |        |                                                                           |
+| TsunamiForecastColor               | Color  | 津波予報色                                                                |
+| TsunamiForecastForegroundColor     | Color  | 津波予報文字色                                                            |
+| TsunamiAdvisoryColor               | Color  | 津波注意報色                                                              |
+| TsunamiAdvisoryForegroundColor     | Color  | 津波注意報文字色                                                          |
+| TsunamiWarningColor                | Color  | 津波警報色                                                                |
+| TsunamiWarningForegroundColor      | Color  | 津波警報文字色                                                            |
+| TsunamiMajorWarningColor           | Color  | 津波大津波警報色                                                          |
+| TsunamiMajorWarningForegroundColor | Color  | 津波大津波警報文字色                                                      |
+|                                    |        |                                                                           |
+| EarthquakeHypocenterBorderColor    | Color  | 震央アイコンボーダー色(地震情報)                                          |
+| EarthquakeHypocenterColor          | Color  | 震央アイコン塗りつぶし色(地震情報)                                        |
+|                                    |        |                                                                           |
+| EewForecastHypocenterBorderColor   | Color  | 震央アイコンボーダー色(緊急地震速報 予報)                                 |
+| EewForecastHypocenterColor         | Color  | 震央アイコン塗りつぶし色(緊急地震速報 予報)                               |
+| EewWarningHypocenterBorderColor    | Color  | 震央アイコンボーダー色(緊急地震速報 警報)                                 |
+| EewWarningHypocenterColor          | Color  | 震央アイコン中央色(緊急地震速報 警報)                                     |
+|                                    |        |                                                                           |
+| IsEewHypocenterBlinkAnimation      | bool   | 緊急地震速報震央アイコンの点滅アニメーションを有効にするか                |
+|                                    |        |                                                                           |
+| EewForecastPWaveColor              | Color  | 緊急地震速報(予報)P波色                                                   |
+| EewForecastSWaveColor              | Color  | 緊急地震速報(予報)S波色                                                   |
+| IsEewForecastSWaveGradient         | bool   | 緊急地震速報(予報)のS波色をグラデーションにするか                         |
+|                                    |        |                                                                           |
+| EewWarningPWaveColor               | Color  | 緊急地震速報(警報)P波色                                                   |
+| EewWarningSWaveColor               | Color  | 緊急地震速報(警報)S波色                                                   |
+| IsEewWarningSWaveGradient          | bool   | 緊急地震速報(警報)のS波色をグラデーションにするか                         |
+|                                    |        |                                                                           |
+| AshfallLight                       | Color  | 降灰予報における『少量の降灰』                                            |
+| AshfallLightForeground             | Color  | 降灰予報における『少量の降灰』文字色                                      |
+| AshfallModerate                    | Color  | 降灰予報における『やや多量の降灰』                                        |
+| AshfallModerateForeground          | Color  | 降灰予報における『やや多量の降灰』文字色                                  |
+| AshfallHeavy                       | Color  | 降灰予報における『多量の降灰』                                            |
+| AshfallHeavyForeground             | Color  | 降灰予報における『多量の降灰』文字色                                      |
+| SmallVolcanicBombFall              | Color  | 降灰予報における『小さな噴石の落下』                                      |
+| SmallVolcanicBombFallForeground    | Color  | 降灰予報における『小さな噴石の落下』文字色                                |
 
 ### 震度アイコンテーマ
 
-|プロパティ名|型|解説|
-|:--|:--|:--|
-|Name|string|テーマ名 設定ファイル上でも使用されます|
-|IntensityColors|object|震度階級(後述)|
-|LpgmIntensityColors|object|長周期地震動階級(後述)|
-|BorderWidthMultiply|double|縁の太さの割合 (参考値 Standard/Quarog:`0.125` JMA/Vivid:`0.05`)|
+| プロパティ名        | 型     | 解説                                                             |
+| :------------------ | :----- | :--------------------------------------------------------------- |
+| Name                | string | テーマ名 設定ファイル上でも使用されます                          |
+| IntensityColors     | object | 震度階級(後述)                                                   |
+| LpgmIntensityColors | object | 長周期地震動階級(後述)                                           |
+| BorderWidthMultiply | double | 縁の太さの割合 (参考値 Standard/Quarog:`0.125` JMA/Vivid:`0.05`) |
 
 #### 震度階級
 
@@ -126,107 +126,107 @@ json のファイル形式、カラーコード(`#FFFFFF`等)の知識が前提�
 
 ```json
 {
-    "Name": "KiwiV3",
-    "IntensityColors": {
-        "Unknown": {
-            "Foreground": "#E6000000",
-            "Background": "#808080",
-            "Border": "#999999"
-        },
-        "Error": {
-            "Foreground": "#b30f20",
-            "Background": "#ffff6c",
-            "Border": "#FFFF52"
-        },
-        "Int0": {
-            "Foreground": "#E6FFFFFF",
-            "Background": "#808080",
-            "Border": "#999999"
-        },
-        "Int1": {
-            "Foreground": "#E6FFFFFF",
-            "Background": "#3C5A82",
-            "Border": "#29405E"
-        },
-        "Int2": {
-            "Foreground": "#E6FFFFFF",
-            "Background": "#1E82E6",
-            "Border": "#135EA9"
-        },
-        "Int3": {
-            "Foreground": "#E6000000",
-            "Background": "#78E6DC",
-            "Border": "#56A9A1"
-        },
-        "Int4": {
-            "Foreground": "#E6000000",
-            "Background": "#FFFF96",
-            "Border": "#BCBC6D"
-        },
-        "Int5Lower": {
-            "Foreground": "#E6000000",
-            "Background": "#FFD200",
-            "Border": "#BC9A00"
-        },
-        "Int5Upper": {
-            "Foreground": "#E6000000",
-            "Background": "#FF9600",
-            "Border": "#BC6D00"
-        },
-        "Int6Lower": {
-            "Foreground": "#E6FFFFFF",
-            "Background": "#F03200",
-            "Border": "#B02200"
-        },
-        "Int6Upper": {
-            "Foreground": "#E6FFFFFF",
-            "Background": "#BE0000",
-            "Border": "#8B0000"
-        },
-        "Int7": {
-            "Foreground": "#E6FFFFFF",
-            "Background": "#8C0028",
-            "Border": "#65001A"
-        }
+  "Name": "KiwiV3",
+  "IntensityColors": {
+    "Unknown": {
+      "Foreground": "#E6000000",
+      "Background": "#808080",
+      "Border": "#999999"
     },
-    "LpgmIntensityColors": {
-        "Unknown": {
-            "Foreground": "#000000",
-            "Background": "#808080",
-            "Border": "#999999"
-        },
-        "Error": {
-            "Foreground": "#b30f20",
-            "Background": "#ffff6c",
-            "Border": "#FFFF52"
-        },
-        "LpgmInt0": {
-            "Foreground": "#E6FFFFFF",
-            "Background": "#808080",
-            "Border": "#999999"
-        },
-        "LpgmInt1": {
-            "Foreground": "#E6000000",
-            "Background": "#78E6DC",
-            "Border": "#56A9A1"
-        },
-        "LpgmInt2": {
-            "Foreground": "#E6000000",
-            "Background": "#FFD200",
-            "Border": "#BC9A00"
-        },
-        "LpgmInt3": {
-            "Foreground": "#E6FFFFFF",
-            "Background": "#F03200",
-            "Border": "#B02200"
-        },
-        "LpgmInt4": {
-            "Foreground": "#E6FFFFFF",
-            "Background": "#BE0000",
-            "Border": "#8B0000"
-        }
+    "Error": {
+      "Foreground": "#b30f20",
+      "Background": "#ffff6c",
+      "Border": "#FFFF52"
     },
-    "BorderWidthMultiply": 0.125
+    "Int0": {
+      "Foreground": "#E6FFFFFF",
+      "Background": "#808080",
+      "Border": "#999999"
+    },
+    "Int1": {
+      "Foreground": "#E6FFFFFF",
+      "Background": "#3C5A82",
+      "Border": "#29405E"
+    },
+    "Int2": {
+      "Foreground": "#E6FFFFFF",
+      "Background": "#1E82E6",
+      "Border": "#135EA9"
+    },
+    "Int3": {
+      "Foreground": "#E6000000",
+      "Background": "#78E6DC",
+      "Border": "#56A9A1"
+    },
+    "Int4": {
+      "Foreground": "#E6000000",
+      "Background": "#FFFF96",
+      "Border": "#BCBC6D"
+    },
+    "Int5Lower": {
+      "Foreground": "#E6000000",
+      "Background": "#FFD200",
+      "Border": "#BC9A00"
+    },
+    "Int5Upper": {
+      "Foreground": "#E6000000",
+      "Background": "#FF9600",
+      "Border": "#BC6D00"
+    },
+    "Int6Lower": {
+      "Foreground": "#E6FFFFFF",
+      "Background": "#F03200",
+      "Border": "#B02200"
+    },
+    "Int6Upper": {
+      "Foreground": "#E6FFFFFF",
+      "Background": "#BE0000",
+      "Border": "#8B0000"
+    },
+    "Int7": {
+      "Foreground": "#E6FFFFFF",
+      "Background": "#8C0028",
+      "Border": "#65001A"
+    }
+  },
+  "LpgmIntensityColors": {
+    "Unknown": {
+      "Foreground": "#000000",
+      "Background": "#808080",
+      "Border": "#999999"
+    },
+    "Error": {
+      "Foreground": "#b30f20",
+      "Background": "#ffff6c",
+      "Border": "#FFFF52"
+    },
+    "LpgmInt0": {
+      "Foreground": "#E6FFFFFF",
+      "Background": "#808080",
+      "Border": "#999999"
+    },
+    "LpgmInt1": {
+      "Foreground": "#E6000000",
+      "Background": "#78E6DC",
+      "Border": "#56A9A1"
+    },
+    "LpgmInt2": {
+      "Foreground": "#E6000000",
+      "Background": "#FFD200",
+      "Border": "#BC9A00"
+    },
+    "LpgmInt3": {
+      "Foreground": "#E6FFFFFF",
+      "Background": "#F03200",
+      "Border": "#B02200"
+    },
+    "LpgmInt4": {
+      "Foreground": "#E6FFFFFF",
+      "Background": "#BE0000",
+      "Border": "#8B0000"
+    }
+  },
+  "BorderWidthMultiply": 0.125
 }
 ```
 
