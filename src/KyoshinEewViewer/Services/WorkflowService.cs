@@ -1,4 +1,3 @@
-using AvaloniaEdit.Utils;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Services.Workflows;
 using Splat;
@@ -38,7 +37,8 @@ public class WorkflowService
 	public void LoadWorkflows()
 	{
 		UserWorkflows.Clear();
-		UserWorkflows.AddRange(ConfigurationLoader.LoadWorkflows());
+		foreach (var workflow in ConfigurationLoader.LoadWorkflows())
+			UserWorkflows.Add(workflow);
 	}
 
 	public void SaveWorkflows()
@@ -56,11 +56,8 @@ public class WorkflowService
 			try
 			{
 				Logger.LogDebug($"ユーザーワークフロー {w.Name} がトリガーされました");
-				if (w.Action is { } action)
-				{
-					await action.PrepareAsync(e);
-					await action.ExecuteAsync(e);
-				}
+				await w.Actions.PrepareAsync(e);
+				await w.Actions.ExecuteAsync(e);
 			}
 			catch (Exception ex)
 			{
@@ -75,11 +72,8 @@ public class WorkflowService
 			try
 			{
 				Logger.LogDebug($"システムワークフロー {w.Name} がトリガーされました");
-				if (w.Action is { } action)
-				{
-					await action.PrepareAsync(e);
-					await action.ExecuteAsync(e);
-				}
+				await w.Actions.PrepareAsync(e);
+				await w.Actions.ExecuteAsync(e);
 			}
 			catch (Exception ex)
 			{

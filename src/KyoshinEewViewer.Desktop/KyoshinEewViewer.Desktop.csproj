@@ -2,10 +2,16 @@
     <Import Project="..\..\common.props" />
 
     <PropertyGroup>
-        <OutputType>WinExe</OutputType>
+        <!-- デフォルトは Exe（Linux, macOS 用） -->
+        <OutputType>Exe</OutputType>
         <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    </PropertyGroup>
+
+    <!-- Windows 向けビルドの場合は WinExe に変更 -->
+    <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('win'))">
+        <OutputType>WinExe</OutputType>
     </PropertyGroup>
 
     <!-- プロジェクト参照 -->

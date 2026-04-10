@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
+using FluentAvalonia.UI.Controls;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Core.Models.Events;
@@ -163,6 +164,17 @@ public class SettingWindowViewModel : ViewModelBase
 				_ => [],
 			}).FirstOrDefault(s => s.SpeakerId == config.Voicevox.SpeakerId)?.Name ?? "不明");
 
+		// macOS 通知権限リクエストコマンド
+		RequestMacOSNotificationPermissionCommand = ReactiveCommand.CreateFromTask(
+			async () => await RequestMacOSNotificationPermissionAsync()
+		);
+
+		// macOS の場合は権限状態を初期化時に確認
+		if (IsMacOS)
+		{
+			_ = Task.Run(async () => await UpdateMacOSNotificationPermissionStatusAsync());
+		}
+
 		UpdatePage = new BasicSettingPage<UpdatePage>("\xf071", "アプリの更新", []) { IsVisible = false };
 		SettingPages = [
 			UpdatePage,
@@ -269,7 +281,7 @@ public class SettingWindowViewModel : ViewModelBase
 	}
 	public void AddWorkflow()
 	{
-		var wf = new Workflow() { Name = "新しいワークフロー", Action = new DummyAction(), Trigger = new DummyTrigger() };
+		var wf = new Workflow() { Name = "新しいワークフロー", Trigger = new DummyTrigger() };
 		WorkflowService.Workflows.Add(wf);
 		SelectedWorkflow = wf;
 	}
@@ -469,8 +481,18 @@ public class SettingWindowViewModel : ViewModelBase
 	public bool IsLinux { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
 	public bool IsWindows { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 	public bool IsMacOs { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+	public bool IsMacOS => IsMacOs; // AXAML バインディング用のエイリアス
 	public bool IsLogDirectoryCustomizable { get; } = PlatformDirectories.IsLogDirectoryCustomizable;
 	public bool IsUseCurrentDirectoryOptionAvailable { get; } = !RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+
+	private string _macosNotificationPermissionStatus = "未確認";
+	public string MacOSNotificationPermissionStatus
+	{
+		get => _macosNotificationPermissionStatus;
+		set => this.RaiseAndSetIfChanged(ref _macosNotificationPermissionStatus, value);
+	}
+
+	public ReactiveCommand<Unit, Unit> RequestMacOSNotificationPermissionCommand { get; }
 
 	public void OpenLogDirectory()
 	{
@@ -574,6 +596,66 @@ public class SettingWindowViewModel : ViewModelBase
 
 	public void CrashApp()
 		=> throw new ApplicationException("クラッシュボタンが押下されました。");
+	#endregion
+
+	#region macOS Notification
+	private async Task RequestMacOSNotificationPermissionAsync()
+	{
+#if MACOS
+		var notificationService = Locator.Current.GetService<NotificationService>();
+		if (notificationService?.TrayIcon is Notification.macOS.MacOSNotificationProvider macosProvider)
+		{
+			var granted = await macosProvider.RequestAuthorizationAsync();
+			await UpdateMacOSNotificationPermissionStatusAsync();
+
+			if (KyoshinEewViewerApp.TopLevelControl is Window tlc)
+			{
+				if (granted)
+				{
+					await new ContentDialog
+					{
+						Title = "通知権限が許可されました",
+						Content = "macOS の通知を受け取ることができます。",
+						CloseButtonText = "OK"
+					}.ShowAsync(tlc);
+				}
+				else
+				{
+					await new ContentDialog
+					{
+						Title = "通知権限が拒否されました",
+						Content = "システム環境設定から通知を有効にしてください。",
+						CloseButtonText = "OK"
+					}.ShowAsync(tlc);
+				}
+			}
+		}
+#else
+		await Task.CompletedTask;
+#endif
+	}
+
+	private async Task UpdateMacOSNotificationPermissionStatusAsync()
+	{
+#if MACOS
+		var notificationService = Locator.Current.GetService<NotificationService>();
+		if (notificationService?.TrayIcon is Notification.macOS.MacOSNotificationProvider macosProvider)
+		{
+			var status = await macosProvider.GetAuthorizationStatusAsync();
+			MacOSNotificationPermissionStatus = status switch
+			{
+				UserNotifications.UNAuthorizationStatus.Authorized => "✓ 許可済み",
+				UserNotifications.UNAuthorizationStatus.Denied => "✗ 拒否されています",
+				UserNotifications.UNAuthorizationStatus.NotDetermined => "未確認",
+				UserNotifications.UNAuthorizationStatus.Provisional => "仮許可",
+				UserNotifications.UNAuthorizationStatus.Ephemeral => "一時許可",
+				_ => "不明"
+			};
+		}
+#else
+		await Task.CompletedTask;
+#endif
+	}
 	#endregion
 }
 

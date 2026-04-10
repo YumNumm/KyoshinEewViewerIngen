@@ -49,10 +49,20 @@
         <EnableWindowsTargeting>true</EnableWindowsTargeting>
 
         <DefineConstants Condition="$(RuntimeIdentifier.StartsWith('linux'))">LINUX</DefineConstants>
+        <DefineConstants Condition="$(RuntimeIdentifier.StartsWith('osx'))">MACOS</DefineConstants>
+    </PropertyGroup>
+
+    <!-- macOS ターゲットフレームワーク用のコンパイル定数とリンク設定 -->
+    <PropertyGroup Condition="$(TargetFramework.Contains('macos'))">
+        <DefineConstants>$(DefineConstants);MACOS</DefineConstants>
+        <!-- macOS ではトリミングを無効化 -->
+        <PublishTrimmed>true</PublishTrimmed>
+        <TrimMode>partial</TrimMode>
+        <LinkMode>None</LinkMode>
     </PropertyGroup>
 
     <PropertyGroup>
-        <AvaloniaVersion>11.3.12</AvaloniaVersion>
+        <AvaloniaVersion>11.3.13</AvaloniaVersion>
         <SplatVersion>19.3.1</SplatVersion>
         <DotnetVersion>10.0.5</DotnetVersion>
     </PropertyGroup>
@@ -60,18 +70,15 @@
     <!-- NuGet -->
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
-        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics"
-            Version="$(AvaloniaVersion)" />
+        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="$(AvaloniaVersion)" />
         <PackageReference Include="ReactiveUI.Avalonia" Version="11.4.12" />
         <PackageReference Include="Avalonia.Skia" Version="$(AvaloniaVersion)" />
-        <PackageReference Include="FluentAvaloniaUI" Version="2.5.0" />
+        <PackageReference Include="FluentAvaloniaUI" Version="2.5.1" />
 
         <PackageReference Include="Splat" Version="$(SplatVersion)" />
-        <PackageReference Include="Splat.DependencyInjection.SourceGenerator" Version="2.2.2"
-            PrivateAssets="all" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+        <PackageReference Include="Splat.DependencyInjection.SourceGenerator" Version="2.2.2" PrivateAssets="all" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 
-        <PackageReference Condition="$(RuntimeIdentifier.StartsWith('linux'))"
-            Include="Mono.Posix.NETStandard" Version="1.0.0" />
+        <PackageReference Condition="$(RuntimeIdentifier.StartsWith('linux'))" Include="Mono.Posix.NETStandard" Version="1.0.0" />
 
         <PackageReference Include="Microsoft.Extensions.Logging" Version="$(DotnetVersion)" />
         <PackageReference Include="NReco.Logging.File" Version="1.3.1" />
