@@ -3,52 +3,84 @@
 	"tasks": [
 		{
 			"label": "build",
-			"command": "dotnet",
+			"command": "mise",
 			"type": "process",
 			"args": [
+				"exec",
+				"--",
+				"dotnet",
 				"build",
 				"${workspaceFolder}/src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj",
 				"/property:GenerateFullPaths=true",
 				"/consoleloggerparameters:NoSummary"
 			],
+			"options": {
+				"env": {
+					"PATH": "${env:HOME}/.local/bin:/opt/homebrew/bin:/usr/local/bin:${env:PATH}"
+				}
+			},
 			"problemMatcher": "$msCompile"
 		},
 		{
 			"label": "build-shake-detection-producer",
-			"command": "dotnet",
+			"command": "mise",
 			"type": "process",
 			"args": [
+				"exec",
+				"--",
+				"dotnet",
 				"build",
 				"${workspaceFolder}/src/Sandboxes/ShakeDetectionProducer/ShakeDetectionProducer.csproj",
 				"/property:GenerateFullPaths=true",
 				"/consoleloggerparameters:NoSummary",
 				"--debug"
 			],
+			"options": {
+				"env": {
+					"PATH": "${env:HOME}/.local/bin:/opt/homebrew/bin:/usr/local/bin:${env:PATH}"
+				}
+			},
 			"problemMatcher": "$msCompile"
 		},
 		{
 			"label": "publish",
-			"command": "dotnet",
+			"command": "mise",
 			"type": "process",
 			"args": [
+				"exec",
+				"--",
+				"dotnet",
 				"publish",
 				"${workspaceFolder}/src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj",
 				"/property:GenerateFullPaths=true",
 				"/consoleloggerparameters:NoSummary"
 			],
+			"options": {
+				"env": {
+					"PATH": "${env:HOME}/.local/bin:/opt/homebrew/bin:/usr/local/bin:${env:PATH}"
+				}
+			},
 			"problemMatcher": "$msCompile"
 		},
 		{
 			"label": "watch",
-			"command": "dotnet",
+			"command": "mise",
 			"type": "process",
 			"args": [
+				"exec",
+				"--",
+				"dotnet",
 				"watch",
 				"run",
 				"${workspaceFolder}/src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj",
 				"/property:GenerateFullPaths=true",
 				"/consoleloggerparameters:NoSummary"
 			],
+			"options": {
+				"env": {
+					"PATH": "${env:HOME}/.local/bin:/opt/homebrew/bin:/usr/local/bin:${env:PATH}"
+				}
+			},
 			"problemMatcher": "$msCompile"
 		}
 	]
