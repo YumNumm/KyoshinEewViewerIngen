@@ -24,7 +24,9 @@ public class KyoshinMonitorReplaySettingPage : ReactiveObject, ISettingPage
 	public ISettingPage[] SubPages => [];
 
 	public bool IsDebug { get; }
+#if DEBUG
 		= true;
+#endif
 
 	public KyoshinMonitorSeries Series { get; }
 	public KyoshinEewViewerConfiguration Config { get; }

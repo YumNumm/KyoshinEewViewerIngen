@@ -246,6 +246,7 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 				}
 
 				var ordersRenderedPoints = renderedPoints.OrderByDescending(p => p.LatestIntensity ?? -1000);
+#if DEBUG
 				// 観測点名の描画
 				if (zoom >= Config.RawIntensityObject.ShowNameZoomLevel)
 					foreach (var point in ordersRenderedPoints)
@@ -262,7 +263,9 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 						var centerPoint = origCenterPoint;
 
 						var text =
+#if DEBUG
 							point.IntensityDiff.ToString("+0.0;-0.0") + " " +
+#endif
 							(zoom >= Config.RawIntensityObject.ShowNameZoomLevel ? point.Name + " " : "");
 
 						if (point.IsTmpDisabled)
@@ -327,6 +330,7 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 						TextPaint.Color = IsDarkTheme ? SKColors.White : SKColors.Black;
 						canvas.DrawText(text, loc, TextPaint);
 					}
+#endif
 				// 観測点本体の描画
 				foreach (var point in ordersRenderedPoints.Reverse())
 				{
