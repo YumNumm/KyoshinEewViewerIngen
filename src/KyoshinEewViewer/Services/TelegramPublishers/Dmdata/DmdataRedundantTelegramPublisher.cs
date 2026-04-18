@@ -770,12 +770,27 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 	}
 
 	/// <summary>
+	/// デバッグ用: ApiBaseUrl/DataApiBaseUrl の変更を反映してAPIクライアントを再構築し再接続する
+	/// </summary>
+	public async Task RebuildApiClientAndReconnectAsync()
+	{
+		Logger.LogInfo("デバッグ用 APIクライアント再構築＋再接続が要求されました");
+		if (Credential != null)
+		{
+			ApiClient = BuildApiClient(Credential);
+			DataProcessor.SetApiClient(ApiClient);
+			Logger.LogInfo("APIクライアントを再構築しました");
+		}
+		await StartInternalAsync();
+	}
+
+	/// <summary>
 	/// デバッグ用: 現在の設定で再接続を強制する
 	/// </summary>
 	public async Task ForceReconnectAsync()
 	{
 		Logger.LogInfo("デバッグ用再接続が要求されました");
-		await StartInternalAsync();
+		await RebuildApiClientAndReconnectAsync();
 	}
 
 	/// <summary>
