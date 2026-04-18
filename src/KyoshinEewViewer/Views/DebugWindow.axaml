@@ -194,6 +194,15 @@
 								           Foreground="{DynamicResource SubForegroundColor}"/>
 							</StackPanel>
 
+							<Grid ColumnDefinitions="Auto,8,*" RowDefinitions="Auto,Auto" RowSpacing="4">
+								<TextBlock Grid.Row="0" Grid.Column="0" Text="Pong送信遅延:" FontSize="12"/>
+								<TextBlock Grid.Row="0" Grid.Column="2" FontSize="12"
+								           Text="{Binding DmdataLastPongSendMs, StringFormat='{}{0} ms', TargetNullValue='—'}"/>
+								<TextBlock Grid.Row="1" Grid.Column="0" Text="Ping間隔:" FontSize="12"/>
+								<TextBlock Grid.Row="1" Grid.Column="2" FontSize="12"
+								           Text="{Binding DmdataLastPingIntervalSec, StringFormat='{}{0:0.##} s', TargetNullValue='—'}"/>
+							</Grid>
+
 							<TextBlock TextWrapping="Wrap" FontSize="11"
 							           Foreground="{DynamicResource SubForegroundColor}"
 							           Text="⚠ 誤った URL を設定すると接続が失敗します。設定は config.json に保存されます。"/>

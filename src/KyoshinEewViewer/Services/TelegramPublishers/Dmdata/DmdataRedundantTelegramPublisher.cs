@@ -129,6 +129,16 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 	/// </summary>
 	public DateTime? LastMessageTime => ConnectionManager.LastMessageTime;
 
+	/// <summary>
+	/// 直近の ping 受信から pong 送信完了までの時間（ミリ秒）。直接接続モード時のみ。サーバ往復 RTT ではありません。
+	/// </summary>
+	public long? LastPongSendMilliseconds => ConnectionManager.LastPongSendMilliseconds;
+
+	/// <summary>
+	/// 前回の ping からの経過時間（秒）。初回は null。
+	/// </summary>
+	public double? LastPingIntervalSeconds => ConnectionManager.LastPingIntervalSeconds;
+
 	private ILogger Logger { get; }
 	private KyoshinEewViewerConfiguration Config { get; }
 	private InformationCacheService CacheService { get; }
@@ -260,6 +270,12 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 				ReconnectionStrategy.ResetBackoffTime();
 			}
 			ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+		};
+
+		ConnectionManager.PingStatisticsChanged += (_, _) =>
+		{
+			this.RaisePropertyChanged(nameof(LastPongSendMilliseconds));
+			this.RaisePropertyChanged(nameof(LastPingIntervalSeconds));
 		};
 	}
 

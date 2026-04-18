@@ -8,6 +8,7 @@ using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
 using ReactiveUI;
 using Splat;
 using System;
+using System.ComponentModel;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive.Linq;
@@ -22,6 +23,14 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 	public KyoshinEewViewerConfiguration Config { get; }
 
 	private DmdataRedundantTelegramPublisher? DmdataPublisher { get; }
+
+	/// <summary>DM-D.S.S WebSocket の Pong 送信までの遅延（ms）。直接接続時のみ。</summary>
+	public long? DmdataLastPongSendMs => DmdataPublisher?.LastPongSendMilliseconds;
+
+	/// <summary>前回 ping からの間隔（秒）。</summary>
+	public double? DmdataLastPingIntervalSec => DmdataPublisher?.LastPingIntervalSeconds;
+
+	private PropertyChangedEventHandler? _dmdataPublisherPropertyChanged;
 
 	private IDisposable? _metricsSubscription;
 	private IDisposable? _logSubscription;
@@ -136,6 +145,19 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 		Config = config;
 		_loggerProvider = loggerProvider ?? Locator.Current.GetService<InMemoryLoggerProvider>();
 		DmdataPublisher = Locator.Current.GetService<DmdataRedundantTelegramPublisher>();
+		if (DmdataPublisher is INotifyPropertyChanged dmdataInpc)
+		{
+			_dmdataPublisherPropertyChanged = (_, e) =>
+			{
+				if (e.PropertyName is nameof(DmdataRedundantTelegramPublisher.LastPongSendMilliseconds)
+				    or nameof(DmdataRedundantTelegramPublisher.LastPingIntervalSeconds))
+				{
+					this.RaisePropertyChanged(nameof(DmdataLastPongSendMs));
+					this.RaisePropertyChanged(nameof(DmdataLastPingIntervalSec));
+				}
+			};
+			dmdataInpc.PropertyChanged += _dmdataPublisherPropertyChanged;
+		}
 
 		// メトリクス更新イベントをサブスクライブ
 		_metricsSubscription = MessageBus.Current.Listen<MetricsUpdated>()
@@ -257,6 +279,8 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 	public void Dispose()
 	{
 		Deactivate();
+		if (DmdataPublisher is INotifyPropertyChanged dmdataInpc && _dmdataPublisherPropertyChanged is { } h)
+			dmdataInpc.PropertyChanged -= h;
 		_metricsSubscription?.Dispose();
 		_logSubscription?.Dispose();
 		GC.SuppressFinalize(this);

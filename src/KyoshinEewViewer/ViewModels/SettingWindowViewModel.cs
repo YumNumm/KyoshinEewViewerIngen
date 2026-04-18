@@ -106,6 +106,7 @@ public class SettingWindowViewModel : ViewModelBase
 		WorkflowService = workflowService;
 		VoicevoxService = voicevoxService;
 		SubWindowService = subWindowService;
+		DmdataPublisher = Locator.Current.GetService<DmdataRedundantTelegramPublisher>();
 
 		Logger = logManager.GetLogger<SettingWindowViewModel>();
 
@@ -594,6 +595,72 @@ public class SettingWindowViewModel : ViewModelBase
 
 	public void CrashApp()
 		=> throw new ApplicationException("クラッシュボタンが押下されました。");
+
+	private DmdataRedundantTelegramPublisher? DmdataPublisher { get; }
+
+	public string? WebSocketOverrideUrl
+	{
+		get => Config.Dmdata.WebSocketDefaultEndpoint;
+		set
+		{
+			Config.Dmdata.WebSocketDefaultEndpoint = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+			this.RaisePropertyChanged();
+		}
+	}
+
+	public string WebSocketRedundantEndpointsText
+	{
+		get => string.Join(Environment.NewLine, Config.Dmdata.WebSocketRedundantEndpoints ?? []);
+		set
+		{
+			Config.Dmdata.WebSocketRedundantEndpoints = value
+				.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+				.Where(s => !string.IsNullOrWhiteSpace(s))
+				.ToArray();
+			if (Config.Dmdata.WebSocketRedundantEndpoints.Length == 0)
+				Config.Dmdata.WebSocketRedundantEndpoints = null;
+			this.RaisePropertyChanged();
+		}
+	}
+
+	private bool _isDmdataReconnecting;
+	public bool IsDmdataReconnecting
+	{
+		get => _isDmdataReconnecting;
+		set => this.RaiseAndSetIfChanged(ref _isDmdataReconnecting, value);
+	}
+
+	private string? _dmdataReconnectStatus;
+	public string? DmdataReconnectStatus
+	{
+		get => _dmdataReconnectStatus;
+		set => this.RaiseAndSetIfChanged(ref _dmdataReconnectStatus, value);
+	}
+
+	public async Task ReconnectDmdataAsync()
+	{
+		if (DmdataPublisher == null)
+		{
+			DmdataReconnectStatus = "DmdataPublisher が利用できません";
+			return;
+		}
+
+		IsDmdataReconnecting = true;
+		DmdataReconnectStatus = "再接続中...";
+		try
+		{
+			await DmdataPublisher.ForceReconnectAsync();
+			DmdataReconnectStatus = "再接続要求を送信しました";
+		}
+		catch (Exception ex)
+		{
+			DmdataReconnectStatus = $"エラー: {ex.Message}";
+		}
+		finally
+		{
+			IsDmdataReconnecting = false;
+		}
+	}
 	#endregion
 
 	#region macOS Notification

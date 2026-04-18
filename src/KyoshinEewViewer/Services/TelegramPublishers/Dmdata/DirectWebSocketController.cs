@@ -2,6 +2,7 @@ using DmdataSharp.WebSocketMessages.V2;
 using KyoshinEewViewer.Core;
 using Splat;
 using System;
+using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
@@ -28,6 +29,8 @@ public class DirectWebSocketController : IDisposable
 	public event EventHandler<DataWebSocketMessage>? DataReceived;
 	public event EventHandler? Connected;
 	public event EventHandler? Disconnected;
+	/// <summary>ping 受信から pong 送信完了までの時間が更新された</summary>
+	public event EventHandler? PingLatencyUpdated;
 
 	private bool _isConnected;
 	public bool IsConnected => _isConnected;
@@ -37,6 +40,14 @@ public class DirectWebSocketController : IDisposable
 
 	private DateTime? _lastMessageTime;
 	public DateTime? LastMessageTime => _lastMessageTime;
+
+	/// <summary>直近の ping 受信から pong 送信完了までの時間（ミリ秒）。サーバ往復 RTT ではありません。</summary>
+	public long? LastPongSendMilliseconds { get; private set; }
+
+	/// <summary>前回の ping からの経過時間（秒）。初回は null。</summary>
+	public double? LastPingIntervalSeconds { get; private set; }
+
+	private DateTimeOffset? _previousPingAt;
 
 	public string? EndpointUrl { get; private set; }
 
@@ -52,6 +63,9 @@ public class DirectWebSocketController : IDisposable
 	{
 		EndpointUrl = url;
 		_isConnected = false;
+		LastPongSendMilliseconds = null;
+		LastPingIntervalSeconds = null;
+		_previousPingAt = null;
 
 		_cts?.Cancel();
 		_cts?.Dispose();
@@ -134,8 +148,15 @@ public class DirectWebSocketController : IDisposable
 					break;
 
 				case "ping":
+				{
+					var now = DateTimeOffset.UtcNow;
+					if (_previousPingAt is { } prev)
+						LastPingIntervalSeconds = (now - prev).TotalSeconds;
+					_previousPingAt = now;
+
 					var pingId = doc.RootElement.TryGetProperty("pingId", out var pid) ? pid.GetString() : null;
 					var pong = JsonSerializer.Serialize(new { type = "pong", pingId }, JsonOptions);
+					var sw = Stopwatch.StartNew();
 					if (_webSocket?.State == WebSocketState.Open)
 					{
 						await _webSocket.SendAsync(
@@ -144,7 +165,11 @@ public class DirectWebSocketController : IDisposable
 							true,
 							ct);
 					}
+					sw.Stop();
+					LastPongSendMilliseconds = sw.ElapsedMilliseconds;
+					PingLatencyUpdated?.Invoke(this, EventArgs.Empty);
 					break;
+				}
 
 				case "data":
 					var message = JsonSerializer.Deserialize<DataWebSocketMessage>(json, JsonOptions);
@@ -187,6 +212,9 @@ public class DirectWebSocketController : IDisposable
 		_isConnected = false;
 		_webSocket?.Dispose();
 		_webSocket = null;
+		LastPongSendMilliseconds = null;
+		LastPingIntervalSeconds = null;
+		_previousPingAt = null;
 	}
 
 	public void Dispose()

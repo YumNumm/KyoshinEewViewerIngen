@@ -9,6 +9,7 @@ using Splat;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
@@ -80,6 +81,21 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 	}
 
 	/// <summary>
+	/// 直近の ping 受信から pong 送信完了までの時間（ミリ秒）。直接接続モード時のみ。DM-D.S.S の仕様上サーバ往復 RTT ではありません。
+	/// </summary>
+	public long? LastPongSendMilliseconds =>
+		IsDirectMode ? _directController?.LastPongSendMilliseconds : null;
+
+	/// <summary>
+	/// 前回の ping からの経過時間（秒）。初回 ping 後は null。
+	/// </summary>
+	public double? LastPingIntervalSeconds =>
+		IsDirectMode ? _directController?.LastPingIntervalSeconds : _lastRedundantPingIntervalSeconds;
+
+	private double? _lastRedundantPingIntervalSeconds;
+	private DateTimeOffset? _previousRedundantPingAt;
+
+	/// <summary>
 	/// 受信した総メッセージ数
 	/// </summary>
 	private long _totalMessagesReceived = 0;
@@ -104,6 +120,11 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 	/// 接続状態変更イベント
 	/// </summary>
 	public event EventHandler? ConnectionStatusChanged;
+
+	/// <summary>
+	/// WebSocket の ping 関連表示値が更新された
+	/// </summary>
+	public event EventHandler? PingStatisticsChanged;
 
 	/// <summary>
 	/// すべての接続失効イベント
@@ -143,9 +164,12 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 
 		Logger.LogDebug("WebSocket接続処理を開始します");
 		IsDirectMode = false;
+		_lastRedundantPingIntervalSeconds = null;
+		_previousRedundantPingAt = null;
 
 		RedundantController?.Dispose();
 		RedundantController = new RedundantDmdataSocketController(apiClient);
+		RedundantController.Options.EnableRawDataEvents = true;
 		ConfigureRedundantControllerEvents();
 
 		var classifications = subscribingCategories.Select(c => TelegramCategoryMap[c]).Distinct().ToArray();
@@ -195,6 +219,8 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 	{
 		Logger.LogInfo($"直接接続モードで WebSocket 接続します: {url}");
 		IsDirectMode = true;
+		_lastRedundantPingIntervalSeconds = null;
+		_previousRedundantPingAt = null;
 
 		RedundantController?.Dispose();
 		RedundantController = null;
@@ -219,13 +245,17 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 			_directController = null;
 			IsDirectMode = false;
 			UpdateConnectionStatus();
+			NotifyPingStatisticsChanged();
 			return;
 		}
 
 		if (RedundantController != null)
 		{
 			await RedundantController.DisconnectAsync();
+			_lastRedundantPingIntervalSeconds = null;
+			_previousRedundantPingAt = null;
 			UpdateConnectionStatus();
+			NotifyPingStatisticsChanged();
 		}
 	}
 
@@ -236,6 +266,8 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 	{
 		if (_directController == null)
 			return;
+
+		_directController.PingLatencyUpdated += (_, _) => NotifyPingStatisticsChanged();
 
 		_directController.DataReceived += (s, e) =>
 		{
@@ -274,6 +306,7 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 		RedundantController.RawDataReceived += (s, e) =>
 		{
 			TotalMessagesReceived = RedundantController.TotalMessagesReceived;
+			TryRecordRedundantPingInterval(e);
 		};
 
 		RedundantController.AllConnectionsLost += (s, e) =>
@@ -305,6 +338,37 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 			UpdateConnectionStatus();
 			ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
 		};
+	}
+
+	private void TryRecordRedundantPingInterval(RawDataReceivedEventArgs e)
+	{
+		if (e.IsDuplicate || !IsWebSocketPingJson(e.Message))
+			return;
+
+		if (_previousRedundantPingAt is { } prev)
+			_lastRedundantPingIntervalSeconds = (e.ReceivedTime - prev).TotalSeconds;
+		_previousRedundantPingAt = e.ReceivedTime;
+		NotifyPingStatisticsChanged();
+	}
+
+	private static bool IsWebSocketPingJson(string json)
+	{
+		try
+		{
+			using var doc = JsonDocument.Parse(json);
+			return doc.RootElement.TryGetProperty("type", out var t) && t.GetString() == "ping";
+		}
+		catch
+		{
+			return false;
+		}
+	}
+
+	private void NotifyPingStatisticsChanged()
+	{
+		this.RaisePropertyChanged(nameof(LastPongSendMilliseconds));
+		this.RaisePropertyChanged(nameof(LastPingIntervalSeconds));
+		PingStatisticsChanged?.Invoke(this, EventArgs.Empty);
 	}
 
 	/// <summary>

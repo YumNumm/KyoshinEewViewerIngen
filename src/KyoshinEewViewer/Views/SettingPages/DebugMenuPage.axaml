@@ -33,6 +33,47 @@
                     </Grid>
                 </StackPanel>
             </HeaderedContentControl>
+            <HeaderedContentControl>
+                <HeaderedContentControl.Header>
+                    <TextBlock Text="DM-D.S.S（開発者向け）" FontSize="24" FontFamily="{DynamicResource MainMediumFont}" />
+                </HeaderedContentControl.Header>
+                <StackPanel Margin="2" Spacing="8" HorizontalAlignment="Stretch">
+                    <TextBlock TextWrapping="Wrap" FontSize="12"
+                               Text="WebSocket 接続先 URL を ws:// または wss:// で始まる URL に設定すると、認証・Ticket 発行をスキップして直接接続します。空欄でデフォルト動作に戻ります。"/>
+
+                    <TextBlock Text="WebSocket 接続先 URL（直接接続）" FontSize="12" FontWeight="SemiBold"/>
+                    <TextBox Text="{Binding WebSocketOverrideUrl}"
+                             Watermark="ws://localhost:8080 または空欄（デフォルト）"
+                             FontSize="12"/>
+
+                    <TextBlock Text="冗長接続エンドポイント（改行区切り）" FontSize="12" FontWeight="SemiBold"/>
+                    <TextBox Text="{Binding WebSocketRedundantEndpointsText}"
+                             Watermark="空欄でデフォルトの冗長エンドポイントを使用"
+                             FontSize="12"
+                             AcceptsReturn="True"
+                             MinHeight="60"/>
+
+                    <TextBlock Text="API ベース URL（空欄でデフォルト: https://api.dmdata.jp）" FontSize="12"/>
+                    <TextBox Text="{Binding Config.Dmdata.ApiBaseUrl}"
+                             Watermark="https://api.dmdata.jp"
+                             FontSize="12"/>
+
+                    <TextBlock Text="データ API ベース URL（空欄でデフォルト: https://data.api.dmdata.jp）" FontSize="12"/>
+                    <TextBox Text="{Binding Config.Dmdata.DataApiBaseUrl}"
+                             Watermark="https://data.api.dmdata.jp"
+                             FontSize="12"/>
+
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Content="設定を反映して再接続"
+                                Command="{Binding ReconnectDmdataAsync}"
+                                IsEnabled="{Binding !IsDmdataReconnecting}"/>
+                        <TextBlock Text="{Binding DmdataReconnectStatus}"
+                                   VerticalAlignment="Center"
+                                   FontSize="12"/>
+                    </StackPanel>
+                </StackPanel>
+            </HeaderedContentControl>
+
             <Button Content="アプリをクラッシュさせる" FontSize="24" Command="{Binding CrashApp}" HorizontalAlignment="Center">
                 <Button.Styles>
                     <Style>
