@@ -1,3 +1,4 @@
 {
-	"mise.configureExtensionsAutomatically": false
+	"mise.configureExtensionsAutomatically": false,
+	"dotnet.defaultSolution": "KyoshinEewViewer.sln"
 }
