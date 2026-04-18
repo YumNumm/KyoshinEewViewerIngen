@@ -24,7 +24,6 @@ public class TimeshiftEarthquakeInformationHost : EarthquakeInformationHost
 	private int TimeshiftSeconds { get; set; } = 0;
 
 	private KyoshinEventStateTracker EventStateTracker { get; } = new();
-	private Dictionary<string, HashSet<string?>> RegionSubRegionMap { get; } = [];
 
 	public override DateTime CurrentTime =>
 		Config.Eew.SyncKyoshinMonitorPsWave ? KyoshinMonitorWatcher.CurrentDisplayTime : TimerService.CurrentTime.AddSeconds(-TimeshiftSeconds);
@@ -186,7 +185,17 @@ public class TimeshiftEarthquakeInformationHost : EarthquakeInformationHost
 		// 観測点から地域マッピングを構築
 		KyoshinMonitorWatcher.RealtimeDataUpdated += BuildRegionMap;
 
+		// 時刻ジャンプ(スリープ復帰など)時のリセット
+		KyoshinMonitorWatcher.TimeJumpDetected += OnTimeJumpDetected;
+
 		TimerService.StartMainTimer();
+	}
+
+	private void OnTimeJumpDetected(TimeSpan jump)
+	{
+		EventStateTracker.Clear();
+		KyoshinEvents = [];
+		ShakeDetectedRegions = [];
 	}
 
 	private void BuildRegionMap((DateTime time, RealtimeObservationPoint[] data, KyoshinEvent[] events) e)
