@@ -4,6 +4,7 @@ using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Core.Models.Events;
 using KyoshinEewViewer.Core.Models.Metrics;
 using KyoshinEewViewer.Services;
+using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
 using ReactiveUI;
 using Splat;
 using System;
@@ -19,6 +20,8 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 	public string Title => "デバッグウィンドウ";
 
 	public KyoshinEewViewerConfiguration Config { get; }
+
+	private DmdataRedundantTelegramPublisher? DmdataPublisher { get; }
 
 	private IDisposable? _metricsSubscription;
 	private IDisposable? _logSubscription;
@@ -81,12 +84,58 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 		set => this.RaiseAndSetIfChanged(ref _scrollToEnd, value);
 	}
 
+	/// <summary>
+	/// WebSocket接続先 URL（直接接続モード: ws:// または wss:// で始まる URL）
+	/// </summary>
+	public string? WebSocketOverrideUrl
+	{
+		get => Config.Dmdata.WebSocketDefaultEndpoint;
+		set
+		{
+			Config.Dmdata.WebSocketDefaultEndpoint = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+			this.RaisePropertyChanged();
+		}
+	}
+
+	/// <summary>
+	/// 冗長接続エンドポイント（改行区切り）
+	/// </summary>
+	public string WebSocketRedundantEndpointsText
+	{
+		get => string.Join(Environment.NewLine, Config.Dmdata.WebSocketRedundantEndpoints ?? []);
+		set
+		{
+			Config.Dmdata.WebSocketRedundantEndpoints = value
+				.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+				.Where(s => !string.IsNullOrWhiteSpace(s))
+				.ToArray();
+			if (Config.Dmdata.WebSocketRedundantEndpoints.Length == 0)
+				Config.Dmdata.WebSocketRedundantEndpoints = null;
+			this.RaisePropertyChanged();
+		}
+	}
+
+	private bool _isDmdataReconnecting;
+	public bool IsDmdataReconnecting
+	{
+		get => _isDmdataReconnecting;
+		set => this.RaiseAndSetIfChanged(ref _isDmdataReconnecting, value);
+	}
+
+	private string? _dmdataReconnectStatus;
+	public string? DmdataReconnectStatus
+	{
+		get => _dmdataReconnectStatus;
+		set => this.RaiseAndSetIfChanged(ref _dmdataReconnectStatus, value);
+	}
+
 	public DebugWindowViewModel(KyoshinEewViewerConfiguration config, InMemoryLoggerProvider? loggerProvider = null)
 	{
 		SplatRegistrations.RegisterLazySingleton<DebugWindowViewModel>();
 
 		Config = config;
 		_loggerProvider = loggerProvider ?? Locator.Current.GetService<InMemoryLoggerProvider>();
+		DmdataPublisher = Locator.Current.GetService<DmdataRedundantTelegramPublisher>();
 
 		// メトリクス更新イベントをサブスクライブ
 		_metricsSubscription = MessageBus.Current.Listen<MetricsUpdated>()
@@ -127,6 +176,34 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 	{
 		_loggerProvider?.Clear();
 		LogEntries.Clear();
+	}
+
+	/// <summary>
+	/// DMDATA WebSocket を再接続する（デバッグ用）
+	/// </summary>
+	public async Task ReconnectDmdataAsync()
+	{
+		if (DmdataPublisher == null)
+		{
+			DmdataReconnectStatus = "DmdataPublisher が利用できません";
+			return;
+		}
+
+		IsDmdataReconnecting = true;
+		DmdataReconnectStatus = "再接続中...";
+		try
+		{
+			await DmdataPublisher.ForceReconnectAsync();
+			DmdataReconnectStatus = "再接続要求を送信しました";
+		}
+		catch (Exception ex)
+		{
+			DmdataReconnectStatus = $"エラー: {ex.Message}";
+		}
+		finally
+		{
+			IsDmdataReconnecting = false;
+		}
 	}
 
 	/// <summary>
