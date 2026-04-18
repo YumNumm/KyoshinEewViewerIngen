@@ -253,11 +253,17 @@
                         </Panel>
                     </Button>
                     <TextBlock Text="{Binding Version, StringFormat={}v{0}}"
-								Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-								FontSize="8"
-								IsVisible="{Binding !IsStandalone}"
-								IsHitTestVisible="False"
-								HorizontalAlignment="Center" />
+							Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+							FontSize="8"
+							IsVisible="{Binding !IsStandalone}"
+							IsHitTestVisible="False"
+							HorizontalAlignment="Center" />
+                    <TextBlock Text="Customized by @YumNumm"
+							Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+							FontSize="8"
+							IsVisible="{Binding !IsStandalone}"
+							IsHitTestVisible="False"
+							HorizontalAlignment="Center" />
                 </StackPanel>
             </Panel>
         </Panel>
