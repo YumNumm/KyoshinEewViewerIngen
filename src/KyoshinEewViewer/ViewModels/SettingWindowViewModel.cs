@@ -193,9 +193,7 @@ public class SettingWindowViewModel : ViewModelBase
 			new BasicSettingPage<MapPage>("\xf5a0", "地図", []),
 			new BasicSettingPage<AboutPage>("\xf129", "このアプリについて", []),
 			new BasicSettingPage<LicencePage>("\xf2c2", "ライセンス", []),
-#if DEBUG
 			new BasicSettingPage<DebugMenuPage>("\xf188", "デバッグメニュー", []),
-#endif
 		];
 		_selectedSettingPage = SettingPages[1];
 		if ((updateCheckService.AvailableUpdateVersions?.Length ?? 0) > 0)
