@@ -14,9 +14,11 @@
         <OutputType>WinExe</OutputType>
     </PropertyGroup>
 
-    <!-- プロジェクト参照 -->
+    <!-- プロジェクト参照（マルチターゲットの外側評価を避けるため net10.0 に固定） -->
     <ItemGroup>
-        <ProjectReference Include="..\KyoshinEewViewer\KyoshinEewViewer.csproj" />
+        <ProjectReference Include="..\KyoshinEewViewer\KyoshinEewViewer.csproj">
+            <SetTargetFramework>TargetFramework=net10.0</SetTargetFramework>
+        </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>
