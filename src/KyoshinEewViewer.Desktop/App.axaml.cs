@@ -109,9 +109,7 @@ public class App : Application
 					{
 						// 設定に応じて処理を分岐
 						if (config.FocusExistingInstanceOnDuplicate
-#if DEBUG
 						&& false // デバッグビルドでは無効化
-#endif
 						)
 						{
 							// 既存のウィンドウを最前面に表示

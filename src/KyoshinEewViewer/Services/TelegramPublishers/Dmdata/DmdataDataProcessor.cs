@@ -103,12 +103,10 @@ public class DmdataDataProcessor
 			return null;
 		}
 
-#if DEBUG
 		var sb = new System.Text.StringBuilder();
 		foreach (var p in e.Passing)
 			sb.Append($" {p.Name}:{p.Time:ss.fff}");
 		Logger.LogDebug($"{e.Head.Type}{sb}");
-#endif
 
 		if (e.XmlReport is null)
 		{

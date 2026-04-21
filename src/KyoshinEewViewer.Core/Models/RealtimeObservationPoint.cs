@@ -125,7 +125,6 @@ public class RealtimeObservationPoint
 	/// </summary>
 	public bool HasValidHistory { get; set; }
 
-#if DEBUG
 	/// <summary>
 	/// 揺れ検知時に計算されたスコア（デバッグ用）
 	/// </summary>
@@ -150,7 +149,6 @@ public class RealtimeObservationPoint
 	/// 近傍無反応ペナルティ値（デバッグ用）
 	/// </summary>
 	public double DebugNoChangePenalty { get; set; }
-#endif
 
 	/// <summary>
 	/// 距離付き近傍観測点

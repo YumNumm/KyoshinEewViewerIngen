@@ -42,9 +42,7 @@ public class EarthquakeSeries : SeriesBase
 	public static SeriesMeta MetaData { get; } = new(typeof(EarthquakeSeries), "earthquake", "地震情報", new FontIconSource { Glyph = "\xf05a", FontFamily = new(Utils.IconFontName) }, true, "震源･震度情報を受信･表示します。");
 
 	public bool IsDebugBuild { get; }
-#if DEBUG
 			= true;
-#endif
 
 	private SoundCategory SoundCategory { get; } = new("Earthquake", "地震情報");
 	private Sound UpdatedSound { get; }

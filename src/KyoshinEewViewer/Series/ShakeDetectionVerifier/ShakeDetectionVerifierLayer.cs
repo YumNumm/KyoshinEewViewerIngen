@@ -85,7 +85,6 @@ public class ShakeDetectionVerifierLayer(KyoshinEewViewerConfiguration config) :
 		Color = new SKColor(0, 0, 0, 80),
 	};
 
-#if DEBUG
 	private static readonly SKPaint TextPaint = new()
 	{
 		Typeface = KyoshinEewViewerFonts.MainRegular,
@@ -110,7 +109,6 @@ public class ShakeDetectionVerifierLayer(KyoshinEewViewerConfiguration config) :
 		Style = SKPaintStyle.Stroke,
 		StrokeWidth = 2,
 	};
-#endif
 
 	private KyoshinEewViewerConfiguration Config { get; } = config;
 
@@ -165,7 +163,7 @@ public class ShakeDetectionVerifierLayer(KyoshinEewViewerConfiguration config) :
 
 				var renderedPoints = ordersRenderedPoints.ToArray();
 
-#if DEBUG
+
 				// ズーム10以上で揺れ検知パラメータを表示
 				if (zoom >= 10)
 				{
@@ -260,7 +258,6 @@ public class ShakeDetectionVerifierLayer(KyoshinEewViewerConfiguration config) :
 
 					}
 				}
-#endif
 
 				// 観測点本体の描画
 				foreach (var point in renderedPoints.Reverse())

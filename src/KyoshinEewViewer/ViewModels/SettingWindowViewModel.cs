@@ -181,9 +181,7 @@ public class SettingWindowViewModel : ViewModelBase
 			new BasicSettingPage<MapPage>("\xf5a0", "地図", []),
 			new BasicSettingPage<AboutPage>("\xf129", "このアプリについて", []),
 			new BasicSettingPage<LicencePage>("\xf2c2", "ライセンス", []),
-#if DEBUG
 			new BasicSettingPage<DebugMenuPage>("\xf188", "デバッグメニュー", []),
-#endif
 		];
 		_selectedSettingPage = SettingPages[1];
 		if ((updateCheckService.AvailableUpdateVersions?.Length ?? 0) > 0)
@@ -210,9 +208,7 @@ public class SettingWindowViewModel : ViewModelBase
 			UpdateProgress = 50;
 			return;
 		}
-#if DEBUG
 		IsDebug = true;
-#endif
 	}
 
 	public string Title { get; } = "設定 - KyoshinEewViewer for ingen";
@@ -278,7 +274,7 @@ public class SettingWindowViewModel : ViewModelBase
 		var result = await DialogHelper.ShowSettingWindowConfirmationDialogAsync(
 			"ワークフローの削除",
 			$"ワークフロー「{workflow.Name}」を削除しますか？\nこの操作は元に戻すことができません。");
-		
+
 		if (result)
 		{
 			WorkflowService.Workflows.Remove(workflow);

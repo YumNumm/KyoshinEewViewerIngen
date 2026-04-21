@@ -14,7 +14,6 @@ public class ImageTileLayer : MapLayer
 		Color = new SKColor(255, 0, 0, 100),
 		PathEffect = SKPathEffect.Create2DLine(1, SKMatrix.CreateScale(8, 8).PreConcat(SKMatrix.CreateRotationDegrees(-30, 0, 0)))
 	};
-#if DEBUG
 	private static readonly SKPaint DebugPen = new()
 	{
 		Style = SKPaintStyle.Fill,
@@ -26,7 +25,6 @@ public class ImageTileLayer : MapLayer
 		Color = SKColors.White.WithAlpha(100),
 		StrokeWidth = 2,
 	};
-#endif
 	private static readonly SKPaint ImageBlender = new()
 	{
 		// ImageFilter = SKImageFilter.CreateBlendMode(SKBlendMode.SrcIn, SKImageFilter.CreateColorFilter(SKColorFilter.CreateBlendMode(SKColors.White.WithAlpha(200), SKBlendMode.SrcIn))),
@@ -97,10 +95,8 @@ public class ImageTileLayer : MapLayer
 						{
 							canvas.DrawBitmap(image, new SKRect(cx, cy, cx + MercatorProjection.TileSize, cy + ch), ImageBlender);
 
-#if DEBUG
 							canvas.DrawText($"Z{baseZoom} {{{xTileOffset + x}, {yTileOffset + y}}}", cx, cy, DebugBorderPen);
 							canvas.DrawText($"Z{baseZoom} {{{xTileOffset + x}, {yTileOffset + y}}}", cx, cy, DebugPen);
-#endif
 						}
 						// -1 ズーム倍率へのフォールバックだが気象庁のHPではズームが2レベルごとなので活用できてないのでコメントアウト
 						//else if (Provider.TryGetTileBitmap(baseZoom - 1, tx / 2, ty / 2, true, out image) && image is { })

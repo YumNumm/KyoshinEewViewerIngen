@@ -272,9 +272,7 @@ public class KyoshinMonitorSeries : SeriesBase
 	}
 
 	public bool IsDebug { get; }
-#if DEBUG
 		= true;
-#endif
 
 	private bool _showColorSample;
 	public bool ShowColorSample

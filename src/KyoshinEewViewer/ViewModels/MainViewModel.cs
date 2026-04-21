@@ -334,11 +334,9 @@ public partial class MainViewModel : ViewModelBase
 		SeriesController.RegisterSeries(RadarSeries.MetaData);
 		SeriesController.RegisterSeries(QzssSeries.MetaData);
 
-#if DEBUG
 		SeriesController.RegisterSeries(Series.Typhoon.TyphoonSeries.MetaData);
 		SeriesController.RegisterSeries(Series.Lightning.LightningSeries.MetaData);
 		SeriesController.RegisterSeries(Series.ShakeDetectionVerifier.ShakeDetectionVerifierSeries.MetaData);
-#endif
 		SeriesController.RegisterSeries(ObservationPointEditorSeries.MetaData);
 
 		if (StartupOptions.Current?.StandaloneSeriesName is { } ssn && TryGetStandaloneSeries(ssn, out var sSeries))

@@ -23,9 +23,7 @@ public class SoundPlayerService
 	/// 利用可能かどうか
 	/// </summary>
 	public bool IsAvailable { get; }
-#if DEBUG
 	public Sound TestSound { get; }
-#endif
 	private ILogger Logger { get; }
 
 	public SoundPlayerService(KyoshinEewViewerConfiguration config, ILogManager logManager)
@@ -65,7 +63,6 @@ public class SoundPlayerService
 			Logger.LogError(ex, "Bass の初期化に失敗しました");
 			IsAvailable = false;
 		}
-#if DEBUG
 		TestSound = RegisterSound(
 			new SoundCategory("Test", "テスト"),
 			"TestPlay",
@@ -77,7 +74,6 @@ public class SoundPlayerService
 				{ "!test", "偶数秒" },
 			}
 		);
-#endif
 	}
 	~SoundPlayerService()
 	{
