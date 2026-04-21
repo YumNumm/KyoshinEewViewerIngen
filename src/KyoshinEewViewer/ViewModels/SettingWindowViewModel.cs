@@ -221,9 +221,7 @@ public class SettingWindowViewModel : ViewModelBase
 			UpdateProgress = 50;
 			return;
 		}
-#if DEBUG
 		IsDebug = true;
-#endif
 	}
 
 	public string Title { get; } = "設定 - KyoshinEewViewer for ingen";
@@ -289,7 +287,7 @@ public class SettingWindowViewModel : ViewModelBase
 		var result = await DialogHelper.ShowSettingWindowConfirmationDialogAsync(
 			"ワークフローの削除",
 			$"ワークフロー「{workflow.Name}」を削除しますか？\nこの操作は元に戻すことができません。");
-		
+
 		if (result)
 		{
 			WorkflowService.Workflows.Remove(workflow);

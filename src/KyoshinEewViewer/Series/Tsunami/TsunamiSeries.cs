@@ -195,7 +195,7 @@ public class TsunamiSeries : SeriesBase
 		}
 
 		ExpireTimer.Change(TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
-		
+
 		RegisterSystemWorkflows();
 	}
 
@@ -223,11 +223,7 @@ public class TsunamiSeries : SeriesBase
 	}
 
 	public bool IsDebugBuiid =>
-#if DEBUG
 		true;
-#else
-		false;
-#endif
 
 	private TsunamiInfo? _current;
 	public TsunamiInfo? Current

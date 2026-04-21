@@ -22,9 +22,7 @@ public partial class DuplicateInstanceWarningWindow : Window
 	private void CheckInstance()
 	{
 		if (!Utils.IsAppRunning
-#if DEBUG
 			|| true
-#endif
 			)
 		{
 			IsContinue = true;

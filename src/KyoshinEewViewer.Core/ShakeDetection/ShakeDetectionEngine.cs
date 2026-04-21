@@ -149,18 +149,14 @@ public class ShakeDetectionEngine(ILogManager? logManager = null, ShakeDetection
 				.Where(n => n.Point.HasValidHistory)
 				.Sum(n => n.Weight);
 
-#if DEBUG
 			point.DebugAvailableTotalWeight = availableTotalWeight;
-#endif
 
 			// 重み合計が極端に低い場合は離島扱い（単独検知）
 			if (availableTotalWeight < Parameters.IsolatedThreshold)
 			{
-#if DEBUG
 				point.DebugIsIsolated = true;
 				point.DebugDetectionScore = 0;
 				point.DebugDetectionThreshold = Parameters.IsolatedDetectionDiff;
-#endif
 				if (point.IntensityDiff >= Parameters.IsolatedDetectionDiff && point.Event == null)
 				{
 					var level = KyoshinEvent.GetLevel(point.LatestIntensity);
@@ -171,9 +167,7 @@ public class ShakeDetectionEngine(ILogManager? logManager = null, ShakeDetection
 				}
 				continue;
 			}
-#if DEBUG
 			point.DebugIsIsolated = false;
-#endif
 
 			var events = new List<KyoshinEvent>();
 			if (point.Event != null)
@@ -209,11 +203,9 @@ public class ShakeDetectionEngine(ILogManager? logManager = null, ShakeDetection
 			// 閾値: 有効な重み合計に係数を掛けた値
 			var threshold = availableTotalWeight * Parameters.ScoreThresholdRatio;
 
-#if DEBUG
 			point.DebugDetectionScore = finalScore;
 			point.DebugDetectionThreshold = threshold;
 			point.DebugNoChangePenalty = penaltyScore;
-#endif
 
 			// スコアに寄与する観測点が1点のみの場合は単独ノイズの可能性があるためスキップ
 			if (contributingPointCount <= 1)

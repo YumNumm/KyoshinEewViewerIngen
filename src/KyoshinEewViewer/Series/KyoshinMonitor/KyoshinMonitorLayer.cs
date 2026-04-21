@@ -410,22 +410,20 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 							PointPaint);
 					}
 
-#if DEBUG
-					//if (point.Event != null)
-					//{
-					//	PointPaint.Color = TextPaint.Color = point.Event.DebugColor;
-					//	TextPaint.Style = SKPaintStyle.Stroke;
-					//	canvas.DrawCircle(
-					//		pointCenter.AsSkPoint(),
-					//		circleSize / 2,
-					//		PointPaint);
+					if (point.Event != null)
+					{
+						PointPaint.Color = TextPaint.Color = point.Event.DebugColor;
+						TextPaint.Style = SKPaintStyle.Stroke;
+						canvas.DrawCircle(
+							pointCenter.AsSkPoint(),
+							circleSize / 2,
+							PointPaint);
 
-					//	if (point.NearPoints is { } nps)
-					//		foreach (var np in nps.Where(np => np.Point.IntensityDiff >= .5))
-					//			if (np.Point.Event == null)
-					//				canvas.DrawLine(pointCenter.AsSkPoint(), np.Point.Location.ToPixel(zoom).AsSkPoint(), TextPaint);
-					//}
-#endif
+						if (point.NearPoints is { } nps)
+							foreach (var np in nps.Where(np => np.Point.IntensityDiff >= .5))
+								if (np.Point.Event == null)
+									canvas.DrawLine(pointCenter.AsSkPoint(), np.Point.Location.ToPixel(zoom).AsSkPoint(), TextPaint);
+					}
 				}
 			}
 
@@ -614,17 +612,15 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 				canvas.DrawLine((basePoint - new PointD(size, 0)).AsSkPoint(), (basePoint + new PointD(size, 0)).AsSkPoint(), CurrentLocationPen);
 			}
 
-#if DEBUG
-			//if (KyoshinEvents != null)
-			//	foreach (var evt in KyoshinEvents)
-			//	{
-			//		TextPaint.Color = evt.DebugColor;
-			//		TextPaint.Style = SKPaintStyle.Stroke;
-			//		var tl = evt.TopLeft.ToPixel(zoom).AsSkPoint();
-			//		var br = evt.BottomRight.ToPixel(zoom).AsSkPoint() - tl;
-			//		canvas.DrawRect(tl.X, tl.Y, br.X, br.Y, TextPaint);
-			//	}
-#endif
+			if (KyoshinEvents != null)
+				foreach (var evt in KyoshinEvents)
+				{
+					TextPaint.Color = evt.DebugColor;
+					TextPaint.Style = SKPaintStyle.Stroke;
+					var tl = evt.TopLeft.ToPixel(zoom).AsSkPoint();
+					var br = evt.BottomRight.ToPixel(zoom).AsSkPoint() - tl;
+					canvas.DrawRect(tl.X, tl.Y, br.X, br.Y, TextPaint);
+				}
 		}
 		finally
 		{
