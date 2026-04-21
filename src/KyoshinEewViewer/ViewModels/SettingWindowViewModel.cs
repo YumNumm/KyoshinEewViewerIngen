@@ -9,6 +9,7 @@ using KyoshinEewViewer.Series;
 using KyoshinEewViewer.Series.Qzss.Events;
 using KyoshinEewViewer.Services;
 using KyoshinEewViewer.Services.ExtarnalPublishers.Axis;
+using KyoshinEewViewer.Services.Feedback;
 using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
 using KyoshinEewViewer.Services.Voicevox;
 using KyoshinEewViewer.Services.Workflows;
@@ -95,6 +96,7 @@ public class SettingWindowViewModel : ViewModelBase
 		ILogManager logManager,
 		DmdataSettingPage dmdataPage,
 		AxisSettingPage axisPage,
+		FeedbackSettingPage feedbackPage,
 		ISubWindowsService? subWindowService)
 	{
 		SplatRegistrations.RegisterLazySingleton<SettingWindowViewModel>();
@@ -192,9 +194,12 @@ public class SettingWindowViewModel : ViewModelBase
 				axisPage,
 			]),
 			new BasicSettingPage<MapPage>("\xf5a0", "地図", []),
+			feedbackPage,
 			new BasicSettingPage<AboutPage>("\xf129", "このアプリについて", []),
 			new BasicSettingPage<LicencePage>("\xf2c2", "ライセンス", []),
+#if DEBUG
 			new BasicSettingPage<DebugMenuPage>("\xf188", "デバッグメニュー", []),
+#endif
 		];
 		_selectedSettingPage = SettingPages[1];
 		if ((updateCheckService.AvailableUpdateVersions?.Length ?? 0) > 0)
@@ -221,7 +226,9 @@ public class SettingWindowViewModel : ViewModelBase
 			UpdateProgress = 50;
 			return;
 		}
+#if DEBUG
 		IsDebug = true;
+#endif
 	}
 
 	public string Title { get; } = "設定 - KyoshinEewViewer for ingen";

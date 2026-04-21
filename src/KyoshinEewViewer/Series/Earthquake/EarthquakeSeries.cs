@@ -42,7 +42,9 @@ public class EarthquakeSeries : SeriesBase
 	public static SeriesMeta MetaData { get; } = new(typeof(EarthquakeSeries), "earthquake", "地震情報", new FontIconSource { Glyph = "\xf05a", FontFamily = new(Utils.IconFontName) }, true, "震源･震度情報を受信･表示します。");
 
 	public bool IsDebugBuild { get; }
+#if DEBUG
 			= true;
+#endif
 
 	private SoundCategory SoundCategory { get; } = new("Earthquake", "地震情報");
 	private Sound UpdatedSound { get; }
@@ -295,7 +297,7 @@ public class EarthquakeSeries : SeriesBase
 	private async Task ProcessInformationFragment(EarthquakeEvent evt, EarthquakeInformationFragment targetFragment)
 	{
 		var zoomPoints = new List<Location>();
-		var hypocenters = new List<Location>();
+		var hypocenters = new List<(Location Location, Location? Error)>();
 		var areaItems = new Dictionary<JmaIntensity, List<(Location Location, string Name)>>();
 		var cityItems = new Dictionary<JmaIntensity, List<(Location Location, string Name)>>();
 		var stationItems = new Dictionary<JmaIntensity, List<(Location Location, string Name)>>();
@@ -306,7 +308,7 @@ public class EarthquakeSeries : SeriesBase
 			if (evt?.Location == null)
 				return null;
 
-			hypocenters.Add(evt.Location);
+			hypocenters.Add((evt.Location, evt.LocationError));
 			return evt.Location;
 		}
 
@@ -491,7 +493,7 @@ public class EarthquakeSeries : SeriesBase
 			var stationItems = new Dictionary<JmaIntensity, List<(Location Location, string Name)>>();
 			var zoomPoints = new List<Location>();
 			var pointGroups = new List<ObservationIntensityGroup>();
-			var hypocenters = new List<Location>();
+			var hypocenters = new List<(Location Location, Location? Error)>();
 
 			EarthquakeEvent? eq = null;
 
@@ -519,7 +521,7 @@ public class EarthquakeSeries : SeriesBase
 				else
 					eq.MagnitudeAlternativeText = hypo.Magnitude;
 
-				hypocenters.Add(hypo.Location);
+				hypocenters.Add((hypo.Location, null));
 			}
 			if (eq == null)
 				throw new EarthquakeTelegramParseException("地震情報を組み立てることができませんでした");
@@ -543,7 +545,7 @@ public class EarthquakeSeries : SeriesBase
 				pointGroups.AddArea(st.Intensity, "-", 0, st.Name ?? "不明", int.Parse(st.Code ?? "0"));
 			}
 
-			var hcLoc = hypocenters.LastOrDefault();
+			var hcLoc = hypocenters.Count > 0 ? hypocenters[^1].Location : null;
 			if (hcLoc != null)
 				SortItems(hcLoc, stationItems);
 

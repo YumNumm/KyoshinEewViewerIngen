@@ -36,15 +36,19 @@ public static class LoggingAdapter
 
 			if (EnableDebugLog)
 				builder.SetMinimumLevel(LogLevel.Debug);
+#if DEBUG
 			builder.SetMinimumLevel(LogLevel.Debug).AddDebug();
+#endif
 			if (!RuntimeInformation.RuntimeIdentifier.Contains("wasm") && config.Update.SendCrashReport)
 				builder.AddSentry(o =>
 				{
 					o.Dsn = "https://565aa07785854f1aabdaac930c1a483f@sentry.ingen084.net/2";
 					o.TracesSampleRate = 0.01; // 1% 送信する
 					o.IsGlobalModeEnabled = true;
+#if DEBUG
 					o.Environment = "development";
 					o.Debug = true;
+#endif
 					o.Release = Core.Utils.Version;
 					o.AutoSessionTracking = true;
 					o.MinimumBreadcrumbLevel = LogLevel.Information;
@@ -52,6 +56,7 @@ public static class LoggingAdapter
 					o.ConfigureScope(s =>
 					{
 						s.User = new SentryUser {
+							Id = config.InstanceId.ToString(),
 							IpAddress = "{{auto}}",
 						};
 					});
