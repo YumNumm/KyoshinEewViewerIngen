@@ -9,7 +9,6 @@ using Splat;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
@@ -342,26 +341,13 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 
 	private void TryRecordRedundantPingInterval(RawDataReceivedEventArgs e)
 	{
-		if (e.IsDuplicate || !IsWebSocketPingJson(e.Message))
+		if (e.IsDuplicate || !string.Equals(e.Message.Type, "ping", StringComparison.Ordinal))
 			return;
 
 		if (_previousRedundantPingAt is { } prev)
 			_lastRedundantPingIntervalSeconds = (e.ReceivedTime - prev).TotalSeconds;
 		_previousRedundantPingAt = e.ReceivedTime;
 		NotifyPingStatisticsChanged();
-	}
-
-	private static bool IsWebSocketPingJson(string json)
-	{
-		try
-		{
-			using var doc = JsonDocument.Parse(json);
-			return doc.RootElement.TryGetProperty("type", out var t) && t.GetString() == "ping";
-		}
-		catch
-		{
-			return false;
-		}
 	}
 
 	private void NotifyPingStatisticsChanged()
