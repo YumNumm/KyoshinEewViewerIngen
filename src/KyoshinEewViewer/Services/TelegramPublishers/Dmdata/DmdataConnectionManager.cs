@@ -341,7 +341,7 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 
 	private void TryRecordRedundantPingInterval(RawDataReceivedEventArgs e)
 	{
-		if (e.IsDuplicate || !string.Equals(e.Message.Type, "ping", StringComparison.Ordinal))
+		if (e.IsDuplicate || e.Message?.Type is not "ping")
 			return;
 
 		if (_previousRedundantPingAt is { } prev)

@@ -5,6 +5,8 @@
 		<!-- マルチターゲット化 -->
 		<TargetFrameworks>net10.0;net10.0-macos</TargetFrameworks>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<!-- publish / -r 指定時の NETSDK1047 回避（project.assets.json に RID グラフを含める） -->
+		<RuntimeIdentifiers>osx-arm64;osx-x64;win-x64;win-arm64;linux-x64;linux-arm64</RuntimeIdentifiers>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -14,25 +16,31 @@
 	<!-- プロジェクト参照 -->
 	<ItemGroup>
 		<ProjectReference Include="..\KyoshinEewViewer.Core\KyoshinEewViewer.Core.csproj" />
-		<ProjectReference Include="..\KyoshinEewViewer.DCReportParser\KyoshinEewViewer.DCReportParser.csproj" />
-		<ProjectReference Include="..\KyoshinEewViewer.JmaXmlParser\KyoshinEewViewer.JmaXmlParser.csproj" />
+		<ProjectReference
+			Include="..\KyoshinEewViewer.DCReportParser\KyoshinEewViewer.DCReportParser.csproj" />
+		<ProjectReference
+			Include="..\KyoshinEewViewer.JmaXmlParser\KyoshinEewViewer.JmaXmlParser.csproj" />
 		<ProjectReference Include="..\KyoshinEewViewer.Map\KyoshinEewViewer.Map.csproj" />
-		<ProjectReference Include="..\KyoshinEewViewer.TravelTimeTable\KyoshinEewViewer.TravelTimeTable.csproj" />
-		<ProjectReference Include="..\KyoshinEewViewer.CustomControl\KyoshinEewViewer.CustomControl.csproj" />
-		<ProjectReference Include="..\KyoshinEewViewer.CsvSourceGenerator\KyoshinEewViewer.CsvSourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+		<ProjectReference
+			Include="..\KyoshinEewViewer.TravelTimeTable\KyoshinEewViewer.TravelTimeTable.csproj" />
+		<ProjectReference
+			Include="..\KyoshinEewViewer.CustomControl\KyoshinEewViewer.CustomControl.csproj" />
+		<ProjectReference
+			Include="..\KyoshinEewViewer.CsvSourceGenerator\KyoshinEewViewer.CsvSourceGenerator.csproj"
+			OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
 	<ItemGroup>
-        <PackageReference Include="ManagedBass" Version="4.0.2" />
+		<PackageReference Include="ManagedBass" Version="4.0.2" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="$(DotnetVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="$(DotnetVersion)" />
 		<PackageReference Include="System.IO.Ports" Version="$(DotnetVersion)" />
 		<PackageReference Include="Sentry.Extensions.Logging" Version="6.3.0" />
-        <PackageReference Include="Splat.Microsoft.Extensions.Logging" Version="$(SplatVersion)" />
+		<PackageReference Include="Splat.Microsoft.Extensions.Logging" Version="$(SplatVersion)" />
 
 		<PackageReference Include="Xaml.Behaviors.Avalonia" Version="11.3.9.5" />
 		<PackageReference Include="Markdown.Avalonia" Version="11.0.2" />
-        <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.4.1" />
+		<PackageReference Include="Avalonia.AvaloniaEdit" Version="11.4.1" />
 		<PackageReference Include="System.ServiceModel.Syndication" Version="$(DotnetVersion)" />
 		<PackageReference Include="System.Text.Encoding.CodePages" Version="$(DotnetVersion)" />
 
@@ -41,32 +49,71 @@
 
 	<ItemGroup>
 		<AvaloniaResource Include="Assets\**" />
-    </ItemGroup>
+	</ItemGroup>
 
-    <ItemGroup>
-        <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="KeyType" />
-        <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="KeyFormat" />
-        <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="ValueType" />
-        <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="ValueFormat" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AdditionalCommentEarthquake.csv" Link="csv\AdditionalCommentEarthquake.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaEpicenter.csv" Link="csv\AreaEpicenter.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaInformationPrefectureEarthquake.csv" Link="csv\AreaInformationPrefectureEarthquake.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaInformationCity.csv" Link="csv\AreaInformationCity.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{15}&quot;" />
-        <!--<AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaEpicenterAbbreviation.csv" Link="csv\AreaEpicenterAbbreviation.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaEpicenterDetail.csv" Link="csv\AreaEpicenterDetail.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaFloodForecast.csv" Link="csv\AreaFloodForecast.csv" KeyType="long" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaForecastEEW.csv" Link="csv\AreaForecastEEW.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />-->
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaForecastLocalEEW.csv" Link="csv\AreaForecastLocalEEW.csv" KeyType="int" KeyFormat="{0}" ValueType="(string Name, string NameKana)" ValueFormat="(&quot;{1}&quot;, &quot;{2}&quot;)" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaMarineJ.csv" Link="csv\AreaMarineJ.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <!--<AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaRiver.csv" Link="csv\AreaRiver.csv" KeyType="long" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\CoastTsunami.csv" Link="csv\CoastTsunami.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />-->
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaTsunami.csv" Link="csv\AreaTsunami.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\PointVolcano.csv" Link="csv\PointVolcano.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\VolcanicWarning.csv" Link="csv\VolcanicWarning.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <!--<AdditionalFiles Include="..\..\jma-code-dictionary\csv\WaterLevelStation.csv" Link="csv\WaterLevelStation.csv" KeyType="long" KeyFormat="{0}" ValueType="(string Name, string Series)" ValueFormat="(&quot;{1}&quot;, &quot;{2}&quot;)" />-->
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\MarineWarning.csv" Link="csv\MarineWarning.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaForecastLocalM.csv" Link="csv\AreaForecastLocalM.csv" KeyType="int" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
-        <AdditionalFiles Include="csv\DCRFloodForecastRegion.csv" Link="csv\DCRFloodForecastRegion.csv" KeyType="long" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
+	<ItemGroup>
+		<CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="KeyType" />
+		<CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="KeyFormat" />
+		<CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="ValueType" />
+		<CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="ValueFormat" />
+		<AdditionalFiles Include="..\..\jma-code-dictionary\csv\AdditionalCommentEarthquake.csv"
+			Link="csv\AdditionalCommentEarthquake.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+			ValueFormat="&quot;{1}&quot;" />
+		<AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaEpicenter.csv"
+			Link="csv\AreaEpicenter.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+			ValueFormat="&quot;{1}&quot;" />
+		<AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaInformationPrefectureEarthquake.csv"
+			Link="csv\AreaInformationPrefectureEarthquake.csv" KeyType="int" KeyFormat="{0}"
+			ValueType="string" ValueFormat="&quot;{1}&quot;" />
+		<AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaInformationCity.csv"
+			Link="csv\AreaInformationCity.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+			ValueFormat="&quot;{15}&quot;" />
+		<!--<AdditionalFiles
+		Include="..\..\jma-code-dictionary\csv\AreaEpicenterAbbreviation.csv"
+		Link="csv\AreaEpicenterAbbreviation.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+		ValueFormat="&quot;{1}&quot;" />
+        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaEpicenterDetail.csv"
+		Link="csv\AreaEpicenterDetail.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+		ValueFormat="&quot;{1}&quot;" />
+        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaFloodForecast.csv"
+		Link="csv\AreaFloodForecast.csv" KeyType="long" KeyFormat="{0}" ValueType="string"
+		ValueFormat="&quot;{1}&quot;" />
+        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaForecastEEW.csv"
+		Link="csv\AreaForecastEEW.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+		ValueFormat="&quot;{1}&quot;" />-->
+		<AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaForecastLocalEEW.csv"
+			Link="csv\AreaForecastLocalEEW.csv" KeyType="int" KeyFormat="{0}"
+			ValueType="(string Name, string NameKana)" ValueFormat="(&quot;{1}&quot;, &quot;{2}&quot;)" />
+		<AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaMarineJ.csv"
+			Link="csv\AreaMarineJ.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+			ValueFormat="&quot;{1}&quot;" />
+		<!--<AdditionalFiles
+		Include="..\..\jma-code-dictionary\csv\AreaRiver.csv" Link="csv\AreaRiver.csv" KeyType="long"
+		KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
+        <AdditionalFiles Include="..\..\jma-code-dictionary\csv\CoastTsunami.csv"
+		Link="csv\CoastTsunami.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+		ValueFormat="&quot;{1}&quot;" />-->
+		<AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaTsunami.csv"
+			Link="csv\AreaTsunami.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+			ValueFormat="&quot;{1}&quot;" />
+		<AdditionalFiles Include="..\..\jma-code-dictionary\csv\PointVolcano.csv"
+			Link="csv\PointVolcano.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+			ValueFormat="&quot;{1}&quot;" />
+		<AdditionalFiles Include="..\..\jma-code-dictionary\csv\VolcanicWarning.csv"
+			Link="csv\VolcanicWarning.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+			ValueFormat="&quot;{1}&quot;" />
+		<!--<AdditionalFiles
+		Include="..\..\jma-code-dictionary\csv\WaterLevelStation.csv" Link="csv\WaterLevelStation.csv"
+		KeyType="long" KeyFormat="{0}" ValueType="(string Name, string Series)"
+		ValueFormat="(&quot;{1}&quot;, &quot;{2}&quot;)" />-->
+		<AdditionalFiles Include="..\..\jma-code-dictionary\csv\MarineWarning.csv"
+			Link="csv\MarineWarning.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+			ValueFormat="&quot;{1}&quot;" />
+		<AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaForecastLocalM.csv"
+			Link="csv\AreaForecastLocalM.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
+			ValueFormat="&quot;{1}&quot;" />
+		<AdditionalFiles Include="csv\DCRFloodForecastRegion.csv" Link="csv\DCRFloodForecastRegion.csv"
+			KeyType="long" KeyFormat="{0}" ValueType="string" ValueFormat="&quot;{1}&quot;" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -76,10 +123,10 @@
 			<DependentUpon>Resources.resx</DependentUpon>
 		</Compile>
 		<Compile Update="Services\Workflows\BuiltinActions\PlaySoundActionControl.axaml.cs">
-		  <DependentUpon>PlaySoundActionControl.axaml</DependentUpon>
+			<DependentUpon>PlaySoundActionControl.axaml</DependentUpon>
 		</Compile>
 		<Compile Update="Views\SettingPages\WorkflowPage.axaml.cs">
-		  <DependentUpon>WorkflowPage.axaml</DependentUpon>
+			<DependentUpon>WorkflowPage.axaml</DependentUpon>
 		</Compile>
 		<EmbeddedResource Update="Properties\Resources.resx">
 			<Generator>PublicResXFileCodeGenerator</Generator>
