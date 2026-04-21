@@ -263,7 +263,6 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 
 						var text =
 							point.IntensityDiff.ToString("+0.0;-0.0") + " " +
-#endif
 							(zoom >= Config.RawIntensityObject.ShowNameZoomLevel ? point.Name + " " : "");
 
 						if (point.IsTmpDisabled)
@@ -328,7 +327,6 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 						TextPaint.Color = IsDarkTheme ? SKColors.White : SKColors.Black;
 						canvas.DrawText(text, loc, TextPaint);
 					}
-#endif
 				// 観測点本体の描画
 				foreach (var point in ordersRenderedPoints.Reverse())
 				{
@@ -412,20 +410,22 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 							PointPaint);
 					}
 
-					if (point.Event != null)
-					{
-						PointPaint.Color = TextPaint.Color = point.Event.DebugColor;
-						TextPaint.Style = SKPaintStyle.Stroke;
-						canvas.DrawCircle(
-							pointCenter.AsSkPoint(),
-							circleSize / 2,
-							PointPaint);
+#if DEBUG
+					//if (point.Event != null)
+					//{
+					//	PointPaint.Color = TextPaint.Color = point.Event.DebugColor;
+					//	TextPaint.Style = SKPaintStyle.Stroke;
+					//	canvas.DrawCircle(
+					//		pointCenter.AsSkPoint(),
+					//		circleSize / 2,
+					//		PointPaint);
 
-						if (point.NearPoints is { } nps)
-							foreach (var np in nps.Where(np => np.Point.IntensityDiff >= .5))
-								if (np.Point.Event == null)
-									canvas.DrawLine(pointCenter.AsSkPoint(), np.Point.Location.ToPixel(zoom).AsSkPoint(), TextPaint);
-					}
+					//	if (point.NearPoints is { } nps)
+					//		foreach (var np in nps.Where(np => np.Point.IntensityDiff >= .5))
+					//			if (np.Point.Event == null)
+					//				canvas.DrawLine(pointCenter.AsSkPoint(), np.Point.Location.ToPixel(zoom).AsSkPoint(), TextPaint);
+					//}
+#endif
 				}
 			}
 
@@ -614,15 +614,17 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 				canvas.DrawLine((basePoint - new PointD(size, 0)).AsSkPoint(), (basePoint + new PointD(size, 0)).AsSkPoint(), CurrentLocationPen);
 			}
 
-			if (KyoshinEvents != null)
-				foreach (var evt in KyoshinEvents)
-				{
-					TextPaint.Color = evt.DebugColor;
-					TextPaint.Style = SKPaintStyle.Stroke;
-					var tl = evt.TopLeft.ToPixel(zoom).AsSkPoint();
-					var br = evt.BottomRight.ToPixel(zoom).AsSkPoint() - tl;
-					canvas.DrawRect(tl.X, tl.Y, br.X, br.Y, TextPaint);
-				}
+#if DEBUG
+			//if (KyoshinEvents != null)
+			//	foreach (var evt in KyoshinEvents)
+			//	{
+			//		TextPaint.Color = evt.DebugColor;
+			//		TextPaint.Style = SKPaintStyle.Stroke;
+			//		var tl = evt.TopLeft.ToPixel(zoom).AsSkPoint();
+			//		var br = evt.BottomRight.ToPixel(zoom).AsSkPoint() - tl;
+			//		canvas.DrawRect(tl.X, tl.Y, br.X, br.Y, TextPaint);
+			//	}
+#endif
 		}
 		finally
 		{

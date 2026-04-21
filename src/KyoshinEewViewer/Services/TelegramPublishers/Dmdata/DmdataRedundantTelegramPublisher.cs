@@ -78,6 +78,13 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 	private IDmdataV2ApiClient? ApiClient { get; set; }
 
 	/// <summary>
+	/// 直接WebSocket接続モードかどうか（認証・Ticket発行をスキップ）
+	/// </summary>
+	private bool IsDirectMode =>
+		!Config.Dmdata.UseRedundancy &&
+		Config.Dmdata.WebSocketDefaultEndpoint?.StartsWith("ws", StringComparison.OrdinalIgnoreCase) == true;
+
+	/// <summary>
 	/// 購読中のカテゴリ
 	/// </summary>
 	public ObservableCollection<InformationCategory> SubscribingCategories { get; } = [];
@@ -121,6 +128,16 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 	/// 最後にメッセージを受信した時刻
 	/// </summary>
 	public DateTime? LastMessageTime => ConnectionManager.LastMessageTime;
+
+	/// <summary>
+	/// 直近の ping 受信から pong 送信完了までの時間（ミリ秒）。直接接続モード時のみ。サーバ往復 RTT ではありません。
+	/// </summary>
+	public long? LastPongSendMilliseconds => ConnectionManager.LastPongSendMilliseconds;
+
+	/// <summary>
+	/// 前回の ping からの経過時間（秒）。初回は null。
+	/// </summary>
+	public double? LastPingIntervalSeconds => ConnectionManager.LastPingIntervalSeconds;
 
 	private ILogger Logger { get; }
 	private KyoshinEewViewerConfiguration Config { get; }
@@ -176,7 +193,7 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 		PullTimer = new(async s => await PullFeedAsync());
 
 		ReconnectionStrategy.InitializeWebSocketReconnectTimer(
-			() => ApiClient != null &&
+			() => (ApiClient != null || IsDirectMode) &&
 				SubscribingCategories.Any() &&
 				Config.Dmdata.UseWebSocket &&
 				ConnectionManager.RedundancyStatus == DmdataSharp.Redundancy.RedundancyStatus.Disconnected &&
@@ -191,7 +208,7 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 
 		ReconnectionStrategy.InitializeTemporaryFailureRecoveryTimer(() =>
 		{
-			if (CurrentState == ConnectionState.TemporaryFailure && ApiClient != null)
+			if (CurrentState == ConnectionState.TemporaryFailure && (ApiClient != null || IsDirectMode))
 			{
 				Logger.LogInfo($"一時的な障害から復旧を試みます (試行回数: {ReconnectionStrategy.TemporaryFailureCount})");
 				try
@@ -223,6 +240,14 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 			{
 				FailCount++;
 				ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+
+				// 直接接続モードではApiClientが不要なため、PULL型への切り替えはスキップ
+				if (IsDirectMode)
+				{
+					Logger.LogWarning("直接接続モードでWebSocket接続が切断されました（PULL型への切り替えはスキップ）");
+					return;
+				}
+
 				if (FailCount >= MaxFailCountBeforePullSwitch)
 				{
 					Logger.LogInfo("接続失敗回数が上限に達したためPULL型に切り替えます");
@@ -245,6 +270,12 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 				ReconnectionStrategy.ResetBackoffTime();
 			}
 			ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+		};
+
+		ConnectionManager.PingStatisticsChanged += (_, _) =>
+		{
+			this.RaisePropertyChanged(nameof(LastPongSendMilliseconds));
+			this.RaisePropertyChanged(nameof(LastPingIntervalSeconds));
 		};
 	}
 
@@ -273,6 +304,7 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 				Config.Dmdata.RefreshToken);
 
 			ApiClient = BuildApiClient(Credential);
+			DataProcessor.SetApiClient(ApiClient);
 		}
 		else if (!string.IsNullOrWhiteSpace(Config.Dmdata.OAuthClientSecret))
 		{
@@ -283,18 +315,17 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 				Config.Dmdata.OAuthClientSecret);
 
 			ApiClient = BuildApiClient(Credential);
+			DataProcessor.SetApiClient(ApiClient);
 		}
-		else
+		else if (!IsDirectMode)
 			return Task.CompletedTask;
-
-		DataProcessor.SetApiClient(ApiClient);
 
 		_configSubscription = Config.Dmdata.WhenAnyValue(x => x.UseWebSocket, x => x.ReceiveTraining, x => x.UseRedundancy)
 			.Skip(1)
 			.Throttle(TimeSpan.FromSeconds(1))
 			.Subscribe(async _ =>
 			{
-				if (ApiClient == null)
+				if (ApiClient == null && !IsDirectMode)
 					return;
 				await StartInternalAsync();
 			});
@@ -324,8 +355,7 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 			token: cancellationToken);
 		Credential = credentials;
 		Config.Dmdata.RefreshToken = credentials.RefreshToken;
-		ClientBuilder.UseOAuth(Credential);
-		ApiClient = ClientBuilder.BuildV2ApiClient();
+		ApiClient = BuildApiClient(credentials);
 		DataProcessor.SetApiClient(ApiClient);
 		OnInformationCategoryUpdated();
 	}
@@ -338,6 +368,15 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 
 	public async override Task<InformationCategory[]> GetSupportedCategoriesAsync()
 	{
+		// 直接接続モードでは認証不要ですべてのカテゴリを返す
+		if (IsDirectMode)
+		{
+			var directCategories = CategoryMap.Values.SelectMany(v => v).Distinct().ToArray();
+			if (!Config.Dmdata.UseWebSocket)
+				directCategories = [.. directCategories.Where(c => c != InformationCategory.EewForecast && c != InformationCategory.EewWarning)];
+			return directCategories;
+		}
+
 		if (Credential == null)
 			return [];
 		if (ApiClient == null)
@@ -399,10 +438,12 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 			CurrentState == ConnectionState.WebSocketConnected)
 			return;
 
-		if (ApiClient == null)
+		if (ApiClient == null && !IsDirectMode)
 			throw new InvalidOperationException("ApiClientが初期化されていません");
 
-		Logger.LogInfo("WebSocketに接続します");
+		Logger.LogInfo(IsDirectMode
+			? $"直接接続モードでWebSocketに接続します: {Config.Dmdata.WebSocketDefaultEndpoint}"
+			: "WebSocketに接続します");
 		CurrentState = ConnectionState.Connecting;
 
 		try
@@ -577,6 +618,14 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 					continue;
 				}
 
+				// 直接接続モードではAPIクライアントが不要なため、履歴取得をスキップ
+				if (IsDirectMode)
+				{
+					if (isWebSocket)
+						OnHistoryTelegramArrived("DM-D.S.S(WS-Direct)", c, []);
+					continue;
+				}
+
 				(var infos, interval) = await DataProcessor.FetchListAsync(c, false, Config.Dmdata.ReceiveTraining);
 				OnHistoryTelegramArrived(
 					$"DM-D.S.S({(isWebSocket ? "WS" : "PULL")})",
@@ -671,7 +720,7 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 		await _stateTransitionSemaphore.WaitAsync();
 		try
 		{
-			if (ApiClient == null)
+			if (ApiClient == null && !IsDirectMode)
 				throw new DmdataException("ApiClient が初期化されていません");
 
 			// 既存の接続があれば一旦切断
@@ -734,6 +783,30 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 		{
 			_stateTransitionSemaphore.Release();
 		}
+	}
+
+	/// <summary>
+	/// デバッグ用: ApiBaseUrl/DataApiBaseUrl の変更を反映してAPIクライアントを再構築し再接続する
+	/// </summary>
+	public async Task RebuildApiClientAndReconnectAsync()
+	{
+		Logger.LogInfo("デバッグ用 APIクライアント再構築＋再接続が要求されました");
+		if (Credential != null)
+		{
+			ApiClient = BuildApiClient(Credential);
+			DataProcessor.SetApiClient(ApiClient);
+			Logger.LogInfo("APIクライアントを再構築しました");
+		}
+		await StartInternalAsync();
+	}
+
+	/// <summary>
+	/// デバッグ用: 現在の設定で再接続を強制する
+	/// </summary>
+	public async Task ForceReconnectAsync()
+	{
+		Logger.LogInfo("デバッグ用再接続が要求されました");
+		await RebuildApiClientAndReconnectAsync();
 	}
 
 	/// <summary>

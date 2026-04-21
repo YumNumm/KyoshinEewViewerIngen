@@ -28,6 +28,9 @@ public class ObjectStorageClient
 
 	public async Task<long> UploadAsync(string key, Stream stream)
 	{
+		// PutObjectAsync はデフォルトで AutoCloseStream=true のためアップロード後に Stream を閉じる。
+		// 閉じた後に Length へアクセスすると ObjectDisposedException になるため先に取得する。
+		var length = stream.Length;
 		var request = new PutObjectRequest
 		{
 			BucketName = _bucket,
@@ -37,7 +40,6 @@ public class ObjectStorageClient
 		};
 		await _client.PutObjectAsync(request);
 
-		var length = stream.Length;
 		_logger.LogInformation($"オブジェクトストレージにアップロード完了: {key} ({length} bytes)");
 		return length;
 	}

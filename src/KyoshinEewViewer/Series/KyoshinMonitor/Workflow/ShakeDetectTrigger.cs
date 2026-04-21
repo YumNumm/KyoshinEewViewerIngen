@@ -30,6 +30,8 @@ public enum PeakRegionExpansionMode
 
 public class ShakeDetectTrigger : WorkflowTrigger
 {
+	public override Type EventType => typeof(ShakeDetectedEvent);
+
 	public static Dictionary<KyoshinEventLevel, string> LevelNames { get; } = new()
 	{
 		{ KyoshinEventLevel.Weaker, "微弱(非推奨)" },
@@ -130,7 +132,8 @@ public class ShakeDetectTrigger : WorkflowTrigger
 			},
 			random.Next() % 2 == 0,
 			false,
-			false
+			false,
+			[]
 		)
 		{
 			IsTest = true,

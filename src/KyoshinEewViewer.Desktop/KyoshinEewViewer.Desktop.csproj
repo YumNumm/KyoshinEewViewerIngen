@@ -2,15 +2,23 @@
     <Import Project="..\..\common.props" />
 
     <PropertyGroup>
-        <OutputType>WinExe</OutputType>
+        <!-- デフォルトは Exe（Linux, macOS 用） -->
+        <OutputType>Exe</OutputType>
         <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     </PropertyGroup>
 
-    <!-- プロジェクト参照 -->
+    <!-- Windows 向けビルドの場合は WinExe に変更 -->
+    <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('win'))">
+        <OutputType>WinExe</OutputType>
+    </PropertyGroup>
+
+    <!-- プロジェクト参照（マルチターゲットの外側評価を避けるため net10.0 に固定） -->
     <ItemGroup>
-        <ProjectReference Include="..\KyoshinEewViewer\KyoshinEewViewer.csproj" />
+        <ProjectReference Include="..\KyoshinEewViewer\KyoshinEewViewer.csproj">
+            <SetTargetFramework>TargetFramework=net10.0</SetTargetFramework>
+        </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>

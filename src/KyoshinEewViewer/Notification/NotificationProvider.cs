@@ -17,6 +17,10 @@ public abstract class NotificationProvider : IDisposable
 			return new Windows.WindowsNotificationProvider();
 		if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
 			return new Linux.LinuxNotificationProvider();
+#if MACOS
+		if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+			return new macOS.MacOSNotificationProvider();
+#endif
 		return null;
 	}
 }

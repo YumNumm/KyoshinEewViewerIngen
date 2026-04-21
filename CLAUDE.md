@@ -11,6 +11,11 @@
 
 **Documentation**: Technical documentation and code structure explanations may be in English for international collaboration, but implementation details should prioritize Japanese.
 
+## GitHub / Pull Requests（厳守）
+
+- **ingen084** のリポジトリは **upstream**。ここへ PR を作成しない。
+- PR は **常に YumNumm（このリポジトリの `origin`）** のみ。`gh pr create` では **`--repo YumNumm/KyoshinEewViewerIngen`** を明示する。
+
 ## Project Overview
 
 **KyoshinEewViewer for ingen** - Japanese disaster prevention application

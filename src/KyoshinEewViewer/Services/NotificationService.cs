@@ -12,7 +12,7 @@ namespace KyoshinEewViewer.Services;
 public class NotificationService
 {
 	private KyoshinEewViewerConfiguration Config { get; }
-	private NotificationProvider? TrayIcon { get; set; }
+	internal NotificationProvider? TrayIcon { get; set; }
 	public bool Available => TrayIcon != null;//NotifyIconService?.Enabled ?? false;
 	public bool TrayIconAvailable => TrayIcon?.TrayIconAvailable ?? false;
 

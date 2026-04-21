@@ -26,7 +26,22 @@
       "mcp__serena__think_about_collected_information",
       "mcp__serena__read_memory",
       "mcp__serena__think_about_whether_you_are_done",
-      "mcp__serena__think_about_task_adherence"
+      "mcp__serena__think_about_task_adherence",
+      "WebSearch",
+      "Bash(dotnet --info:*)",
+      "Bash(dotnet workload search:*)",
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(dotnet workload:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet clean:*)",
+      "Bash(git reset:*)",
+      "Bash(dotnet nuget:*)",
+      "Bash(dotnet list package:*)",
+      "WebFetch(domain:www.nuget.org)",
+      "Bash(dotnet publish:*)"
     ],
     "deny": []
   }

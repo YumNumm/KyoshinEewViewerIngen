@@ -126,7 +126,7 @@
                     </Grid>
                 </Expander.Header>
                 <StackPanel Margin="10">
-                    <Grid ColumnDefinitions="auto,10,*" RowDefinitions="auto,auto,auto,auto" RowSpacing="8">
+                    <Grid ColumnDefinitions="auto,10,*" RowDefinitions="auto,auto,auto,auto,auto,auto" RowSpacing="8">
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="アクティブ接続数:" />
                         <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding DmdataRedundantTelegramPublisher.ActiveConnectionCount}" />
                         
@@ -135,7 +135,15 @@
                         
                         <TextBlock Grid.Row="3" Grid.Column="0" Text="受信メッセージ数:" />
                         <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding DmdataRedundantTelegramPublisher.TotalMessagesReceived}" />
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Pong送信遅延:" />
+                        <TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding DmdataRedundantTelegramPublisher.LastPongSendMilliseconds, StringFormat='{}{0} ms', TargetNullValue='—'}" />
+
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Ping間隔:" />
+                        <TextBlock Grid.Row="5" Grid.Column="2" Text="{Binding DmdataRedundantTelegramPublisher.LastPingIntervalSeconds, StringFormat='{}{0:0.##} s', TargetNullValue='—'}" />
                     </Grid>
+                    <TextBlock Margin="0,4,0,0" FontSize="11" Foreground="{DynamicResource SubForegroundColor}" TextWrapping="Wrap"
+                               Text="Pong送信遅延は直接接続（ws://）時のみ。Ping間隔はサーバからの ping を受信するたびに前回からの秒数です。DM-D.S.S の仕様上、ICMP のような往復時間は取得できません。" />
                     
                     <!-- 即時再接続ボタン -->
                     <Button Classes="accent" Content="今すぐ再接続" 

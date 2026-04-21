@@ -76,7 +76,6 @@ public class ReplayFileEarthquakeInformationHost : EarthquakeInformationHost
 	private ReplayFileRunner? Runner { get; set; }
 
 	private KyoshinEventStateTracker EventStateTracker { get; } = new();
-	private Dictionary<string, HashSet<string?>> RegionSubRegionMap { get; } = [];
 
 	public override DateTime CurrentTime {
 		get {
@@ -278,7 +277,17 @@ public class ReplayFileEarthquakeInformationHost : EarthquakeInformationHost
 		// 観測点から地域マッピングを構築
 		KyoshinMonitorWatcher.RealtimeDataUpdated += BuildRegionMap;
 
+		// 時刻ジャンプ時のリセット
+		KyoshinMonitorWatcher.TimeJumpDetected += OnTimeJumpDetected;
+
 		Runner.Start();
+	}
+
+	private void OnTimeJumpDetected(TimeSpan jump)
+	{
+		EventStateTracker.Clear();
+		KyoshinEvents = [];
+		ShakeDetectedRegions = [];
 	}
 
 	private void BuildRegionMap((DateTime time, RealtimeObservationPoint[] data, KyoshinEvent[] events) e)

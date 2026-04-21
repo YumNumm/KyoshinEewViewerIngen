@@ -1,3 +1,4 @@
+using DmdataSharp;
 using DmdataSharp.ApiParameters.V2;
 using DmdataSharp.Interfaces;
 using DmdataSharp.Redundancy;
@@ -8,8 +9,8 @@ using Splat;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
-using DmdataSharp;
 
 namespace KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
 
@@ -36,6 +37,18 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 		get => _redundantController;
 		private set => this.RaiseAndSetIfChanged(ref _redundantController, value);
 	}
+
+	private DirectWebSocketController? _directController;
+	private DirectWebSocketController? DirectController
+	{
+		get => _directController;
+		set => this.RaiseAndSetIfChanged(ref _directController, value);
+	}
+
+	/// <summary>
+	/// 直接接続モードかどうか
+	/// </summary>
+	public bool IsDirectMode { get; private set; }
 
 	/// <summary>
 	/// 冗長性状態
@@ -68,6 +81,21 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 	}
 
 	/// <summary>
+	/// 直近の ping 受信から pong 送信完了までの時間（ミリ秒）。直接接続モード時のみ。DM-D.S.S の仕様上サーバ往復 RTT ではありません。
+	/// </summary>
+	public long? LastPongSendMilliseconds =>
+		IsDirectMode ? _directController?.LastPongSendMilliseconds : null;
+
+	/// <summary>
+	/// 前回の ping からの経過時間（秒）。初回 ping 後は null。
+	/// </summary>
+	public double? LastPingIntervalSeconds =>
+		IsDirectMode ? _directController?.LastPingIntervalSeconds : _lastRedundantPingIntervalSeconds;
+
+	private double? _lastRedundantPingIntervalSeconds;
+	private DateTimeOffset? _previousRedundantPingAt;
+
+	/// <summary>
 	/// 受信した総メッセージ数
 	/// </summary>
 	private long _totalMessagesReceived = 0;
@@ -80,7 +108,8 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 	/// <summary>
 	/// 最後にメッセージを受信した時刻
 	/// </summary>
-	public DateTime? LastMessageTime => RedundantController?.LastMessageTime;
+	public DateTime? LastMessageTime =>
+		_directController?.LastMessageTime ?? RedundantController?.LastMessageTime;
 
 	/// <summary>
 	/// データ受信イベント
@@ -93,6 +122,11 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 	public event EventHandler? ConnectionStatusChanged;
 
 	/// <summary>
+	/// WebSocket の ping 関連表示値が更新された
+	/// </summary>
+	public event EventHandler? PingStatisticsChanged;
+
+	/// <summary>
 	/// すべての接続失効イベント
 	/// </summary>
 	public event EventHandler? AllConnectionsLost;
@@ -103,10 +137,11 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 	}
 
 	/// <summary>
-	/// WebSocket接続を開始する
+	/// WebSocket接続を開始する。
+	/// customDefaultEndpoint が ws:// / wss:// で始まる場合は直接接続モードになる。
 	/// </summary>
 	public async Task ConnectWebSocketAsync(
-		IDmdataV2ApiClient apiClient,
+		IDmdataV2ApiClient? apiClient,
 		IEnumerable<InformationCategory> subscribingCategories,
 		string appVersion,
 		bool receiveTraining,
@@ -114,10 +149,27 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 		string[] customRedundantEndpoints,
 		string? customDefaultEndpoint)
 	{
+		// 直接接続モードの判定: 単一接続 かつ URL が ws:// / wss:// で始まる場合
+		var isDirectUrl = !useRedundancy &&
+			customDefaultEndpoint?.StartsWith("ws", StringComparison.OrdinalIgnoreCase) == true;
+
+		if (isDirectUrl)
+		{
+			await ConnectDirectAsync(customDefaultEndpoint!);
+			return;
+		}
+
+		if (apiClient == null)
+			throw new InvalidOperationException("通常接続にはApiClientが必要です");
+
 		Logger.LogDebug("WebSocket接続処理を開始します");
+		IsDirectMode = false;
+		_lastRedundantPingIntervalSeconds = null;
+		_previousRedundantPingAt = null;
 
 		RedundantController?.Dispose();
 		RedundantController = new RedundantDmdataSocketController(apiClient);
+		RedundantController.Options.EnableRawDataEvents = true;
 		ConfigureRedundantControllerEvents();
 
 		var classifications = subscribingCategories.Select(c => TelegramCategoryMap[c]).Distinct().ToArray();
@@ -161,15 +213,81 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 	}
 
 	/// <summary>
+	/// 直接URLへのWebSocket接続を開始する（認証・Ticket発行なし）
+	/// </summary>
+	private async Task ConnectDirectAsync(string url)
+	{
+		Logger.LogInfo($"直接接続モードで WebSocket 接続します: {url}");
+		IsDirectMode = true;
+		_lastRedundantPingIntervalSeconds = null;
+		_previousRedundantPingAt = null;
+
+		RedundantController?.Dispose();
+		RedundantController = null;
+
+		_directController?.Dispose();
+		_directController = new DirectWebSocketController(Locator.Current.GetService<ILogManager>()!);
+		ConfigureDirectControllerEvents();
+
+		await _directController.ConnectAsync(url);
+		UpdateConnectionStatus();
+	}
+
+	/// <summary>
 	/// WebSocket接続を切断する
 	/// </summary>
 	public async Task DisconnectWebSocketAsync()
 	{
+		if (_directController != null)
+		{
+			await _directController.DisconnectAsync();
+			_directController.Dispose();
+			_directController = null;
+			IsDirectMode = false;
+			UpdateConnectionStatus();
+			NotifyPingStatisticsChanged();
+			return;
+		}
+
 		if (RedundantController != null)
 		{
 			await RedundantController.DisconnectAsync();
+			_lastRedundantPingIntervalSeconds = null;
+			_previousRedundantPingAt = null;
 			UpdateConnectionStatus();
+			NotifyPingStatisticsChanged();
 		}
+	}
+
+	/// <summary>
+	/// DirectWebSocketControllerのイベントハンドラを設定する
+	/// </summary>
+	private void ConfigureDirectControllerEvents()
+	{
+		if (_directController == null)
+			return;
+
+		_directController.PingLatencyUpdated += (_, _) => NotifyPingStatisticsChanged();
+
+		_directController.DataReceived += (s, e) =>
+		{
+			TotalMessagesReceived++;
+			DataReceived?.Invoke(this, e);
+		};
+
+		_directController.Connected += (s, e) =>
+		{
+			Logger.LogInfo("直接WebSocket接続が確立されました");
+			UpdateConnectionStatus();
+			ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+		};
+
+		_directController.Disconnected += (s, e) =>
+		{
+			Logger.LogWarning("直接WebSocket接続が切断されました");
+			UpdateConnectionStatus();
+			AllConnectionsLost?.Invoke(this, EventArgs.Empty);
+		};
 	}
 
 	/// <summary>
@@ -188,6 +306,7 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 		RedundantController.RawDataReceived += (s, e) =>
 		{
 			TotalMessagesReceived = RedundantController.TotalMessagesReceived;
+			TryRecordRedundantPingInterval(e);
 		};
 
 		RedundantController.AllConnectionsLost += (s, e) =>
@@ -221,12 +340,54 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 		};
 	}
 
+	private void TryRecordRedundantPingInterval(RawDataReceivedEventArgs e)
+	{
+		if (e.IsDuplicate || !IsWebSocketPingJson(e.Message))
+			return;
+
+		if (_previousRedundantPingAt is { } prev)
+			_lastRedundantPingIntervalSeconds = (e.ReceivedTime - prev).TotalSeconds;
+		_previousRedundantPingAt = e.ReceivedTime;
+		NotifyPingStatisticsChanged();
+	}
+
+	private static bool IsWebSocketPingJson(string json)
+	{
+		try
+		{
+			using var doc = JsonDocument.Parse(json);
+			return doc.RootElement.TryGetProperty("type", out var t) && t.GetString() == "ping";
+		}
+		catch
+		{
+			return false;
+		}
+	}
+
+	private void NotifyPingStatisticsChanged()
+	{
+		this.RaisePropertyChanged(nameof(LastPongSendMilliseconds));
+		this.RaisePropertyChanged(nameof(LastPingIntervalSeconds));
+		PingStatisticsChanged?.Invoke(this, EventArgs.Empty);
+	}
+
 	/// <summary>
 	/// 接続状態を更新する
 	/// </summary>
 	private void UpdateConnectionStatus()
 	{
-		if (RedundantController != null)
+		if (_directController != null)
+		{
+			RedundancyStatus = _directController.IsConnected
+				? RedundancyStatus.FullyConnected
+				: RedundancyStatus.Disconnected;
+			ActiveConnectionCount = _directController.IsConnected ? 1 : 0;
+			ConnectedEndpoints = _directController.IsConnected && _directController.EndpointUrl != null
+				? [_directController.EndpointUrl]
+				: [];
+			TotalMessagesReceived = _directController.TotalMessagesReceived;
+		}
+		else if (RedundantController != null)
 		{
 			RedundancyStatus = RedundantController.Status;
 			ActiveConnectionCount = RedundantController.ActiveConnectionCount;
@@ -245,10 +406,12 @@ public class DmdataConnectionManager : ReactiveObject, IDisposable
 	/// <summary>
 	/// WebSocketが接続されているかどうか
 	/// </summary>
-	public bool IsWebSocketConnected => RedundantController?.IsConnected ?? false;
+	public bool IsWebSocketConnected =>
+		_directController?.IsConnected ?? RedundantController?.IsConnected ?? false;
 
 	public void Dispose()
 	{
+		_directController?.Dispose();
 		RedundantController?.Dispose();
 		GC.SuppressFinalize(this);
 	}

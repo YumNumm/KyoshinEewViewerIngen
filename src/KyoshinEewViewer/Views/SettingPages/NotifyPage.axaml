@@ -70,6 +70,31 @@
                 </ui:SettingsExpander>
             </StackPanel>
 
+            <!-- macOS 専用セクション -->
+            <StackPanel IsVisible="{Binding IsMacOS}">
+                <TextBlock Text="macOS 通知設定" FontWeight="Bold" Margin="10,20,10,5" />
+                <ui:SettingsExpander Header="通知権限のリクエスト"
+                                     Description="macOS では通知を表示するために明示的な権限が必要です。">
+                    <ui:SettingsExpander.IconSource>
+                        <ui:FontIconSource Glyph="&#xf0f3;" FontFamily="{StaticResource IconFont}" />
+                    </ui:SettingsExpander.IconSource>
+                    <ui:SettingsExpander.Footer>
+                        <Button Content="権限をリクエスト"
+                                Command="{Binding RequestMacOSNotificationPermissionCommand}" />
+                    </ui:SettingsExpander.Footer>
+                </ui:SettingsExpander>
+
+                <ui:SettingsExpander Header="通知権限の状態">
+                    <ui:SettingsExpander.IconSource>
+                        <ui:FontIconSource Glyph="&#xf05a;" FontFamily="{StaticResource IconFont}" />
+                    </ui:SettingsExpander.IconSource>
+                    <ui:SettingsExpander.Footer>
+                        <TextBlock Text="{Binding MacOSNotificationPermissionStatus}"
+                                   VerticalAlignment="Center" />
+                    </ui:SettingsExpander.Footer>
+                </ui:SettingsExpander>
+            </StackPanel>
+
             <TextBlock Text="通知" FontWeight="Bold" Margin="10,20,10,5" />
             <ui:SettingsExpander Header="通知機能を利用する" Description="試験的な実装のため、バージョンアップで利用できなくなる可能性があります。" IsExpanded="True">
                 <ui:SettingsExpander.IconSource>
