@@ -44,11 +44,13 @@ internal class Program
 			return new ObjectStorageClient(s3Endpoint, s3AccessKey, s3SecretKey, s3Bucket, logger);
 		});
 		builder.Services.AddHttpClient();
+		builder.Services.AddSingleton(_ => KyoshinImageRetryOptions.FromEnvironment());
 		builder.Services.AddSingleton(sp =>
 		{
 			var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
 			var logger = sp.GetRequiredService<ILogger<ReplayFileBuilder>>();
-			return new ReplayFileBuilder(httpClientFactory.CreateClient(), logger, internalApiUrl);
+			var retryOptions = sp.GetRequiredService<KyoshinImageRetryOptions>();
+			return new ReplayFileBuilder(httpClientFactory.CreateClient(), logger, internalApiUrl, retryOptions);
 		});
 
 		builder.Services.AddHostedService<ReplayGeneratorWorker>();

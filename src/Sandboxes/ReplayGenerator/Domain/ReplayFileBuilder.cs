@@ -11,12 +11,14 @@ public class ReplayFileBuilder
 	private readonly HttpClient _httpClient;
 	private readonly ILogger<ReplayFileBuilder> _logger;
 	private readonly string? _internalApiUrl;
+	private readonly KyoshinImageRetryOptions _imageRetryOptions;
 
-	public ReplayFileBuilder(HttpClient httpClient, ILogger<ReplayFileBuilder> logger, string? internalApiUrl = null)
+	public ReplayFileBuilder(HttpClient httpClient, ILogger<ReplayFileBuilder> logger, string? internalApiUrl = null, KyoshinImageRetryOptions? imageRetryOptions = null)
 	{
 		_httpClient = httpClient;
 		_logger = logger;
 		_internalApiUrl = internalApiUrl;
+		_imageRetryOptions = imageRetryOptions ?? new KyoshinImageRetryOptions();
 	}
 
 	/// <summary>
@@ -104,19 +106,44 @@ public class ReplayFileBuilder
 		}
 	}
 
-	private async Task<byte[]?> FetchKyoshinImageAsync(DateTime time)
+	internal async Task<byte[]?> FetchKyoshinImageAsync(DateTime time)
 	{
 		var url = WebApiUrlGenerator.Generate(WebApiUrlType.RealtimeImg, time, RealtimeDataType.Shindo, false);
-		try
+		var maxAttempts = Math.Max(1, _imageRetryOptions.MaxAttempts);
+
+		for (var attempt = 0; attempt < maxAttempts; attempt++)
 		{
-			var response = await _httpClient.GetAsync(url);
-			if (!response.IsSuccessStatusCode) return null;
-			return await response.Content.ReadAsByteArrayAsync();
+			var delay = _imageRetryOptions.GetDelayForAttempt(attempt);
+			if (delay > TimeSpan.Zero)
+				await Task.Delay(delay);
+
+			try
+			{
+				var response = await _httpClient.GetAsync(url);
+				if (response.IsSuccessStatusCode)
+					return await response.Content.ReadAsByteArrayAsync();
+
+				if (attempt + 1 >= maxAttempts)
+				{
+					_logger.LogWarning($"強震モニタ画像の取得に失敗しました（リトライ上限到達）: {time:HH:mm:ss} status={(int)response.StatusCode} attempts={attempt + 1}");
+					return null;
+				}
+
+				_logger.LogDebug($"強震モニタ画像の取得に失敗しリトライします: {time:HH:mm:ss} status={(int)response.StatusCode} attempt={attempt + 1}/{maxAttempts}");
+			}
+			catch (Exception ex)
+			{
+				if (attempt + 1 >= maxAttempts)
+				{
+					_logger.LogWarning(ex, $"強震モニタ画像の取得に失敗しました（リトライ上限到達・例外）: {time:HH:mm:ss} attempts={attempt + 1}");
+					return null;
+				}
+
+				_logger.LogDebug(ex, $"強震モニタ画像の取得で例外が発生しリトライします: {time:HH:mm:ss} attempt={attempt + 1}/{maxAttempts}");
+			}
 		}
-		catch
-		{
-			return null;
-		}
+
+		return null;
 	}
 
 	private async Task<string?> FetchKyoshinEewJsonAsync(DateTime time)
