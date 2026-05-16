@@ -76,10 +76,13 @@ public class ReplayGeneratorWorker : BackgroundService
 		{
 			try
 			{
-				var snapshot = await _stateManager.GetRealtimeSnapshot();
-				var (shouldGenerate, state) = await _shakeTracker.CheckTimerAsync(snapshot);
-				if (shouldGenerate && state != null)
-					await GenerateFromShake(state, snapshot);
+				if (_shakeTracker.HasActiveSession)
+				{
+					var snapshot = await _stateManager.GetRealtimeSnapshot();
+					var (shouldGenerate, state) = await _shakeTracker.CheckTimerAsync(snapshot);
+					if (shouldGenerate && state != null)
+						await GenerateFromShake(state, snapshot);
+				}
 			}
 			catch (Exception ex)
 			{
