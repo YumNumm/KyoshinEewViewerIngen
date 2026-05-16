@@ -44,6 +44,11 @@ public class ValkeyStateManager
 			new("lastEventTime", state.LastEventTime.ToString("O")),
 			new("eewJson", state.EewJson ?? ""),
 			new("status", state.Status.ToString()),
+			new("associatedEewEventId", state.AssociatedEewEventId ?? ""),
+			new("associatedEewOriginTime", state.AssociatedEewOriginTime?.ToString("O") ?? ""),
+			new("associatedEewReportTime", state.AssociatedEewReportTime?.ToString("O") ?? ""),
+			new("associatedEewMagnitude", state.AssociatedEewMagnitude?.ToString() ?? ""),
+			new("associatedEewDepthKm", state.AssociatedEewDepthKm?.ToString() ?? ""),
 		};
 		await Db.HashSetAsync(key, entries);
 	}
@@ -62,6 +67,11 @@ public class ValkeyStateManager
 			LastEventTime = DateTime.TryParse(dict.GetValueOrDefault("lastEventTime"), out var let2) ? let2 : DateTime.UtcNow,
 			EewJson = dict.GetValueOrDefault("eewJson") is { Length: > 0 } eew ? eew : null,
 			Status = Enum.TryParse<SessionStatus>(dict.GetValueOrDefault("status"), out var s) ? s : SessionStatus.Tracking,
+			AssociatedEewEventId = dict.GetValueOrDefault("associatedEewEventId") is { Length: > 0 } id ? id : null,
+			AssociatedEewOriginTime = DateTime.TryParse(dict.GetValueOrDefault("associatedEewOriginTime"), out var eot) ? eot : null,
+			AssociatedEewReportTime = DateTime.TryParse(dict.GetValueOrDefault("associatedEewReportTime"), out var ert) ? ert : null,
+			AssociatedEewMagnitude = double.TryParse(dict.GetValueOrDefault("associatedEewMagnitude"), out var mag) ? mag : null,
+			AssociatedEewDepthKm = double.TryParse(dict.GetValueOrDefault("associatedEewDepthKm"), out var dep) ? dep : null,
 		};
 	}
 
