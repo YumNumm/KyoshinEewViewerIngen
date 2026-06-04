@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.5](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.4...1.0.5) - 2026-06-04
+- chore: PR は YumNumm（origin）のみ — Cursor ルールと CLAUDE 追記 by @YumNumm in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/13
+- Bump the nuget group with 1 update by @dependabot[bot] in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/14
+- fix(ReplayGenerator): アクティブセッションがない場合は snapshot fetch をスキップ by @YumNumm in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/16
+
 ## [1.0.4](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.3...1.0.4) - 2026-03-31
 - Bump the nuget group with 1 update by @dependabot[bot] in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/11
 
