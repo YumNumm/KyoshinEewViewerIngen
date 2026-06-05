@@ -77,7 +77,12 @@ internal class Program
 				tracing
 					.AddSource("ShakeDetectionProducer")
 					.AddSource("System.Net.Http")
-					.AddAspNetCoreInstrumentation()
+					.AddAspNetCoreInstrumentation(options =>
+					{
+						options.Filter = httpContext =>
+							!httpContext.Request.Path.StartsWithSegments("/health")
+							&& !httpContext.Request.Path.StartsWithSegments("/metrics");
+					})
 					.AddHttpClientInstrumentation();
 
 				if (!string.IsNullOrEmpty(otlpEndpoint))
@@ -97,6 +102,20 @@ internal class Program
 				else
 					metrics.AddConsoleExporter();
 			});
+
+		// /health・/metrics へのリクエストログを抑制
+		builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
+		builder.Logging.AddFilter("Microsoft.AspNetCore.Routing.EndpointMiddleware", LogLevel.Warning);
+
+		// 構造化ログ（Loki取り込み用）
+		builder.Logging.ClearProviders();
+		builder.Logging.AddJsonConsole(options =>
+		{
+			options.JsonWriterOptions = new System.Text.Json.JsonWriterOptions
+			{
+				Indented = false,
+			};
+		});
 
 		// サービス登録
 		builder.Services.AddSingleton<ValkeyStreamProducer>();
