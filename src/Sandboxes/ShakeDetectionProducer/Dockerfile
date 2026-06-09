@@ -2,6 +2,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 WORKDIR /src
+ENV NUGET_CERT_REVOCATION_MODE=offline
 
 # Copy project files for restore
 COPY common.props ./
