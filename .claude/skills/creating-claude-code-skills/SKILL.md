@@ -43,16 +43,19 @@ Concrete input/output examples.
 ## Writing Effective Descriptions
 
 The `description` field is critical for discovery. Include:
+
 - What the skill does
 - When to use it (triggers/contexts)
 - Key terms users would mention
 
 **Good**:
+
 ```yaml
 description: Extract text from PDF files, fill forms, merge documents. Use when working with PDF files, forms, or document extraction.
 ```
 
 **Bad**:
+
 ```yaml
 description: Helps with documents
 ```
@@ -60,12 +63,14 @@ description: Helps with documents
 ## File Organization Patterns
 
 **Simple skill** (single file):
+
 ```
 commit-helper/
 └── SKILL.md
 ```
 
 **Skill with references**:
+
 ```
 pdf-processing/
 ├── SKILL.md           # Quick start + navigation
@@ -74,6 +79,7 @@ pdf-processing/
 ```
 
 **Skill with scripts**:
+
 ```
 data-analysis/
 ├── SKILL.md
