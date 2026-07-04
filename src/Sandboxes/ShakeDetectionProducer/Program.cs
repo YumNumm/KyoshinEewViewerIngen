@@ -296,10 +296,11 @@ internal class Program
 		};
 
 		// 起動ログ
-		var valkeyConnectionString = Environment.GetEnvironmentVariable("VALKEY_CONNECTION_STRING") ?? "localhost:6379";
+		var valkeyOptions = ValkeyStreamProducer.CreateConfigurationOptionsFromEnv();
 		var valkeyStreamKey = Environment.GetEnvironmentVariable("VALKEY_STREAM_KEY") ?? "shake-detect-events";
 		logger.LogInformation("ShakeDetectionProducer を起動します");
-		logger.LogInformation("Valkey: {ConnectionString}, StreamKey={StreamKey}", valkeyConnectionString, valkeyStreamKey);
+		logger.LogInformation("Valkey: {Endpoints}, ServiceName={ServiceName}, StreamKey={StreamKey}",
+			string.Join(",", valkeyOptions.EndPoints), valkeyOptions.ServiceName ?? "(なし)", valkeyStreamKey);
 		logger.LogInformation("ヘルスチェック: http://0.0.0.0:{Port}/health", port);
 
 		// タイマー開始
