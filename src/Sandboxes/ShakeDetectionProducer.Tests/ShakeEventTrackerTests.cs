@@ -75,4 +75,38 @@ public class ShakeEventTrackerTests
 		Assert.Equal(2, next.SerialNo);
 		Assert.Contains("level_up", next.ChangeReasons);
 	}
+
+	[Fact]
+	public void LevelChanges_AreSentImmediatelyWithDirectionalReasons()
+	{
+		var now = new DateTime(2026, 7, 18, 0, 0, 0, DateTimeKind.Utc);
+		var evt = TestEventFactory.CreateEvent(now);
+		var tracker = new ShakeEventTracker();
+		var first = Assert.IsType<ShakeDetectedPayload>(tracker.PrepareEvent(evt, now));
+		tracker.Commit(first, now);
+
+		evt.Level = KyoshinEewViewer.Core.Models.KyoshinEventLevel.Strong;
+		var levelUp = Assert.IsType<ShakeDetectedPayload>(tracker.PrepareEvent(evt, now.AddMilliseconds(1)));
+		Assert.Contains("level_up", levelUp.ChangeReasons);
+		tracker.Commit(levelUp, now.AddMilliseconds(1));
+
+		evt.Level = KyoshinEewViewer.Core.Models.KyoshinEventLevel.Weak;
+		var levelDown = Assert.IsType<ShakeDetectedPayload>(tracker.PrepareEvent(evt, now.AddMilliseconds(2)));
+		Assert.Contains("level_down", levelDown.ChangeReasons);
+	}
+
+	[Fact]
+	public void BoundsChange_IsSentImmediatelyWithRegionReason()
+	{
+		var now = new DateTime(2026, 7, 18, 0, 0, 0, DateTimeKind.Utc);
+		var evt = TestEventFactory.CreateEvent(now);
+		var tracker = new ShakeEventTracker();
+		var first = Assert.IsType<ShakeDetectedPayload>(tracker.PrepareEvent(evt, now));
+		tracker.Commit(first, now);
+
+		evt.TopLeft.Latitude -= 1;
+		var changed = Assert.IsType<ShakeDetectedPayload>(tracker.PrepareEvent(evt, now.AddMilliseconds(1)));
+
+		Assert.Contains("region_changed", changed.ChangeReasons);
+	}
 }

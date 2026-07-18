@@ -21,6 +21,9 @@ public class ShakeEventPayloadTests
 		a.MergeEvent(c, now.AddSeconds(13));
 
 		Assert.Equal(new[] { b.Id, c.Id, d.Id }, a.MergedEvents.Select(x => x.EventId));
+		Assert.Equal(
+			new[] { now.AddSeconds(11), now.AddSeconds(10), now.AddSeconds(12) },
+			a.MergedEvents.Select(x => x.MergedAt));
 		Assert.DoesNotContain(a.MergedEvents, x => x.EventId == a.Id);
 	}
 
@@ -47,11 +50,50 @@ public class ShakeEventPayloadTests
 		});
 		using var document = JsonDocument.Parse(json);
 		var root = document.RootElement;
+		Assert.Equal(
+			new[]
+			{
+				"changeReasons", "createdAt", "eventId", "expiresAt", "level", "mergedEvents",
+				"pointCount", "points", "region", "serialNo", "type", "updatedAt",
+			},
+			root.EnumerateObject().Select(property => property.Name).Order());
 		Assert.Equal("shake_detection", root.GetProperty("type").GetString());
+		Assert.True(Guid.TryParse(root.GetProperty("eventId").GetString(), out _));
 		Assert.Equal(2, root.GetProperty("serialNo").GetInt32());
-		Assert.True(root.TryGetProperty("updatedAt", out _));
-		Assert.True(root.TryGetProperty("expiresAt", out _));
-		Assert.True(root.TryGetProperty("mergedEvents", out _));
+		Assert.True(DateTime.TryParse(root.GetProperty("createdAt").GetString(), out _));
+		Assert.True(DateTime.TryParse(root.GetProperty("updatedAt").GetString(), out _));
+		Assert.True(DateTime.TryParse(root.GetProperty("expiresAt").GetString(), out _));
+		Assert.Equal(JsonValueKind.String, root.GetProperty("level").ValueKind);
+		Assert.Equal(JsonValueKind.Array, root.GetProperty("changeReasons").ValueKind);
+		Assert.Equal(JsonValueKind.Array, root.GetProperty("mergedEvents").ValueKind);
+		Assert.Equal(JsonValueKind.Number, root.GetProperty("pointCount").ValueKind);
+		Assert.Equal(JsonValueKind.Object, root.GetProperty("region").ValueKind);
+		Assert.Equal(JsonValueKind.Array, root.GetProperty("points").ValueKind);
+
+		var mergedEvent = root.GetProperty("mergedEvents")[0];
+		Assert.Equal(new[] { "eventId", "mergedAt" }, mergedEvent.EnumerateObject().Select(x => x.Name).Order());
+		Assert.Equal(JsonValueKind.String, mergedEvent.GetProperty("eventId").ValueKind);
+		Assert.Equal(JsonValueKind.String, mergedEvent.GetProperty("mergedAt").ValueKind);
+
+		var region = root.GetProperty("region");
+		Assert.Equal(new[] { "bottomRight", "topLeft" }, region.EnumerateObject().Select(x => x.Name).Order());
+		Assert.All(
+			new[] { region.GetProperty("topLeft"), region.GetProperty("bottomRight") },
+			location => Assert.Equal(
+				new[] { "latitude", "longitude" },
+				location.EnumerateObject().Select(x => x.Name).Order()));
+
+		var point = root.GetProperty("points")[0];
+		Assert.Equal(
+			new[] { "code", "intensity", "intensityDiff", "location", "name", "region", "type" },
+			point.EnumerateObject().Select(x => x.Name).Order());
+		Assert.Equal(JsonValueKind.String, point.GetProperty("code").ValueKind);
+		Assert.Equal(JsonValueKind.String, point.GetProperty("name").ValueKind);
+		Assert.Equal(JsonValueKind.String, point.GetProperty("region").ValueKind);
+		Assert.Equal(JsonValueKind.String, point.GetProperty("type").ValueKind);
+		Assert.Equal(JsonValueKind.Object, point.GetProperty("location").ValueKind);
+		Assert.Equal(JsonValueKind.Number, point.GetProperty("intensity").ValueKind);
+		Assert.Equal(JsonValueKind.Number, point.GetProperty("intensityDiff").ValueKind);
 		Assert.False(root.TryGetProperty("isReplay", out _));
 	}
 }
