@@ -251,22 +251,22 @@ internal class Program
 
 				foreach (var evt in confirmedEvents)
 				{
-					var (shouldSend, changeReason) = eventTracker.ProcessEvent(evt);
-					if (!shouldSend)
+					var payload = eventTracker.PrepareEvent(evt, time);
+					if (payload == null)
 						continue;
 
-					using var sendActivity = ActivitySource.StartActivity("shake_detected.send");
+					using var sendActivity = ActivitySource.StartActivity("shake_detection.send");
 					sendActivity?.SetTag("event.id", evt.Id.ToString());
 					sendActivity?.SetTag("event.level", evt.Level.ToString());
-					sendActivity?.SetTag("event.change_reason", changeReason.ToString());
-
-					var payload = ShakeDetectedPayload.FromEvent(evt, changeReason, false);
+					sendActivity?.SetTag("event.serial_no", payload.SerialNo);
+					sendActivity?.SetTag("event.change_reasons", string.Join(',', payload.ChangeReasons));
 
 					try
 					{
 						await valkeyProducer.ProduceShakeDetectedAsync(payload);
-						logger.LogInformation("揺れ検知イベントを送信しました: {EventId} Level={Level} ChangeReason={ChangeReason}",
-							evt.Id, evt.Level, changeReason);
+						eventTracker.Commit(payload, time);
+						logger.LogInformation("揺れ検知イベントを送信しました: {EventId} SerialNo={SerialNo} Level={Level} ChangeReasons={ChangeReasons}",
+							evt.Id, payload.SerialNo, evt.Level, payload.ChangeReasons);
 					}
 					catch (Exception ex)
 					{

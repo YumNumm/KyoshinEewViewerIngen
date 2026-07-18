@@ -227,7 +227,7 @@ public class ShakeDetectionEngine(ILogManager? logManager = null, ShakeDetection
 				{
 					if (evt == firstEvent)
 						continue;
-					firstEvent.MergeEvent(evt);
+					firstEvent.MergeEvent(evt, time);
 					KyoshinEvents.Remove(evt);
 					//Logger.LogDebug($"イベント統合: {firstEvent.Id} <- {evt.Id}");
 				}
@@ -274,7 +274,7 @@ public class ShakeDetectionEngine(ILogManager? logManager = null, ShakeDetection
 				var mergeDistance = Parameters.GetMergeDistance(evt.Level > evt2.Level ? evt.Level : evt2.Level);
 				if (!evt.CheckNearby(evt2, mergeDistance))
 					continue;
-				evt.MergeEvent(evt2);
+				evt.MergeEvent(evt2, time);
 				KyoshinEvents.Remove(evt2);
 				Logger?.LogDebug($"イベント距離統合: {evt.Id} <- {evt2.Id}");
 			}

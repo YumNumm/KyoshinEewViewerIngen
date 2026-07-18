@@ -97,8 +97,9 @@ public sealed class ValkeyStreamProducer : IAsyncDisposable
 	/// </summary>
 	public async Task ProduceShakeDetectedAsync(ShakeDetectedPayload payload, CancellationToken cancellationToken = default)
 	{
-		using var activity = ActivitySource.StartActivity("valkey.produce.shake_detected");
+		using var activity = ActivitySource.StartActivity("valkey.produce.shake_detection");
 		activity?.SetTag("event.id", payload.EventId.ToString());
+		activity?.SetTag("event.serial_no", payload.SerialNo);
 		activity?.SetTag("event.level", payload.Level);
 
 		var stopwatch = Stopwatch.StartNew();
@@ -109,7 +110,7 @@ public sealed class ValkeyStreamProducer : IAsyncDisposable
 			var entries = new NameValueEntry[]
 			{
 				new("eventId", payload.EventId.ToString()),
-				new("type", "shake_detected"),
+				new("type", "shake_detection"),
 				new("payload", json)
 			};
 
