@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.0.6](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.5...1.0.6) - 2026-07-19
+- feat: publish canonical shake detection state payloads by @YumNumm in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/19
+
 ## [1.0.5](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.4...1.0.5) - 2026-06-04
 
 - chore: PR は YumNumm（origin）のみ — Cursor ルールと CLAUDE 追記 by @YumNumm in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/13
