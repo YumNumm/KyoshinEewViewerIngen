@@ -49,11 +49,10 @@ public sealed class ValkeyStreamProducer : IAsyncDisposable
 	{
 		_logger = logger;
 
-		var connectionString = Environment.GetEnvironmentVariable("VALKEY_CONNECTION_STRING") ?? "localhost:6379";
 		_streamKey = Environment.GetEnvironmentVariable("VALKEY_STREAM_KEY") ?? "shake-detect-events";
 		_maxLength = int.Parse(Environment.GetEnvironmentVariable("VALKEY_STREAM_MAXLEN") ?? "10000");
 
-		var options = ConfigurationOptions.Parse(connectionString);
+		var options = CreateConfigurationOptionsFromEnv();
 		options.ClientName = "shake-detection-producer";
 		options.ConnectTimeout = 5000;
 		options.SyncTimeout = 5000;
@@ -67,8 +66,30 @@ public sealed class ValkeyStreamProducer : IAsyncDisposable
 
 		_database = _connection.GetDatabase();
 
-		_logger.LogInformation("Valkey Stream Producerを初期化しました: {ConnectionString}, StreamKey={StreamKey}, MaxLen={MaxLen}",
-			connectionString, _streamKey, _maxLength);
+		_logger.LogInformation("Valkey Stream Producerを初期化しました: {Endpoints}, ServiceName={ServiceName}, StreamKey={StreamKey}, MaxLen={MaxLen}",
+			string.Join(",", options.EndPoints), options.ServiceName ?? "(なし)", _streamKey, _maxLength);
+	}
+
+	internal static ConfigurationOptions CreateConfigurationOptionsFromEnv()
+	{
+		var sentinelAddrs = Environment.GetEnvironmentVariable("REDIS_SENTINEL_ADDRS");
+		if (!string.IsNullOrEmpty(sentinelAddrs))
+		{
+			var options = new ConfigurationOptions
+			{
+				ServiceName = Environment.GetEnvironmentVariable("REDIS_MASTER_NAME") ?? "eqmonitor",
+			};
+			foreach (var addr in sentinelAddrs.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+				options.EndPoints.Add(addr);
+			return options;
+		}
+
+		var url = Environment.GetEnvironmentVariable("REDIS_URL")
+			?? Environment.GetEnvironmentVariable("VALKEY_CONNECTION_STRING")
+			?? "localhost:6379";
+		if (url.StartsWith("redis://", StringComparison.OrdinalIgnoreCase))
+			url = url["redis://".Length..];
+		return ConfigurationOptions.Parse(url);
 	}
 
 	/// <summary>
@@ -76,8 +97,9 @@ public sealed class ValkeyStreamProducer : IAsyncDisposable
 	/// </summary>
 	public async Task ProduceShakeDetectedAsync(ShakeDetectedPayload payload, CancellationToken cancellationToken = default)
 	{
-		using var activity = ActivitySource.StartActivity("valkey.produce.shake_detected");
+		using var activity = ActivitySource.StartActivity("valkey.produce.shake_detection");
 		activity?.SetTag("event.id", payload.EventId.ToString());
+		activity?.SetTag("event.serial_no", payload.SerialNo);
 		activity?.SetTag("event.level", payload.Level);
 
 		var stopwatch = Stopwatch.StartNew();
@@ -88,7 +110,7 @@ public sealed class ValkeyStreamProducer : IAsyncDisposable
 			var entries = new NameValueEntry[]
 			{
 				new("eventId", payload.EventId.ToString()),
-				new("type", "shake_detected"),
+				new("type", "shake_detection"),
 				new("payload", json)
 			};
 

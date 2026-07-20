@@ -3,6 +3,7 @@
 ## Language Support
 
 **Japanese Priority**: This project is a Japanese disaster prevention application. All user-facing content must be in Japanese:
+
 - **UI text and messages**: All interface elements, dialogs, and user messages must be in Japanese
 - **Log messages**: Write all log messages in Japanese as a characteristic of disaster prevention applications
 - **Comments in code**: Write comments in Japanese to maintain consistency with the application domain
@@ -19,6 +20,7 @@
 ## Project Overview
 
 **KyoshinEewViewer for ingen** - Japanese disaster prevention application
+
 - C# .NET 9.0 + Avalonia UI for cross-platform support
 - Monitors seismic activity from JMA and strong motion networks
 - Displays real-time earthquake early warnings and earthquake information
@@ -36,6 +38,7 @@ dotnet build src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj
 ## Architecture
 
 ### Series Architecture
+
 Plugin-based modular architecture separating monitoring functions:
 
 - **KyoshinMonitor**: Strong motion network monitoring and earthquake early warnings
@@ -47,6 +50,7 @@ Plugin-based modular architecture separating monitoring functions:
 - **Qzss**: Satellite disaster crisis management reporting
 
 Each Series structure (`src/KyoshinEewViewer/Series/[SeriesName]/`):
+
 - View (AXAML/ViewModel)
 - Layer (Map rendering)
 - Services (Data processing)
@@ -56,6 +60,7 @@ Each Series structure (`src/KyoshinEewViewer/Series/[SeriesName]/`):
 - Workflow (Workflow definitions)
 
 ### Core Technology Stack
+
 - **Avalonia UI**: AXAML, MVVM, cross-platform
 - **ReactiveUI**: Reactive programming
 - **KyoshinMonitorLib**: Strong motion monitor processing
@@ -66,6 +71,7 @@ Each Series structure (`src/KyoshinEewViewer/Series/[SeriesName]/`):
 ## Project Structure
 
 ### Main Projects
+
 - `KyoshinEewViewer`: Main application (Series, UI, services)
 - `KyoshinEewViewer.Desktop`: Desktop version entry point
 - `KyoshinEewViewer.Core`: Shared models, themes, utilities
@@ -73,16 +79,19 @@ Each Series structure (`src/KyoshinEewViewer/Series/[SeriesName]/`):
 - `KyoshinEewViewer.CustomControl`: Custom UI controls
 
 ### Parser Libraries
+
 - `KyoshinEewViewer.JmaXmlParser`: JMA XML parsing
 - `KyoshinEewViewer.DCReportParser`: QZSS disaster crisis management report parsing
 - `KyoshinEewViewer.CsvSourceGenerator`: CSV dictionary code generation
 
 ### Configuration
+
 - `common.props`: Shared MSBuild properties (.NET 9.0, Nullable, etc.)
 
 ## Development Patterns
 
 ### UI Development (Avalonia)
+
 - MVVM: ViewModels inheriting from `ViewModelBase`
 - AXAML markup (Avalonia version of XAML)
 - Compiled bindings (enabled by default)
@@ -120,19 +129,23 @@ For applying different styles based on boolean properties, use the `Classes.` sy
 This pattern is more declarative, reduces code, and keeps styling logic in XAML where it belongs.
 
 ### Data Processing
+
 - Series-based architecture
 - Reactive streams with ReactiveUI/System.Reactive
 - Thread-safe data updates
 - Geographic data visualization through map layers
 
 ### Theme System
+
 - `IntensityTheme`: Seismic intensity display colors
 - `WindowTheme`: Application theme
 - Theme editor
 - System.Text.Json serialization
 
 ### Workflow System
+
 Event-driven processing with Scriban templates:
+
 - **Triggers**: Event detection conditions (earthquakes, earthquake early warnings, etc.)
 - **Actions**: Response processing (notifications, audio, webhooks, etc.)
 - **Events**: Workflow data
@@ -141,6 +154,7 @@ Event-driven processing with Scriban templates:
 ## Testing
 
 Using xUnit framework:
+
 - `KyoshinEewViewer.Tests`: Template system tests
 - `KyoshinEewViewer.JmaXmlParser.Tests`: XML parsing validation
 - `KyoshinEewViewer.DCReportParser.Tests`: QZSS report parsing validation
@@ -148,12 +162,14 @@ Using xUnit framework:
 **Note**: Only run tests for projects existing in the `tests/` directory
 
 ### Test Focus
+
 - Focus tests on the core functionality and business logic of classes
 - Avoid testing infrastructure code such as event handlers, ResetEvent, or other implementation details
 - Test the public API behavior and expected outcomes rather than internal mechanisms
 - Prioritize testing actual API interactions, data processing, and error handling scenarios
 
 ### Test Organization and Best Practices
+
 - **Consolidate Related Tests**: Group similar test scenarios into comprehensive test methods rather than creating multiple small tests
 - **Avoid Redundant Testing**: Do not create separate tests for simple property setters/getters or method chaining that returns the same instance
 - **Focus on Integration**: Create tests that verify complete workflows (e.g., builder pattern with full configuration) rather than individual method calls
@@ -161,6 +177,7 @@ Using xUnit framework:
 - **Efficient Test Structure**: Use test data arrays or loops to test multiple similar scenarios in a single test method when appropriate
 
 ### What NOT to Test
+
 - Simple property assignments that only set and return values
 - Method chaining that returns `this` (fluent interface patterns)
 - Initial state verification of simple properties
@@ -169,19 +186,23 @@ Using xUnit framework:
 - Enum existence checks
 
 ### Test Data and URL Guidelines
+
 **CRITICAL**: When creating test data, NEVER use real production URLs or endpoints to prevent accidental external requests:
 
 #### Forbidden Test Data
+
 - **NEVER** use actual URLs: `api.dmdata.jp`, `data.api.dmdata.jp`, `ws.api.dmdata.jp`, etc.
 - **NEVER** use real endpoint hostnames: `ws-tokyo.api.dmdata.jp`, `ws-osaka.api.dmdata.jp`, etc.
 
 #### Required Test Data Patterns
+
 - **Use modified/shortened URLs**: `wsdmdatajp`, `customapidmdatajp`, `customdataapidmdatajp`
 - **Use modified endpoints**: `tokyodmdatajp`, `osakadmdatajp` instead of real hostnames
 - **Use examplecom**: For general URL testing where domain doesn't matter
 - **Use invalid/test schemes**: `invalid-endpoint`, `test-endpoint` for error testing
 
 #### Examples
+
 ```csharp
 // ✅ GOOD - Modified URLs that won't trigger real requests
 var mockResponse = new SocketStartResponse
@@ -193,9 +214,9 @@ var mockResponse = new SocketStartResponse
 };
 
 // ❌ BAD - Real production URL that could trigger requests
-var badResponse = new SocketStartResponse 
+var badResponse = new SocketStartResponse
 {
-    Websocket = new SocketStartResponse.Info 
+    Websocket = new SocketStartResponse.Info
     {
         Url = "wss://ws.api.dmdata.jp/v2/socket"  // Real URL - FORBIDDEN
     }
@@ -205,6 +226,7 @@ var badResponse = new SocketStartResponse
 This prevents accidental external HTTP/WebSocket requests during testing and protects against unintended API calls to production services.
 
 ### Example of Good Test Structure
+
 ```csharp
 [Fact(DisplayName = "ビルダーパターンのメソッドチェーニングが正常に動作する")]
 public void BuilderPattern_MethodChaining_WorksCorrectly()
@@ -224,7 +246,9 @@ public void ApiClientMethods_DoNotThrowExceptions()
 ## Important Notes
 
 ### Scriban Templates
+
 When editing templates, check reference materials:
+
 - [Language Specification](https://raw.githubusercontent.com/scriban/scriban/refs/heads/master/doc/language.md)
 - [Built-in Functions](https://raw.githubusercontent.com/scriban/scriban/refs/heads/master/doc/builtins.md)
 
@@ -233,12 +257,14 @@ Aim for simple and understandable implementations.
 ## Development Guidelines
 
 ### Implementation Process
+
 1. **Requirements Clarification**: Always confirm with users when specifications are unclear
 2. **Scope Definition**: Verify UI requirements, data structures, and behavior
 3. **Implementation Planning**: Present plan to users for approval
 4. **Implementation**: Start coding only after confirmation
 
 **No Requirement Guessing** - Always define with users:
+
 - UI design and layout
 - Data input/output formats
 - Existing system integration points
@@ -246,6 +272,7 @@ Aim for simple and understandable implementations.
 - Error handling
 
 ### Implementation Policies
+
 - **DRY Principle**: However, prioritize readability for short code
 - **Active Questions**: Don't hesitate to propose or challenge
 - **No TODO Left Behind**: Except when instructed otherwise
@@ -258,14 +285,18 @@ Aim for simple and understandable implementations.
 ### UI Operation Patterns
 
 #### Sub-window Management
+
 Display sub-windows like settings windows through `ISubWindowsService`:
+
 ```csharp
 var subWindowService = Locator.Current.GetService<ISubWindowsService>();
 subWindowService?.ShowSettingWindow();
 ```
 
 #### Dialog Display
+
 Use `FluentAvalonia.UI.Controls.ContentDialog` for confirmation and error dialogs:
+
 ```csharp
 // 確認ダイアログ
 var result = await new ContentDialog
@@ -284,7 +315,9 @@ if (result == ContentDialogResult.Primary)
 ```
 
 #### Top-level Controls
+
 Use `KyoshinEewViewerApp.TopLevelControl` as the parent window for file selection and dialog display:
+
 ```csharp
 if (KyoshinEewViewerApp.TopLevelControl is not Window tlc) return;
 var files = await tlc.StorageProvider.OpenFilePickerAsync(options);
@@ -300,12 +333,13 @@ await new ContentDialog
 ### Logging Implementation Patterns
 
 #### Standard Service Class Logging Implementation
+
 ```csharp
 // Implementation using ILogManager (legacy method)
 public class SampleService : ReactiveObject, IDisposable
 {
     private ILogger Logger { get; }
-    
+
     public SampleService(ILogManager logManager)
     {
         Logger = logManager.GetLogger<SampleService>();
@@ -316,12 +350,12 @@ public class SampleService : ReactiveObject, IDisposable
 public class SampleService : ReactiveObject, IDisposable
 {
     private ILogger<SampleService> Logger { get; }
-    
+
     public SampleService(ILogger<SampleService> logger)
     {
         Logger = logger;
     }
-    
+
     public async Task ProcessAsync()
     {
         try
@@ -338,6 +372,7 @@ public class SampleService : ReactiveObject, IDisposable
 ```
 
 #### Static Class Logging Implementation
+
 ```csharp
 public static class UtilityClass
 {
@@ -356,6 +391,7 @@ public static class UtilityClass
 ```
 
 #### Log Message Rules
+
 - **Japanese Messages**: Write logs in Japanese as a characteristic of disaster prevention applications
 - **Dynamic Information**: Include dynamic information in `$"Message {variable}"` format
 - **Exception Information**: Include exception information in `Logger.LogError(ex, "Message")` format
@@ -363,7 +399,9 @@ public static class UtilityClass
 - **Error Log Usage Policy**: Error logs are sent to developers via Sentry, so use Warning except when bug detection or important issue tracking is specifically needed
 
 #### Log Extension Methods
+
 By including `using KyoshinEewViewer.Core;`, the following extension methods are available for Splat.ILogger:
+
 - `_logger.LogDebug("メッセージ")`
 - `_logger.LogInfo("メッセージ")`
 - `_logger.LogWarning("メッセージ")`
@@ -372,18 +410,21 @@ By including `using KyoshinEewViewer.Core;`, the following extension methods are
 This enables Microsoft.Extensions.Logging style log methods.
 
 ### Rule Addition Process
+
 Propose adding instructions that could be useful elsewhere to CLAUDE.md for continuous improvement of project rules.
 
 ## Design Guidelines
 
 ### Notification Template Design
+
 - **Detailed Guide**: `docs/notification-design-guidelines.md`
-- **Implementation Examples**: `src/KyoshinEewViewer/Series/*/Templates/*Templates.cs`  
+- **Implementation Examples**: `src/KyoshinEewViewer/Series/*/Templates/*Templates.cs`
 - **Test Patterns**: `tests/KyoshinEewViewer.Tests/Templates/`
 
 ## File Format Rules
 
 ### End-of-file Newlines
+
 - **All files** must include a newline character at the end
 - This ensures proper Git diff display and Unix tool processing
 - Recommended to configure editors to automatically add end-of-file newlines
@@ -391,7 +432,9 @@ Propose adding instructions that could be useful elsewhere to CLAUDE.md for cont
 ## Task Progress Notation Rules
 
 ### TodoWrite activeForm Notation
+
 When using the TodoWrite tool, the `activeForm` parameter should use proper Japanese progressive form:
+
 - **Correct**: `○○を追加中`, `○○の確認中`, `○○を修正中`, `○○の実行中`
 - **Incorrect**: `○○を追加している`, `○○を確認している`, `○○を修正している`, `○○を実行している`
 
