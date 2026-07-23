@@ -49,8 +49,8 @@ internal record EventCacheEntry
 		return new EventCacheEntry
 		{
 			Level = evt.Level,
-			TopLeft = evt.TopLeft,
-			BottomRight = evt.BottomRight,
+			TopLeft = new Location(evt.TopLeft.Latitude, evt.TopLeft.Longitude),
+			BottomRight = new Location(evt.BottomRight.Latitude, evt.BottomRight.Longitude),
 			PointCodes = evt.Points.Select(p => p.Code).ToHashSet(),
 			PointStates = evt.Points.ToDictionary(
 				p => p.Code,

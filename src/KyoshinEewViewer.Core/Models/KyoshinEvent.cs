@@ -90,6 +90,11 @@ public class KyoshinEvent
 		point.Event = this;
 		_points.Add(point);
 	}
+	public void UpdatePointState(RealtimeObservationPoint point, DateTime time)
+	{
+		if (_points.Contains(point))
+			UpdatedAt = time;
+	}
 	public void MergeEvent(KyoshinEvent evt, DateTime time)
 	{
 		UpdatedAt = time;

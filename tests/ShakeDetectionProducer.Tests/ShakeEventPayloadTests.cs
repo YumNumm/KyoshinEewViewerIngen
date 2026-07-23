@@ -10,6 +10,44 @@ namespace ShakeDetectionProducer.Tests;
 
 public class ShakeEventPayloadTests
 {
+	[Fact(DisplayName = "観測点状態の変化はtracker理由とupdatedAtを同時に進める")]
+	public void PointStateLifecycle_AdvancesUpdatedAt()
+	{
+		var createdAt = new DateTime(2026, 7, 23, 12, 0, 0, DateTimeKind.Utc);
+		var changedAt = createdAt.AddSeconds(1);
+		var point = CreatePoint("A", 35, 139, 1.2);
+		var evt = new KyoshinEvent(createdAt, point, 10) { IsConfirmed = true };
+		var tracker = new ShakeEventTracker();
+		tracker.ProcessEvent(evt);
+
+		point.LatestIntensity = 2.2;
+		evt.UpdatePointState(point, changedAt);
+		var (shouldSend, reason) = tracker.ProcessEvent(evt);
+		var payload = ShakeDetectedPayload.FromEvent(evt, reason, false);
+
+		Assert.True(shouldSend);
+		Assert.True(reason.HasFlag(EventChangeReason.PointStateChanged));
+		Assert.Equal(changedAt, payload.UpdatedAt);
+	}
+
+	[Fact(DisplayName = "trackerは可変regionをsnapshotして範囲変更を検出する")]
+	public void RegionLifecycle_DetectsMutableBoundsChange()
+	{
+		var createdAt = new DateTime(2026, 7, 23, 12, 0, 0, DateTimeKind.Utc);
+		var evt = new KyoshinEvent(createdAt, CreatePoint("A", 35, 139, 1.2), 10)
+		{
+			IsConfirmed = true
+		};
+		var tracker = new ShakeEventTracker();
+		tracker.ProcessEvent(evt);
+
+		evt.AddPoint(CreatePoint("B", 34, 140, 1.3), createdAt.AddSeconds(1), 10);
+		var (shouldSend, reason) = tracker.ProcessEvent(evt);
+
+		Assert.True(shouldSend);
+		Assert.True(reason.HasFlag(EventChangeReason.RegionChanged));
+	}
+
 	[Fact(DisplayName = "producerの正本時刻と統合履歴を完全なペイロードへ変換する")]
 	public void FromEvent_ProducerStateIsPreserved()
 	{

@@ -119,6 +119,8 @@ public class ShakeDetectionEngine(ILogManager? logManager = null, ShakeDetection
 				point.IsTmpDisabled = false;
 			}
 
+			point.Event?.UpdatePointState(point, time);
+
 			// 除外されている観測点はイベントの検出に使用しない
 			if (point.IsTmpDisabled)
 				continue;
