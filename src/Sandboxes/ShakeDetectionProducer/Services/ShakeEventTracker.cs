@@ -23,6 +23,12 @@ public enum EventChangeReason
 	RegionChanged = 1 << 3,
 	/// <summary>検出点が変化（追加・削除・点数変化）</summary>
 	PointsChanged = 1 << 4,
+	/// <summary>観測点の公開状態が変化</summary>
+	PointStateChanged = 1 << 5,
+	/// <summary>イベントの有効期限が延長</summary>
+	ExpiresAtExtended = 1 << 6,
+	/// <summary>別イベントを統合</summary>
+	EventsMerged = 1 << 7,
 }
 
 /// <summary>
@@ -34,6 +40,9 @@ internal record EventCacheEntry
 	public required Location TopLeft { get; init; }
 	public required Location BottomRight { get; init; }
 	public required HashSet<string> PointCodes { get; init; }
+	public required Dictionary<string, EventPointState> PointStates { get; init; }
+	public required DateTime ExpiresAt { get; init; }
+	public required HashSet<Guid> MergedEventIds { get; init; }
 
 	public static EventCacheEntry FromEvent(KyoshinEvent evt)
 	{
@@ -42,10 +51,18 @@ internal record EventCacheEntry
 			Level = evt.Level,
 			TopLeft = evt.TopLeft,
 			BottomRight = evt.BottomRight,
-			PointCodes = evt.Points.Select(p => p.Code).ToHashSet()
+			PointCodes = evt.Points.Select(p => p.Code).ToHashSet(),
+			PointStates = evt.Points.ToDictionary(
+				p => p.Code,
+				p => new EventPointState(p.LatestIntensity, p.IntensityDiff)
+			),
+			ExpiresAt = evt.ExpiresAt,
+			MergedEventIds = evt.MergedEvents.Select(e => e.EventId).ToHashSet()
 		};
 	}
 }
+
+internal record EventPointState(double? Intensity, double IntensityDiff);
 
 /// <summary>
 /// 揺れイベントの変化を追跡するトラッカー
@@ -92,6 +109,16 @@ public class ShakeEventTracker
 		// 検出点の変化（追加・削除・点数変化）
 		if (!newEntry.PointCodes.SetEquals(cachedEntry.PointCodes))
 			changeReason |= EventChangeReason.PointsChanged;
+
+		if (!newEntry.PointStates.OrderBy(entry => entry.Key)
+			.SequenceEqual(cachedEntry.PointStates.OrderBy(entry => entry.Key)))
+			changeReason |= EventChangeReason.PointStateChanged;
+
+		if (newEntry.ExpiresAt > cachedEntry.ExpiresAt)
+			changeReason |= EventChangeReason.ExpiresAtExtended;
+
+		if (!newEntry.MergedEventIds.SetEquals(cachedEntry.MergedEventIds))
+			changeReason |= EventChangeReason.EventsMerged;
 
 		// キャッシュを更新
 		EventCache[evt.Id] = newEntry;

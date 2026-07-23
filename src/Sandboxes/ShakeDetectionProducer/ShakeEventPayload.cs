@@ -22,6 +22,8 @@ public record ShakeDetectedPayload : StreamPayload
 {
 	public required Guid EventId { get; init; }
 	public required DateTime CreatedAt { get; init; }
+	public required DateTime UpdatedAt { get; init; }
+	public required DateTime ExpiresAt { get; init; }
 	public required string Level { get; init; }
 	/// <summary>
 	/// 変化理由の配列
@@ -31,6 +33,7 @@ public record ShakeDetectedPayload : StreamPayload
 	public required int PointCount { get; init; }
 	public required RegionPayload Region { get; init; }
 	public required ObservationPointPayload[] Points { get; init; }
+	public required MergedEventPayload[] MergedEvents { get; init; }
 
 	public static ShakeDetectedPayload FromEvent(KyoshinEvent evt, EventChangeReason changeReason, bool isReplay)
 	{
@@ -38,6 +41,8 @@ public record ShakeDetectedPayload : StreamPayload
 		{
 			EventId = evt.Id,
 			CreatedAt = evt.CreatedAt,
+			UpdatedAt = evt.UpdatedAt,
+			ExpiresAt = evt.ExpiresAt,
 			Level = evt.Level.ToString(),
 			ChangeReasons = GetChangeReasonStrings(changeReason),
 			IsReplay = isReplay,
@@ -68,6 +73,11 @@ public record ShakeDetectedPayload : StreamPayload
 				},
 				Intensity = p.LatestIntensity,
 				IntensityDiff = p.IntensityDiff
+			}).ToArray(),
+			MergedEvents = evt.MergedEvents.Select(e => new MergedEventPayload
+			{
+				EventId = e.EventId,
+				MergedAt = e.MergedAt
 			}).ToArray()
 		};
 	}
@@ -85,8 +95,20 @@ public record ShakeDetectedPayload : StreamPayload
 			reasons.Add("region_changed");
 		if (reason.HasFlag(EventChangeReason.PointsChanged))
 			reasons.Add("points_changed");
+		if (reason.HasFlag(EventChangeReason.PointStateChanged))
+			reasons.Add("point_state_changed");
+		if (reason.HasFlag(EventChangeReason.ExpiresAtExtended))
+			reasons.Add("expires_at_extended");
+		if (reason.HasFlag(EventChangeReason.EventsMerged))
+			reasons.Add("events_merged");
 		return reasons.ToArray();
 	}
+}
+
+public record MergedEventPayload
+{
+	public required Guid EventId { get; init; }
+	public required DateTime MergedAt { get; init; }
 }
 
 /// <summary>

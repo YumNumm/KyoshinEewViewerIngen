@@ -14,6 +14,7 @@ public class KyoshinEvent
 	{
 		Id = Guid.NewGuid();
 		CreatedAt = createdAt;
+		UpdatedAt = createdAt;
 		firstPoint.EventedAt = createdAt;
 		firstPoint.InitialEventedAt = createdAt;
 		_points.Add(firstPoint);
@@ -28,6 +29,8 @@ public class KyoshinEvent
 	}
 	public KyoshinEventLevel Level { get; set; }
 	public DateTime CreatedAt { get; }
+	public DateTime UpdatedAt { get; private set; }
+	public DateTime ExpiresAt => _points.Max(point => point.EventedExpireAt);
 	public Location TopLeft { get; }
 	public Location BottomRight { get; }
 	public int PointCount => _points.Count;
@@ -39,6 +42,8 @@ public class KyoshinEvent
 
 	private readonly List<RealtimeObservationPoint> _points = [];
 	public IReadOnlyList<RealtimeObservationPoint> Points => _points;
+	private readonly List<KyoshinMergedEvent> _mergedEvents = [];
+	public IReadOnlyList<KyoshinMergedEvent> MergedEvents => _mergedEvents;
 
 	/// <summary>
 	/// 最高レベルを検出した地域のセット（Region, SubRegion のタプル）
@@ -48,6 +53,7 @@ public class KyoshinEvent
 
 	public void AddPoint(RealtimeObservationPoint point, DateTime time, int expireSeconds)
 	{
+		UpdatedAt = time;
 		var lv = GetLevel(point.LatestIntensity);
 		// 1点のみの超過ではノイズの可能性があるためレベルアップしない
 		// 同じレベル以上の観測点が既に1点以上ある場合のみレベルアップ
@@ -84,8 +90,11 @@ public class KyoshinEvent
 		point.Event = this;
 		_points.Add(point);
 	}
-	public void MergeEvent(KyoshinEvent evt)
+	public void MergeEvent(KyoshinEvent evt, DateTime time)
 	{
+		UpdatedAt = time;
+		_mergedEvents.Add(new KyoshinMergedEvent(evt.Id, time));
+		_mergedEvents.AddRange(evt._mergedEvents);
 		foreach (var p in evt._points)
 			p.Event = this;
 		if (Level < evt.Level)
@@ -112,10 +121,11 @@ public class KyoshinEvent
 			BottomRight.Longitude = evt.BottomRight.Longitude;
 		_points.AddRange(evt._points);
 	}
-	public void RemovePoint(RealtimeObservationPoint point)
+	public void RemovePoint(RealtimeObservationPoint point, DateTime time)
 	{
 		if (!_points.Contains(point))
 			return;
+		UpdatedAt = time;
 		point.Event = null;
 		point.EventedExpireAt = DateTime.MinValue;
 		point.InitialEventedAt = DateTime.MinValue;
@@ -144,6 +154,8 @@ public class KyoshinEvent
 		new SKColor(0xda, 0xa5, 0x20, 200),
 	];
 }
+
+public record KyoshinMergedEvent(Guid EventId, DateTime MergedAt);
 
 public enum KyoshinEventLevel
 {
