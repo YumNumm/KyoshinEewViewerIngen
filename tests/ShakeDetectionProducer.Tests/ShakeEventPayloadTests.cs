@@ -18,15 +18,16 @@ public class ShakeEventPayloadTests
 		var point = CreatePoint("A", 35, 139, 1.2);
 		var evt = new KyoshinEvent(createdAt, point, 10) { IsConfirmed = true };
 		var tracker = new ShakeEventTracker();
-		tracker.ProcessEvent(evt);
+		var initial = Assert.IsType<ShakeDetectedPayload>(tracker.PrepareEvent(evt, createdAt));
+		tracker.Commit(initial, createdAt);
 
 		point.LatestIntensity = 2.2;
 		evt.UpdatePointState(point, changedAt);
-		var (shouldSend, reason) = tracker.ProcessEvent(evt);
-		var payload = ShakeDetectedPayload.FromEvent(evt, reason, false);
+		var payload = Assert.IsType<ShakeDetectedPayload>(
+			tracker.PrepareEvent(evt, changedAt.AddSeconds(5))
+		);
 
-		Assert.True(shouldSend);
-		Assert.True(reason.HasFlag(EventChangeReason.PointStateChanged));
+		Assert.Contains("point_state_changed", payload.ChangeReasons);
 		Assert.Equal(changedAt, payload.UpdatedAt);
 	}
 
@@ -39,13 +40,15 @@ public class ShakeEventPayloadTests
 			IsConfirmed = true
 		};
 		var tracker = new ShakeEventTracker();
-		tracker.ProcessEvent(evt);
+		var initial = Assert.IsType<ShakeDetectedPayload>(tracker.PrepareEvent(evt, createdAt));
+		tracker.Commit(initial, createdAt);
 
 		evt.AddPoint(CreatePoint("B", 34, 140, 1.3), createdAt.AddSeconds(1), 10);
-		var (shouldSend, reason) = tracker.ProcessEvent(evt);
+		var payload = Assert.IsType<ShakeDetectedPayload>(
+			tracker.PrepareEvent(evt, createdAt.AddSeconds(1))
+		);
 
-		Assert.True(shouldSend);
-		Assert.True(reason.HasFlag(EventChangeReason.RegionChanged));
+		Assert.Contains("region_changed", payload.ChangeReasons);
 	}
 
 	[Fact(DisplayName = "producerの正本時刻と統合履歴を完全なペイロードへ変換する")]
@@ -65,10 +68,10 @@ public class ShakeEventPayloadTests
 
 		var payload = ShakeDetectedPayload.FromEvent(
 			canonical,
+			1,
 			EventChangeReason.PointStateChanged |
 			EventChangeReason.ExpiresAtExtended |
-			EventChangeReason.EventsMerged,
-			false
+			EventChangeReason.EventsMerged
 		);
 
 		Assert.Equal(createdAt, payload.CreatedAt);

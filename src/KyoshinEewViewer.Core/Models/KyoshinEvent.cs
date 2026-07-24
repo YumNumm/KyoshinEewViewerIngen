@@ -35,6 +35,9 @@ public class KyoshinEvent
 	public Location BottomRight { get; }
 	public int PointCount => _points.Count;
 
+	private readonly List<MergedKyoshinEvent> _mergedEvents = [];
+	public IReadOnlyList<MergedKyoshinEvent> MergedEvents => _mergedEvents;
+
 	/// <summary>
 	/// 正式なイベントとして確定しているかどうか
 	/// </summary>
@@ -42,8 +45,6 @@ public class KyoshinEvent
 
 	private readonly List<RealtimeObservationPoint> _points = [];
 	public IReadOnlyList<RealtimeObservationPoint> Points => _points;
-	private readonly List<KyoshinMergedEvent> _mergedEvents = [];
-	public IReadOnlyList<KyoshinMergedEvent> MergedEvents => _mergedEvents;
 
 	/// <summary>
 	/// 最高レベルを検出した地域のセット（Region, SubRegion のタプル）
@@ -95,11 +96,12 @@ public class KyoshinEvent
 		if (_points.Contains(point))
 			UpdatedAt = time;
 	}
-	public void MergeEvent(KyoshinEvent evt, DateTime time)
+	public void MergeEvent(KyoshinEvent evt, DateTime mergedAt)
 	{
-		UpdatedAt = time;
-		_mergedEvents.Add(new KyoshinMergedEvent(evt.Id, time));
-		_mergedEvents.AddRange(evt._mergedEvents);
+		UpdatedAt = mergedAt;
+		AddMergedEvent(evt.Id, mergedAt);
+		foreach (var mergedEvent in evt.MergedEvents)
+			AddMergedEvent(mergedEvent.EventId, mergedEvent.MergedAt);
 		foreach (var p in evt._points)
 			p.Event = this;
 		if (Level < evt.Level)
@@ -124,7 +126,18 @@ public class KyoshinEvent
 			BottomRight.Latitude = evt.BottomRight.Latitude;
 		if (BottomRight.Longitude < evt.BottomRight.Longitude)
 			BottomRight.Longitude = evt.BottomRight.Longitude;
-		_points.AddRange(evt._points);
+		foreach (var point in evt._points)
+		{
+			if (!_points.Contains(point))
+				_points.Add(point);
+		}
+	}
+
+	private void AddMergedEvent(Guid eventId, DateTime mergedAt)
+	{
+		if (eventId == Id || _mergedEvents.Any(e => e.EventId == eventId))
+			return;
+		_mergedEvents.Add(new MergedKyoshinEvent(eventId, mergedAt));
 	}
 	public void RemovePoint(RealtimeObservationPoint point, DateTime time)
 	{
@@ -160,7 +173,7 @@ public class KyoshinEvent
 	];
 }
 
-public record KyoshinMergedEvent(Guid EventId, DateTime MergedAt);
+public readonly record struct MergedKyoshinEvent(Guid EventId, DateTime MergedAt);
 
 public enum KyoshinEventLevel
 {
