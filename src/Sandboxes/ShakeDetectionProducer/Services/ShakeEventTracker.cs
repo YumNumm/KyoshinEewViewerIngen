@@ -17,8 +17,11 @@ public enum EventChangeReason
 	LevelDown = 1 << 2,
 	RegionChanged = 1 << 3,
 	PointsChanged = 1 << 4,
+	/// <summary>観測点の公開状態が変化</summary>
 	PointStateChanged = 1 << 5,
+	/// <summary>イベントの有効期限が延長</summary>
 	ExpiresAtExtended = 1 << 6,
+	/// <summary>別イベントを統合</summary>
 	EventsMerged = 1 << 7,
 }
 
@@ -66,7 +69,6 @@ internal record PendingEventEntry
 	public required EventStateSnapshot State { get; init; }
 	public required ShakeDetectedPayload Payload { get; init; }
 }
-
 /// <summary>
 /// 揺れイベントの送信済み状態と送信待ち revision を追跡するトラッカー
 /// </summary>
@@ -108,7 +110,7 @@ public class ShakeEventTracker
 			serialNo = cached.SerialNo + 1;
 		}
 
-		var payload = ShakeDetectedPayload.FromEvent(evt, serialNo, observedAt, changeReason);
+		var payload = ShakeDetectedPayload.FromEvent(evt, serialNo, changeReason);
 		PendingEvents[evt.Id] = new PendingEventEntry
 		{
 			State = current,

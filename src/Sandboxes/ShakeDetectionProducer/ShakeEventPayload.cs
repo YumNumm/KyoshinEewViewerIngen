@@ -38,7 +38,6 @@ public record ShakeDetectedPayload : StreamPayload
 	public static ShakeDetectedPayload FromEvent(
 		KyoshinEvent evt,
 		int serialNo,
-		DateTime updatedAt,
 		EventChangeReason changeReason)
 	{
 		return new ShakeDetectedPayload
@@ -46,7 +45,7 @@ public record ShakeDetectedPayload : StreamPayload
 			EventId = evt.Id,
 			SerialNo = serialNo,
 			CreatedAt = evt.CreatedAt,
-			UpdatedAt = updatedAt,
+			UpdatedAt = evt.UpdatedAt,
 			ExpiresAt = evt.ExpiresAt,
 			Level = evt.Level.ToString(),
 			ChangeReasons = GetChangeReasonStrings(changeReason),
