@@ -1,7 +1,8 @@
 # Changelog
 
-## [1.0.7](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.6...1.0.7) - 2026-07-24
+## [1.0.7](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.6...1.0.7) - 2026-07-27
 - fix: 揺れ検知Snapshotの更新時刻を正規化 by @YumNumm in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/22
+- Bump the nuget group with 1 update by @dependabot[bot] in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/21
 
 ## [1.0.6](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.5...1.0.6) - 2026-07-19
 - feat: publish canonical shake detection state payloads by @YumNumm in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/19
