@@ -42,7 +42,8 @@ public sealed class ValkeyStreamProducer : IAsyncDisposable
 	private static readonly JsonSerializerOptions JsonOptions = new()
 	{
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-		DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+		DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+		Converters = { new JstDateTimeJsonConverter() }
 	};
 
 	public ValkeyStreamProducer(ILogger<ValkeyStreamProducer> logger)
@@ -202,5 +203,24 @@ public sealed class ValkeyStreamProducer : IAsyncDisposable
 	{
 		await _connection.CloseAsync();
 		_connection.Dispose();
+	}
+}
+
+/// <summary>
+/// Producer内のDateTimeは一貫してJST（+09:00）のwall-clockとして扱われるため、
+/// KindがUnspecified/Utcのいずれであっても常に+09:00オフセット付きで出力するConverter。
+/// これにより受信側（valibot isoTimestamp、TZ必須）でのパース失敗を防ぐ。
+/// </summary>
+internal sealed class JstDateTimeJsonConverter : JsonConverter<DateTime>
+{
+	private static readonly TimeSpan JstOffset = TimeSpan.FromHours(9);
+
+	public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+		=> reader.GetDateTimeOffset().DateTime;
+
+	public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+	{
+		var jst = new DateTimeOffset(DateTime.SpecifyKind(value, DateTimeKind.Unspecified), JstOffset);
+		writer.WriteStringValue(jst.ToString("yyyy-MM-ddTHH:mm:ss.fffffffzzz", System.Globalization.CultureInfo.InvariantCulture));
 	}
 }
