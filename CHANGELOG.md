@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.0.8](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.7...1.0.8) - 2026-07-27
+- fix(shake-detection-producer): Valkey publish時刻にJSTタイムゾーンを付与 by @YumNumm in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/25
+
 ## [1.0.7](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.6...1.0.7) - 2026-07-24
 - fix: 揺れ検知Snapshotの更新時刻を正規化 by @YumNumm in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/22
 
