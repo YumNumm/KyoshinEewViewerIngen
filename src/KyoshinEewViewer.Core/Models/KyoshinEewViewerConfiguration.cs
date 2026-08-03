@@ -7,7 +7,17 @@ using Location = KyoshinMonitorLib.Location;
 
 namespace KyoshinEewViewer.Core.Models;
 
-public class KyoshinEewViewerConfiguration : ReactiveObject
+/// <summary>
+/// ウィンドウの位置・サイズ・状態を保存する設定
+/// </summary>
+public interface IWindowPlacementConfig
+{
+	WindowState WindowState { get; set; }
+	KyoshinEewViewerConfiguration.Point2D? WindowSize { get; set; }
+	KyoshinEewViewerConfiguration.Point2D? WindowLocation { get; set; }
+}
+
+public class KyoshinEewViewerConfiguration : ReactiveObject, IWindowPlacementConfig
 {
 	private bool _showWizard = true;
 	public bool ShowWizard
@@ -137,7 +147,7 @@ public class KyoshinEewViewerConfiguration : ReactiveObject
 	/// <summary>
 	/// 分離Seriesウィンドウの設定
 	/// </summary>
-	public class SeriesWindowConfig : ReactiveObject
+	public class SeriesWindowConfig : ReactiveObject, IWindowPlacementConfig
 	{
 		private bool _isOpen = true;
 		/// <summary>
@@ -597,6 +607,16 @@ public class KyoshinEewViewerConfiguration : ReactiveObject
 			get => _tsunami;
 			set => this.RaiseAndSetIfChanged(ref _tsunami, value);
 		}
+
+		private bool _registerDesktopEntry = true;
+		/// <summary>
+		/// Linux 起動時にデスクトップエントリ (.desktop) を自動生成するかどうか
+		/// </summary>
+		public bool RegisterDesktopEntry
+		{
+			get => _registerDesktopEntry;
+			set => this.RaiseAndSetIfChanged(ref _registerDesktopEntry, value);
+		}
 	}
 
 	private MapConfig _map = new();
@@ -993,6 +1013,62 @@ public class KyoshinEewViewerConfiguration : ReactiveObject
 		{
 			get => _timezoneOffset;
 			set => this.RaiseAndSetIfChanged(ref _timezoneOffset, value);
+		}
+
+		// 衛星航法データ出力を有効化するメッセージを送信する
+		private bool _setupSendSfrbx = true;
+		public bool SetupSendSfrbx
+		{
+			get => _setupSendSfrbx;
+			set => this.RaiseAndSetIfChanged(ref _setupSendSfrbx, value);
+		}
+
+		// NMEA RMC 出力を有効化するメッセージを送信する
+		private bool _setupSendRmc = false;
+		public bool SetupSendRmc
+		{
+			get => _setupSendRmc;
+			set => this.RaiseAndSetIfChanged(ref _setupSendRmc, value);
+		}
+
+		// QZSS 信号の受信を有効化するメッセージを送信する
+		private bool _setupEnableQzss = false;
+		public bool SetupEnableQzss
+		{
+			get => _setupEnableQzss;
+			set => this.RaiseAndSetIfChanged(ref _setupEnableQzss, value);
+		}
+
+		// 更新レート(計測間隔)を変更する
+		private bool _setupChangeUpdateRate = true;
+		public bool SetupChangeUpdateRate
+		{
+			get => _setupChangeUpdateRate;
+			set => this.RaiseAndSetIfChanged(ref _setupChangeUpdateRate, value);
+		}
+
+		// 更新レート(ms)
+		private int _setupUpdateRateMs = 200;
+		public int SetupUpdateRateMs
+		{
+			get => _setupUpdateRateMs;
+			set => this.RaiseAndSetIfChanged(ref _setupUpdateRateMs, value);
+		}
+
+		// ボーレートを変更する
+		private bool _setupChangeBaudRate = true;
+		public bool SetupChangeBaudRate
+		{
+			get => _setupChangeBaudRate;
+			set => this.RaiseAndSetIfChanged(ref _setupChangeBaudRate, value);
+		}
+
+		// 設定送信時のボーレート
+		private int _setupBaudRate = 115200;
+		public int SetupBaudRate
+		{
+			get => _setupBaudRate;
+			set => this.RaiseAndSetIfChanged(ref _setupBaudRate, value);
 		}
 	}
 

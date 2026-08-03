@@ -16,7 +16,7 @@ internal partial class Program
 	{
 		PolygonFeature.AsyncVerticeMode = false;
 		await BuildAvaloniaApp()
-			.UseReactiveUI()
+			.UseReactiveUI(_ => { })
 			.StartBrowserAppAsync("out");
 	}
 

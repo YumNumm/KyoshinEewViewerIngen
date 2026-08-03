@@ -167,17 +167,6 @@ public class SettingWindowViewModel : ViewModelBase
 				_ => [],
 			}).FirstOrDefault(s => s.SpeakerId == config.Voicevox.SpeakerId)?.Name ?? "不明");
 
-		// macOS 通知権限リクエストコマンド
-		RequestMacOSNotificationPermissionCommand = ReactiveCommand.CreateFromTask(
-			async () => await RequestMacOSNotificationPermissionAsync()
-		);
-
-		// macOS の場合は権限状態を初期化時に確認
-		if (IsMacOS)
-		{
-			_ = Task.Run(async () => await UpdateMacOSNotificationPermissionStatusAsync());
-		}
-
 		UpdatePage = new BasicSettingPage<UpdatePage>("\xf071", "アプリの更新", []) { IsVisible = false };
 		SettingPages = [
 			UpdatePage,
@@ -289,8 +278,10 @@ public class SettingWindowViewModel : ViewModelBase
 		WorkflowService.Workflows.Add(wf);
 		SelectedWorkflow = wf;
 	}
-	public async void RemoveWorkflow(Workflow workflow)
+	public async void RemoveWorkflow(object? parameter)
 	{
+		if (parameter is not Workflow workflow)
+			return;
 		var result = await DialogHelper.ShowSettingWindowConfirmationDialogAsync(
 			"ワークフローの削除",
 			$"ワークフロー「{workflow.Name}」を削除しますか？\nこの操作は元に戻すことができません。");
@@ -301,8 +292,10 @@ public class SettingWindowViewModel : ViewModelBase
 			SelectedWorkflow = WorkflowService.Workflows.FirstOrDefault();
 		}
 	}
-	public async Task TestRunWorkflow(Workflow workflow)
+	public async Task TestRunWorkflow(object? parameter)
 	{
+		if (parameter is not Workflow workflow)
+			return;
 		workflow.IsTestRunning = true;
 		try
 		{
@@ -317,8 +310,10 @@ public class SettingWindowViewModel : ViewModelBase
 			workflow.IsTestRunning = false;
 		}
 	}
-	public async Task OpenSoundFileForWorkflow(PlaySoundAction action)
+	public async Task OpenSoundFileForWorkflow(object? parameter)
 	{
+		if (parameter is not PlaySoundAction action)
+			return;
 		if (KyoshinEewViewerApp.TopLevelControl == null)
 			return;
 		var files = await KyoshinEewViewerApp.TopLevelControl.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions()
@@ -367,9 +362,9 @@ public class SettingWindowViewModel : ViewModelBase
 	}
 	public Task UpdateVoicevoxSpeakers()
 		=> VoicevoxService.GetSpeakers();
-	public void UpdateVoicevoxSpeaker(Speaker speaker)
+	public void UpdateVoicevoxSpeaker(object? parameter)
 	{
-		if (speaker is not SingleStyleSpeaker ss)
+		if (parameter is not SingleStyleSpeaker ss)
 			return;
 		Config.Voicevox.SpeakerId = ss.SpeakerId;
 		VoicevoxSpeakerName = ss.Name;
@@ -485,18 +480,10 @@ public class SettingWindowViewModel : ViewModelBase
 	public bool IsLinux { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
 	public bool IsWindows { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 	public bool IsMacOs { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
-	public bool IsMacOS => IsMacOs; // AXAML バインディング用のエイリアス
+	// トレイアイコンはデスクトップ (Windows/macOS/Linux) で利用できる
+	public bool IsDesktop { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
 	public bool IsLogDirectoryCustomizable { get; } = PlatformDirectories.IsLogDirectoryCustomizable;
 	public bool IsUseCurrentDirectoryOptionAvailable { get; } = !RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
-
-	private string _macosNotificationPermissionStatus = "未確認";
-	public string MacOSNotificationPermissionStatus
-	{
-		get => _macosNotificationPermissionStatus;
-		set => this.RaiseAndSetIfChanged(ref _macosNotificationPermissionStatus, value);
-	}
-
-	public ReactiveCommand<Unit, Unit> RequestMacOSNotificationPermissionCommand { get; }
 
 	public void OpenLogDirectory()
 	{
@@ -576,25 +563,32 @@ public class SettingWindowViewModel : ViewModelBase
 
 	public void ProcessDCReportRequest()
 	{
-		try
+		var lines = QzqsmHexString.Split('\n');
+		foreach (var line in lines)
 		{
-			DCReport report;
-			if (QzqsmHexString.StartsWith("$QZQSM"))
+			var trimmedLine = line.Trim();
+			if (string.IsNullOrWhiteSpace(trimmedLine))
+				continue;
+			try
 			{
-				// NMEAセンテンスとしてパース
-				report = DCReport.ParseFromNmea(QzqsmHexString);
+				DCReport report;
+				if (trimmedLine.StartsWith("$QZQSM"))
+				{
+					// NMEAセンテンスとしてパース
+					report = DCReport.ParseFromNmea(trimmedLine);
+				}
+				else
+				{
+					// HEX文字列としてパース
+					report = DCReport.Parse(Convert.FromHexString(trimmedLine.Length % 2 != 0 ? trimmedLine + "0" : trimmedLine));
+				}
+				ProcessManualDCReportRequested.Request(report);
 			}
-			else
+			catch (Exception ex)
 			{
-				// HEX文字列としてパース
-				report = DCReport.Parse(Convert.FromHexString(QzqsmHexString.Length % 2 != 0 ? QzqsmHexString + "0" : QzqsmHexString));
+				Logger.LogError(ex, "デバッグ用DCレポートの解析中にエラーが発生しました");
+				System.Diagnostics.Debug.WriteLine($"デバッグ用DCレポートの解析中にエラーが発生しました: {ex.Message}");
 			}
-			ProcessManualDCReportRequested.Request(report);
-		}
-		catch (Exception ex)
-		{
-			Logger.LogError(ex, "デバッグ用DCレポートの解析中にエラーが発生しました");
-			System.Diagnostics.Debug.WriteLine($"デバッグ用DCレポートの解析中にエラーが発生しました: {ex.Message}");
 		}
 	}
 
@@ -665,66 +659,6 @@ public class SettingWindowViewModel : ViewModelBase
 		{
 			IsDmdataReconnecting = false;
 		}
-	}
-	#endregion
-
-	#region macOS Notification
-	private async Task RequestMacOSNotificationPermissionAsync()
-	{
-#if MACOS
-		var notificationService = Locator.Current.GetService<NotificationService>();
-		if (notificationService?.TrayIcon is Notification.macOS.MacOSNotificationProvider macosProvider)
-		{
-			var granted = await macosProvider.RequestAuthorizationAsync();
-			await UpdateMacOSNotificationPermissionStatusAsync();
-
-			if (KyoshinEewViewerApp.TopLevelControl is Window tlc)
-			{
-				if (granted)
-				{
-					await new ContentDialog
-					{
-						Title = "通知権限が許可されました",
-						Content = "macOS の通知を受け取ることができます。",
-						CloseButtonText = "OK"
-					}.ShowAsync(tlc);
-				}
-				else
-				{
-					await new ContentDialog
-					{
-						Title = "通知権限が拒否されました",
-						Content = "システム環境設定から通知を有効にしてください。",
-						CloseButtonText = "OK"
-					}.ShowAsync(tlc);
-				}
-			}
-		}
-#else
-		await Task.CompletedTask;
-#endif
-	}
-
-	private async Task UpdateMacOSNotificationPermissionStatusAsync()
-	{
-#if MACOS
-		var notificationService = Locator.Current.GetService<NotificationService>();
-		if (notificationService?.TrayIcon is Notification.macOS.MacOSNotificationProvider macosProvider)
-		{
-			var status = await macosProvider.GetAuthorizationStatusAsync();
-			MacOSNotificationPermissionStatus = status switch
-			{
-				UserNotifications.UNAuthorizationStatus.Authorized => "✓ 許可済み",
-				UserNotifications.UNAuthorizationStatus.Denied => "✗ 拒否されています",
-				UserNotifications.UNAuthorizationStatus.NotDetermined => "未確認",
-				UserNotifications.UNAuthorizationStatus.Provisional => "仮許可",
-				UserNotifications.UNAuthorizationStatus.Ephemeral => "一時許可",
-				_ => "不明"
-			};
-		}
-#else
-		await Task.CompletedTask;
-#endif
 	}
 	#endregion
 }

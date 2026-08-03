@@ -87,7 +87,9 @@ Each Series structure (`src/KyoshinEewViewer/Series/[SeriesName]/`):
 - AXAML markup (Avalonia version of XAML)
 - Compiled bindings (enabled by default)
 - FluentAvalonia component usage
-- **Command Binding**: Avalonia recognizes methods directly as Commands, so `ICommand` implementation is unnecessary
+- **Command Binding**: Avalonia recognizes methods directly as Commands, so `ICommand` implementation is unnecessary. However, since Avalonia 12, compiled bindings only resolve methods with no parameters or a single `object` parameter (AVLN2000 otherwise). For methods that receive a `CommandParameter`, take `object?` and cast with a guard clause (`if (parameter is not Foo foo) return;`); for methods also called from C# with typed arguments, keep the typed method and add a parameterless overload for XAML
+- **StringFormat Binding**: When binding a numeric or date/time value with `StringFormat` for display only (even on `Run`/`TextBlock`/`Label`), always specify `Mode=OneWay` explicitly. Without it, Avalonia attempts a reverse conversion (string → source type) that raises noisy first-chance `FormatException`/`ArgumentException` when the formatted string contains units (e.g. `"000.1 km/h"`). If the exception persists, fall back to exposing a pre-formatted string property on the ViewModel instead.
+- **Markdown Display**: Always render Markdown through `Controls/MarkdownViewer.cs` (`MarkdownViewer`), never the raw `LiveMarkdown.Avalonia` `MarkdownRenderer` directly — it lacks the link-click workaround needed for LiveMarkdown.Avalonia 2.2.0's link-click bug.
 
 #### Conditional Styling Pattern
 
@@ -98,11 +100,11 @@ For applying different styles based on boolean properties, use the `Classes.` sy
 ```xml
 <Button>
     <Button.Styles>
-        <Style Selector="ui|SymbolIcon.muted">
+        <Style Selector="ui|FASymbolIcon.muted">
             <Setter Property="Foreground" Value="{DynamicResource EmphasisForegroundColor}" />
         </Style>
     </Button.Styles>
-    <ui:SymbolIcon Classes.muted="{Binding IsMuted}" />
+    <ui:FASymbolIcon Classes.muted="{Binding IsMuted}" />
 </Button>
 ```
 
@@ -124,6 +126,13 @@ This pattern is more declarative, reduces code, and keeps styling logic in XAML 
 - Reactive streams with ReactiveUI/System.Reactive
 - Thread-safe data updates
 - Geographic data visualization through map layers
+- **Map Layer Rendering**: Prefer transforming mesh data directly to screen output every frame via a shader (`SKRuntimeEffect`/SKSL) over CPU-side pre-rasterization into a cached bitmap. When data must be passed to the GPU as a texture, treat it as a data-storage format, not an "image cache". Also consider zoom-dependent level-of-detail (e.g. switching primary mesh granularity) as an option.
+
+### Naming Conventions
+- **P2P地震情報**: Two distinct systems exist — the P2P-network client itself, and the independent HTTP/WebSocket "P2P地震情報 JSON API". Their data is nearly identical, so when naming classes/methods/comments/logs, use `P2PQuake` for generic/shared parts and `P2PQuakeJsonApi` for API-specific parts (existing code uses `P2pQuakeApi` for the latter).
+
+### Sandbox Applications
+Sandbox ("おまけ") apps such as PiDASPlusGraph must not require changes to shared core models (e.g. `WindowTheme`) in `KyoshinEewViewer.Core` — those changes affect the whole main app. Reuse existing `DynamicResource`-exposed colors (e.g. `SubForegroundColor`) instead, or define sandbox-specific values locally within the sandbox project.
 
 ### Theme System
 - `IntensityTheme`: Seismic intensity display colors
@@ -265,19 +274,19 @@ subWindowService?.ShowSettingWindow();
 ```
 
 #### Dialog Display
-Use `FluentAvalonia.UI.Controls.ContentDialog` for confirmation and error dialogs:
+Use `FluentAvalonia.UI.Controls.FAContentDialog` for confirmation and error dialogs:
 ```csharp
 // 確認ダイアログ
-var result = await new ContentDialog
+var result = await new FAContentDialog
 {
     Title = "確認",
     Content = "この操作を実行しますか？",
     PrimaryButtonText = "はい",
     SecondaryButtonText = "いいえ",
-    DefaultButton = ContentDialogButton.Secondary
+    DefaultButton = FAContentDialogButton.Secondary
 }.ShowAsync(this);
 
-if (result == ContentDialogResult.Primary)
+if (result == FAContentDialogResult.Primary)
 {
     // 処理を実行
 }
@@ -289,7 +298,7 @@ Use `KyoshinEewViewerApp.TopLevelControl` as the parent window for file selectio
 if (KyoshinEewViewerApp.TopLevelControl is not Window tlc) return;
 var files = await tlc.StorageProvider.OpenFilePickerAsync(options);
 
-await new ContentDialog
+await new FAContentDialog
 {
     Title = "エラー",
     Content = "操作に失敗しました。",

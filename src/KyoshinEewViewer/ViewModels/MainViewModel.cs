@@ -90,8 +90,8 @@ public partial class MainViewModel : ViewModelBase
 		set => this.RaiseAndSetIfChanged(ref _mapPadding, value);
 	}
 
-	private NavigationViewPaneDisplayMode _navigationViewPaneDisplayMode = NavigationViewPaneDisplayMode.Left;
-	public NavigationViewPaneDisplayMode NavigationViewPaneDisplayMode
+	private FANavigationViewPaneDisplayMode _navigationViewPaneDisplayMode = FANavigationViewPaneDisplayMode.Left;
+	public FANavigationViewPaneDisplayMode NavigationViewPaneDisplayMode
 	{
 		get => _navigationViewPaneDisplayMode;
 		set => this.RaiseAndSetIfChanged(ref _navigationViewPaneDisplayMode, value);
@@ -346,7 +346,7 @@ public partial class MainViewModel : ViewModelBase
 
 			IsStandalone = true;
 			SelectedSeries = sSeries;
-			NavigationViewPaneDisplayMode = NavigationViewPaneDisplayMode.LeftMinimal;
+			NavigationViewPaneDisplayMode = FANavigationViewPaneDisplayMode.LeftMinimal;
 		}
 		else
 		{
@@ -417,9 +417,6 @@ public partial class MainViewModel : ViewModelBase
 		return true;
 	}
 
-	public void ReturnToHomeMap()
-		=> MessageBus.Current.SendMessage(SelectedSeries?.MapNavigationRequest ?? new MapNavigationRequest(null));
-
 	public void ToggleMute()
 		=> Config.Audio.IsMuted = !Config.Audio.IsMuted;
 
@@ -432,8 +429,12 @@ public partial class MainViewModel : ViewModelBase
 	public void ShowDebugWindow()
 		=> MessageBus.Current.SendMessage(new DebugWindowOpenRequested());
 
-	public void SeparateSeries(SeriesBase series)
-		=> SubWindowsService?.ShowSeriesWindow(series);
+	public void SeparateSeries(object? parameter)
+	{
+		if (parameter is not SeriesBase series)
+			return;
+		SubWindowsService?.ShowSeriesWindow(series);
+	}
 
 	private void RestoreSeparatedSeriesWindows()
 	{

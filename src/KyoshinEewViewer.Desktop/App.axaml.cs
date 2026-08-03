@@ -10,6 +10,7 @@ using KyoshinEewViewer.Core.Models.Events;
 using KyoshinEewViewer.CustomControl;
 using KyoshinEewViewer.Desktop.Services;
 using KyoshinEewViewer.Desktop.Views;
+using KyoshinEewViewer.Notification;
 using KyoshinEewViewer.Series;
 using KyoshinEewViewer.Services;
 using KyoshinEewViewer.ViewModels;
@@ -40,7 +41,13 @@ public class App : Application
 		}
 	}
 
-	public override void Initialize() => AvaloniaXamlLoader.Load(this);
+	public override void Initialize()
+	{
+		AvaloniaXamlLoader.Load(this);
+#if DEBUG
+		this.AttachDeveloperTools();
+#endif
+	}
 
 	public override void OnFrameworkInitializationCompleted()
 	{
@@ -105,6 +112,10 @@ public class App : Application
 				{
 					// 多重起動警告
 					if (StartupOptions.Current?.StandaloneSeriesName is null &&
+#if INTEGRATION_TEST
+						// 結合テスト時は既存インスタンスの検知で止まらないようにする
+						StartupOptions.Current?.SmokeTest != true && StartupOptions.Current?.AutoUpdateTest != true &&
+#endif
 						Process.GetProcessesByName("KyoshinEewViewer.Desktop").Concat(Process.GetProcessesByName("KyoshinEewViewer")).Count(p => p.Responding) > 1)
 					{
 						// 設定に応じて処理を分岐
@@ -214,11 +225,29 @@ public class App : Application
 							splashWindow = null;
 
 							// standaloneモードでない場合のみIPCサーバーを起動
-							if (StartupOptions.Current?.StandaloneSeriesName is null)
+							if (StartupOptions.Current?.StandaloneSeriesName is null
+#if INTEGRATION_TEST
+								// 結合テスト時は既存インスタンスとのパイプ名衝突を避けるため起動しない
+								&& StartupOptions.Current?.SmokeTest != true && StartupOptions.Current?.AutoUpdateTest != true
+#endif
+							)
 							{
 								_ipcService = InterProcessCommunicationServiceFactory.Create();
 								_ipcService.StartServer();
 							}
+
+#if INTEGRATION_TEST
+							// スモークテストモード: メインウィンドウ表示を記録して自動終了する
+							if (StartupOptions.Current?.SmokeTest == true)
+							{
+								IntegrationTestSentinel.Write("main-window-opened");
+								_ = Task.Run(async () =>
+								{
+									await Task.Delay(3000);
+									await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown());
+								});
+							}
+#endif
 						};
 						MainWindow.Show();
 						MainWindow.Activate();
@@ -230,7 +259,7 @@ public class App : Application
 					{
 						if (splashWindow != null)
 						{
-							await new ContentDialog
+							await new FAContentDialog
 							{
 								Title = "起動に失敗しました",
 								Content = new SelectableTextBlock { Text = ex.ToString() },
@@ -268,8 +297,28 @@ public class App : Application
 		var config = Locator.Current.RequireService<KyoshinEewViewerConfiguration>();
 		LoggingAdapter.Setup(config);
 
+		// プラットフォーム依存の通知プロバイダを登録する。
+		// 解決時 (NotificationService.Initialize) に生成し、AUMID 登録等が起動直後に走らないよう遅延させる。
+		// 未対応 OS では null を返し、通知は無効になる
+		Locator.CurrentMutable.RegisterLazySingleton(CreateNotificationProvider, typeof(NotificationProvider));
+		// トレイアイコンは Avalonia の TrayIcon で全デスクトップ共通に扱う
+		Locator.CurrentMutable.RegisterLazySingleton(() => (TrayIconProvider)new Notification.AvaloniaTrayIconProvider(), typeof(TrayIconProvider));
+
 		SetupIOC(Locator.GetLocator());
 		base.RegisterServices();
+	}
+
+	private static NotificationProvider? CreateNotificationProvider()
+	{
+#if WINDOWS
+		return new Notification.Windows.WindowsNotificationProvider();
+#else
+		if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+			return new Notification.MacOS.MacOsNotificationProvider();
+		if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+			return new Notification.Linux.LinuxNotificationProvider();
+		return null;
+#endif
 	}
 
 	public void OpenSettingsClicked(object sender, EventArgs args)

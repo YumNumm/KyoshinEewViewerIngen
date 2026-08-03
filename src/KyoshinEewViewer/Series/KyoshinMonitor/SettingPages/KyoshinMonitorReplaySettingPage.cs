@@ -130,7 +130,7 @@ public class KyoshinMonitorReplaySettingPage : ReactiveObject, ISettingPage
 
 	private async Task ShowErrorDialog(string title, string message)
 	{
-		var dialog = new ContentDialog
+		var dialog = new FAContentDialog
 		{
 
 			Title = title,
@@ -143,7 +143,7 @@ public class KyoshinMonitorReplaySettingPage : ReactiveObject, ISettingPage
 
 	private async Task ShowInfoDialog(string title, string message)
 	{
-		var dialog = new ContentDialog
+		var dialog = new FAContentDialog
 		{
 			Title = title,
 			Content = message,

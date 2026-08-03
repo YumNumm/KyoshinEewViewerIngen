@@ -26,6 +26,10 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 		}
 	}
 
+	// 全点分の絶対ピクセル座標のキャッシュ。配列参照+ズーム単位で再利用され、
+	// 毎フレーム全観測点分発生していた投影計算(三角関数)が配列差し替え・ズーム変更時のみになる
+	private readonly PointLayoutCache<RealtimeObservationPoint> _pointLayoutCache = new(p => p.Location);
+
 	private KyoshinEvent[]? _kyoshinEvents;
 	public KyoshinEvent[]? KyoshinEvents
 	{
@@ -59,12 +63,13 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 
 	private static readonly SKPaint TextPaint = new()
 	{
-		Typeface = KyoshinEewViewerFonts.MainRegular,
-		TextSize = 14,
 		StrokeWidth = 2,
 		IsAntialias = true,
-		SubpixelText = true,
-		LcdRenderText = true,
+	};
+	private static readonly SKFont TextFont = new(KyoshinEewViewerFonts.MainRegular, 14)
+	{
+		Subpixel = true,
+		Edging = SKFontEdging.SubpixelAntialias,
 	};
 	private static readonly SKPaint TextBackgroundPaint = new()
 	{
@@ -211,22 +216,26 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 			RenderObservationPoints();
 			void RenderObservationPoints()
 			{
-				if (ObservationPoints == null)
+				if (ObservationPoints is not { } points)
 					return;
 
-				var renderedPoints = new List<RealtimeObservationPoint>();
+				// 全点分のピクセル座標のキャッシュを取得する(ズーム・配列が前回と同じ間は投影計算が発生しない)
+				var pixels = _pointLayoutCache.Get(points, zoom).Pixels;
+				var circleSize = (float)(Math.Max(1, zoom - 4) * 1.75);
+				var circleVector = new PointD(circleSize, circleSize);
+				var renderedPoints = new List<(RealtimeObservationPoint Point, PointD Center)>();
 				var fixedRect = new List<RectD>();
 
 				// 描画対象の観測点のリストアップ
-				foreach (var point in ObservationPoints)
+				for (var i = 0; i < points.Length; i++)
 				{
+					var point = points[i];
+
 					// 設定以下の震度であれば描画しない
 					if (point.LatestIntensity != null && point.LatestIntensity < Config.RawIntensityObject.MinShownIntensity)
 						continue;
 
-					var circleSize = (float)(Math.Max(1, zoom - 4) * 1.75);
-					var circleVector = new PointD(circleSize, circleSize);
-					var pointCenter = point.Location.ToPixel(zoom);
+					var pointCenter = pixels[i];
 					var bound = new RectD(pointCenter - circleVector, pointCenter + circleVector);
 					if (!pixelBound.IntersectsWith(bound))
 						continue;
@@ -241,14 +250,14 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 					if (!Config.RawIntensityObject.ShowInvalidateIcon && point.IsTmpDisabled)
 						continue;
 
-					renderedPoints.Add(point);
+					renderedPoints.Add((point, pointCenter));
 					fixedRect.Add(bound);
 				}
 
-				var ordersRenderedPoints = renderedPoints.OrderByDescending(p => p.LatestIntensity ?? -1000);
+				var ordersRenderedPoints = renderedPoints.OrderByDescending(p => p.Point.LatestIntensity ?? -1000);
 				// 観測点名の描画
 				if (zoom >= Config.RawIntensityObject.ShowNameZoomLevel)
-					foreach (var point in ordersRenderedPoints)
+					foreach (var (point, pixelCenter) in ordersRenderedPoints)
 					{
 						if (point.LatestIntensity is null && !point.HasValidHistory && Config.RawIntensityObject.ShowInvalidateIcon)
 							continue;
@@ -257,8 +266,7 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 
 						var rawIntensity = point.LatestIntensity ?? 0;
 						var intensity = Math.Clamp(rawIntensity, -3, 7);
-						var circleSize = Math.Max(1, zoom - 4) * 1.75;
-						var origCenterPoint = point.Location.ToPixel(zoom) + new PointD(circleSize + 2, TextPaint.TextSize * .4);
+						var origCenterPoint = pixelCenter + new PointD(circleSize + 2, TextFont.Size * .4);
 						var centerPoint = origCenterPoint;
 
 						var text =
@@ -268,12 +276,12 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 						if (point.IsTmpDisabled)
 							text = "(異常値)" + text;
 
-						var textWidth = TextPaint.MeasureText(text);
+						var textWidth = TextFont.MeasureText(text);
 
 						// デフォルトでは右側に
 						var origBound = new RectD(
-							centerPoint - new PointD(0, TextPaint.TextSize * .7),
-							centerPoint + new PointD(textWidth, TextPaint.TextSize * .1));
+							centerPoint - new PointD(0, TextFont.Size * .7),
+							centerPoint + new PointD(textWidth, TextFont.Size * .1));
 						var bound = origBound;
 						var linkOrigin = origBound.BottomLeft + new PointD(1, 1);
 
@@ -310,7 +318,7 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 						fixedRect.Add(bound);
 
 						TextBackgroundPaint.Color = point.LatestColor ?? SKColors.Gray;
-						canvas.DrawLine(linkOrigin.AsSkPoint(), point.Location.ToPixel(zoom).AsSkPoint(), TextBackgroundPaint);
+						canvas.DrawLine(linkOrigin.AsSkPoint(), pixelCenter.AsSkPoint(), TextBackgroundPaint);
 
 						canvas.DrawRect(
 							(float)bound.Left,
@@ -322,25 +330,14 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 						var loc = (centerPoint + new PointD(1, 0)).AsSkPoint();
 						TextPaint.Style = SKPaintStyle.Stroke;
 						TextPaint.Color = IsDarkTheme ? SKColors.Black : SKColors.White;
-						canvas.DrawText(text, loc, TextPaint);
+						canvas.DrawText(text, loc, SKTextAlign.Left, TextFont, TextPaint);
 						TextPaint.Style = SKPaintStyle.Fill;
 						TextPaint.Color = IsDarkTheme ? SKColors.White : SKColors.Black;
-						canvas.DrawText(text, loc, TextPaint);
+						canvas.DrawText(text, loc, SKTextAlign.Left, TextFont, TextPaint);
 					}
-				// 観測点本体の描画
-				foreach (var point in ordersRenderedPoints.Reverse())
+				// 観測点本体の描画(リストアップ時に震度・画面内の判定は済んでいる)
+				foreach (var (point, pointCenter) in ordersRenderedPoints.Reverse())
 				{
-					// 描画しない
-					if (point.LatestIntensity != null && point.LatestIntensity < Config.RawIntensityObject.MinShownIntensity)
-						continue;
-
-					var circleSize = (float)(Math.Max(1, zoom - 4) * 1.75);
-					var circleVector = new PointD(circleSize, circleSize);
-					var pointCenter = point.Location.ToPixel(zoom);
-					var bound = new RectD(pointCenter - circleVector, pointCenter + circleVector);
-					if (!pixelBound.IntersectsWith(bound))
-						continue;
-
 					var color = point.LatestColor;
 
 					// 震度アイコンの描画
@@ -508,17 +505,17 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 						var labelText = string.IsNullOrEmpty(magText) ? depthText : $"{depthText} {magText}";
 
 						var labelX = (float)(basePoint.X + maxSize + 4);
-						var labelY = (float)(basePoint.Y + TextPaint.TextSize * 0.35);
+						var labelY = (float)(basePoint.Y + TextFont.Size * 0.35);
 
 						// アウトライン
 						TextPaint.Style = SKPaintStyle.Stroke;
 						TextPaint.Color = IsDarkTheme ? SKColors.Black : SKColors.White;
-						canvas.DrawText(labelText, labelX, labelY, TextPaint);
+						canvas.DrawText(labelText, labelX, labelY, SKTextAlign.Left, TextFont, TextPaint);
 
 						// 本体
 						TextPaint.Style = SKPaintStyle.Fill;
 						TextPaint.Color = eew.IsCancelled ? SKColors.Gray : (eew.IsWarning ? WarningHypocenter : ForecastHypocenter);
-						canvas.DrawText(labelText, labelX, labelY, TextPaint);
+						canvas.DrawText(labelText, labelX, labelY, SKTextAlign.Left, TextFont, TextPaint);
 					}
 
 					// P/S波 仮定震源要素でなく、位置と精度が保証されているときのみ表示する

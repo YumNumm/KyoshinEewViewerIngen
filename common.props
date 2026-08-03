@@ -34,12 +34,20 @@
         <EventSourceSupport>false</EventSourceSupport>
         <InvariantGlobalization>false</InvariantGlobalization>
 
+        <!-- 不要なフレームワーク機能を無効化してサイズを削減 -->
+        <!-- HttpActivityPropagationSupport は Sentry の HTTP トレース伝播に、
+             AutoreleasePoolSupport は macOS スレッドプールの安全性に必要なため無効化しない -->
+        <DebuggerSupport>false</DebuggerSupport>
+        <MetadataUpdaterSupport>false</MetadataUpdaterSupport>
+        <XmlResolverIsNetworkingEnabledByDefault>false</XmlResolverIsNetworkingEnabledByDefault>
+
         <PublishReadyToRun>true</PublishReadyToRun>
 
-        <PublishTrimmed>false</PublishTrimmed>
+        <!-- opt-in 部分トリム: IsTrimmable 属性のあるアセンブリだけがトリム対象 -->
+        <PublishTrimmed>true</PublishTrimmed>
         <TrimMode>partial</TrimMode>
         <StripSymbols>false</StripSymbols>
-        <!--<EnableTrimAnalyzer>true</EnableTrimAnalyzer>-->
+        <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
         <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
 
         <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
@@ -49,48 +57,50 @@
         <EnableWindowsTargeting>true</EnableWindowsTargeting>
 
         <DefineConstants Condition="$(RuntimeIdentifier.StartsWith('linux'))">LINUX</DefineConstants>
-        <!-- MACOS は RID のみでは付与しない（net10.0 + osx-* では Apple API 参照不可）。net10.0-macos 時は下のブロックで付与。 -->
-    </PropertyGroup>
 
-    <!-- macOS ターゲットフレームワーク用のコンパイル定数とリンク設定 -->
-    <PropertyGroup Condition="$(TargetFramework.Contains('macos'))">
-        <DefineConstants>$(DefineConstants);MACOS</DefineConstants>
-        <!-- macOS ではトリミングを無効化 -->
-        <PublishTrimmed>true</PublishTrimmed>
-        <TrimMode>partial</TrimMode>
-        <LinkMode>None</LinkMode>
+        <!-- 結合テスト専用ビルド: 更新エンドポイント差し替え等のテストフックを有効化する。リリースビルドには含めないこと -->
+        <DefineConstants Condition="'$(IntegrationTestBuild)' == 'true'">$(DefineConstants);INTEGRATION_TEST</DefineConstants>
     </PropertyGroup>
 
     <PropertyGroup>
-        <AvaloniaVersion>11.3.13</AvaloniaVersion>
-        <SplatVersion>19.3.1</SplatVersion>
-        <DotnetVersion>10.0.5</DotnetVersion>
+        <AvaloniaVersion>12.1.0</AvaloniaVersion>
+        <SplatVersion>19.4.1</SplatVersion>
+        <DotnetVersion>10.0.9</DotnetVersion>
     </PropertyGroup>
 
     <!-- NuGet -->
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
-        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="$(AvaloniaVersion)" />
-        <PackageReference Include="ReactiveUI.Avalonia" Version="11.4.12" />
+        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" />
+        <PackageReference Include="ReactiveUI.Avalonia" Version="12.0.3" />
         <PackageReference Include="Avalonia.Skia" Version="$(AvaloniaVersion)" />
-        <PackageReference Include="FluentAvaloniaUI" Version="2.5.1" />
+        <PackageReference Include="Avalonia.HarfBuzz" Version="$(AvaloniaVersion)" />
+        <PackageReference Include="FluentAvaloniaUI" Version="3.0.1" />
 
         <PackageReference Include="Splat" Version="$(SplatVersion)" />
-        <PackageReference Include="Splat.DependencyInjection.SourceGenerator" Version="2.2.2" PrivateAssets="all" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+        <PackageReference Include="Splat.DependencyInjection.SourceGenerator" Version="2.3.0" PrivateAssets="all" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 
         <PackageReference Condition="$(RuntimeIdentifier.StartsWith('linux'))" Include="Mono.Posix.NETStandard" Version="1.0.0" />
 
-        <PackageReference Include="Microsoft.Extensions.Logging" Version="$(DotnetVersion)" />
+        <PackageReference Condition="'$(UsingMicrosoftNETSdkWeb)' != 'true'" Include="Microsoft.Extensions.Logging" Version="$(DotnetVersion)" />
         <PackageReference Include="NReco.Logging.File" Version="1.3.1" />
 
-        <PackageReference Include="KyoshinMonitorLib" Version="0.4.5.2" />
-        <PackageReference Include="KyoshinMonitorLib.SkiaImages" Version="0.4.5.2" />
-        <PackageReference Include="KyoshinMonitorLib.Timers" Version="0.4.5.2" />
-        <PackageReference Include="DmdataSharp" Version="0.6.0.1" />
+        <PackageReference Include="KyoshinMonitorLib" Version="0.4.6" />
+        <PackageReference Include="KyoshinMonitorLib.SkiaImages" Version="0.4.6" />
+        <PackageReference Include="KyoshinMonitorLib.Timers" Version="0.4.6" />
+        <PackageReference Include="DmdataSharp" Version="0.6.0.2" />
     </ItemGroup>
 
     <!-- Splat.DependencyInjection.SourceGenerator の名前空間衝突ワークアラウンド -->
     <ItemGroup>
         <Compile Include="$(MSBuildThisFileDirectory)SplatSourceGeneratorWorkaround.cs" Link="SplatSourceGeneratorWorkaround.cs" />
     </ItemGroup>
+
+    <!-- SkiaSharp 3.x の win 向けパッケージ等が同梱する巨大なネイティブ .pdb (計約100MB) を配布物から除外する
+         (マネージドコードのシンボルは DebugType=embedded で埋め込み済み) -->
+    <Target Name="RemovePdbsFromPublish" AfterTargets="ComputeResolvedFilesToPublishList">
+        <ItemGroup>
+            <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.pdb'" />
+        </ItemGroup>
+    </Target>
 </Project>

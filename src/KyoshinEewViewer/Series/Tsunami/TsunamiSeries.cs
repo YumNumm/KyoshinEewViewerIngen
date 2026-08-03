@@ -33,7 +33,7 @@ using Location = KyoshinMonitorLib.Location;
 namespace KyoshinEewViewer.Series.Tsunami;
 public class TsunamiSeries : SeriesBase
 {
-	public static SeriesMeta MetaData { get; } = new(typeof(TsunamiSeries), "tsunami", "津波情報", new FontIconSource { Glyph = "\xe515", FontFamily = new(Utils.IconFontName) }, true, "津波情報を表示します。");
+	public static SeriesMeta MetaData { get; } = new(typeof(TsunamiSeries), "tsunami", "津波情報", new FAFontIconSource { Glyph = "\xe515", FontFamily = new(Utils.IconFontName) }, true, "津波情報を表示します。");
 
 	private bool IsInitializing { get; set; }
 	private ILogger Logger { get; set; }
@@ -545,7 +545,9 @@ public class TsunamiSeries : SeriesBase
 						Action = new SendNotificationAction
 						{
 							Title = TsunamiNotificationTemplates.NotificationTitle,
-							TemplateText = TsunamiNotificationTemplates.NotificationMessage
+							TemplateText = TsunamiNotificationTemplates.NotificationMessage,
+							// 津波警報以上は重要 (おやすみ中も表示)
+							Urgency = "{{ if IsWarningOrAbove }}critical{{ else }}normal{{ end }}",
 						}
 					}
 				}
@@ -577,7 +579,9 @@ public class TsunamiSeries : SeriesBase
 						Action = new SendNotificationAction
 						{
 							Title = TsunamiNotificationTemplates.NotificationTitle,
-							TemplateText = TsunamiNotificationTemplates.NotificationMessage
+							TemplateText = TsunamiNotificationTemplates.NotificationMessage,
+							// 津波警報以上は重要 (おやすみ中も表示)
+							Urgency = "{{ if IsWarningOrAbove }}critical{{ else }}normal{{ end }}",
 						}
 					}
 				}
@@ -609,7 +613,9 @@ public class TsunamiSeries : SeriesBase
 						Action = new SendNotificationAction
 						{
 							Title = TsunamiNotificationTemplates.NotificationTitle,
-							TemplateText = TsunamiNotificationTemplates.NotificationMessage
+							TemplateText = TsunamiNotificationTemplates.NotificationMessage,
+							// 津波警報以上は重要 (おやすみ中も表示)
+							Urgency = "{{ if IsWarningOrAbove }}critical{{ else }}normal{{ end }}",
 						}
 					}
 				}
@@ -641,7 +647,9 @@ public class TsunamiSeries : SeriesBase
 						Action = new SendNotificationAction
 						{
 							Title = TsunamiNotificationTemplates.NotificationTitle,
-							TemplateText = TsunamiNotificationTemplates.NotificationMessage
+							TemplateText = TsunamiNotificationTemplates.NotificationMessage,
+							// 津波警報以上は重要 (おやすみ中も表示)
+							Urgency = "{{ if IsWarningOrAbove }}critical{{ else }}normal{{ end }}",
 						}
 					}
 				}

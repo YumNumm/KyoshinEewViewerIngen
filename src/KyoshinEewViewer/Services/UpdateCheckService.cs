@@ -35,7 +35,15 @@ public class UpdateCheckService : ReactiveObject
 	public event Action<VersionInfo[]?>? Updated;
 
 
+#if INTEGRATION_TEST
+	// 結合テストビルド専用: 環境変数でモックサーバーへ差し替えられるようにする
+	private static readonly string GithubReleasesUrl =
+		Environment.GetEnvironmentVariable("KEVI_UPDATE_API_URL") ?? "https://api.github.com/repos/ingen084/KyoshinEewViewerIngen/releases";
+	private static bool IsEndpointOverridden
+		=> Environment.GetEnvironmentVariable("KEVI_UPDATE_API_URL") != null;
+#else
 	private const string GithubReleasesUrl = "https://api.github.com/repos/ingen084/KyoshinEewViewerIngen/releases";
+#endif
 	private const string UpdateCheckUrl = "https://svs.ingen084.net/kyoshineewviewer/updates.json";
 
 	// RIDとGitHub Releasesアセット名のマッピング
@@ -57,6 +65,10 @@ public class UpdateCheckService : ReactiveObject
 		Config = config;
 		WorkflowService = workflowService;
 		Client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "KEVi;" + Utils.Version);
+#if INTEGRATION_TEST
+		if (IsEndpointOverridden)
+			Logger.LogWarning($"結合テストビルド: 更新チェックのエンドポイントが差し替えられています: {GithubReleasesUrl}");
+#endif
 		CheckUpdateTask = new Timer(async s =>
 		{
 			if (!config.Update.Enable)
@@ -67,8 +79,14 @@ public class UpdateCheckService : ReactiveObject
 				var currentVersionString = Utils.InternalVersion;
 				var (currentVersion, currentSuffix) = Utils.ParseVersionString(currentVersionString);
 
+#if INTEGRATION_TEST
+				// 結合テスト時は統計用リクエストを本番サーバーへ送らない
+				if (!IsEndpointOverridden)
+					await Client.GetStringAsync(UpdateCheckUrl);
+#else
 				// 暫定でリクエストは残しておく
 				await Client.GetStringAsync(UpdateCheckUrl);
+#endif
 
 				// 取得してでかい順に並べる
 				var releases = (await GitHubRelease.GetReleasesAsync(Client, GithubReleasesUrl))
@@ -113,6 +131,14 @@ public class UpdateCheckService : ReactiveObject
 				WorkflowService.PublishEvent(new UpdateAvailableEvent(AvailableUpdateVersions?.Length > 0, releases.First().TagName));
 				AvailableUpdateVersions = newVersions;
 				Updated?.Invoke(AvailableUpdateVersions);
+
+#if INTEGRATION_TEST
+				if (StartupOptions.Current?.AutoUpdateTest == true)
+				{
+					Logger.LogWarning("結合テストモード: 更新を検出したため自動で自己更新を開始します");
+					_ = StartUpdater();
+				}
+#endif
 			}
 			catch (Exception ex)
 			{
@@ -480,7 +506,7 @@ public class UpdateCheckService : ReactiveObject
 	}
 
 	/// <summary>
-	/// macOS用の自己更新処理（認証ダイアログ付き）
+	/// macOS用の自己更新処理
 	/// </summary>
 	private async Task UpdateMacOS(string newVersionZip)
 	{
@@ -579,17 +605,19 @@ public class UpdateCheckService : ReactiveObject
 			catch { }
 		}
 
-		// 再起動（-nオプションで新しいインスタンスを強制起動）
+		// 現在のプロセス終了を待ってから同じ.appバンドルを起動する
+		var appToOpen = appPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+		const string relaunchScript = "sleep 0.5; while kill -0 \"$1\" 2>/dev/null; do sleep 0.2; done; /usr/bin/open \"$2\"";
 		var openProc = new ProcessStartInfo
 		{
-			FileName = "open",
-			ArgumentList = { "-n", "-a", appPath },
+			FileName = "/bin/sh",
+			ArgumentList = { "-c", relaunchScript, "kevi-relaunch", Environment.ProcessId.ToString(), appToOpen },
 			UseShellExecute = false,
 			CreateNoWindow = true
 		};
 		Process.Start(openProc);
 		
-		await Task.Delay(1000);
+		await Task.Delay(100);
 		(Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
 	}
 

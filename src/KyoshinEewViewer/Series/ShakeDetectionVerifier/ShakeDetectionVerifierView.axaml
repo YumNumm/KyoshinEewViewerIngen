@@ -26,10 +26,10 @@
                 <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4"
                     HorizontalAlignment="Left">
                     <ToggleButton IsChecked="{Binding ShowLeftParameterPanel}">
-                        <ui:SymbolIcon Symbol="Settings" />
+                        <ui:FASymbolIcon Symbol="Settings" />
                     </ToggleButton>
                     <ToggleButton IsChecked="{Binding ShowLeftEventPanel}">
-                        <ui:SymbolIcon Symbol="List" />
+                        <ui:FASymbolIcon Symbol="List" />
                     </ToggleButton>
                 </StackPanel>
 
@@ -252,8 +252,8 @@
                             Command="{Binding TogglePlayback}" Width="40" Margin="4,0,0,0"
                             IsEnabled="{Binding !IsProcessing}">
                             <Panel>
-                                <ui:SymbolIcon Symbol="Play" IsVisible="{Binding !IsPlaying}" />
-                                <ui:SymbolIcon Symbol="Pause" IsVisible="{Binding IsPlaying}" />
+                                <ui:FASymbolIcon Symbol="Play" IsVisible="{Binding !IsPlaying}" />
+                                <ui:FASymbolIcon Symbol="Pause" IsVisible="{Binding IsPlaying}" />
                             </Panel>
                         </ToggleButton>
                         <RepeatButton Grid.Column="4" Content="▶" Command="{Binding NextFrame}"

@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:core="using:KyoshinEewViewer.Core"
 			 xmlns:sty="using:FluentAvalonia.Styling"
+			 xmlns:md="clr-namespace:LiveMarkdown.Avalonia;assembly=LiveMarkdown.Avalonia"
              x:Class="KyoshinEewViewer.Desktop.App"
              Name="KyoshinEewViewer for ingen">
 	<Application.Styles>
@@ -10,14 +11,43 @@
         <core:KyoshinEewViewerIntensityTheme />
 		<sty:FluentAvaloniaTheme UseSystemFontOnWindows="False" PreferUserAccentColor="True" />
         <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
+        <StyleInclude Source="avares://LiveMarkdown.Avalonia/Styles.axaml" />
+
+		<!-- Markdown の GFM Alert (`> [!WARNING]` など) をテーマの警告色で表示する -->
+		<Style Selector="md|MarkdownRenderer">
+			<Style Selector="^ StackPanel.AlertBlock">
+				<Setter Property="Background" Value="{DynamicResource WarningBackgroundColor}" />
+				<Setter Property="TextElement.Foreground" Value="{DynamicResource WarningForegroundColor}" />
+				<Setter Property="Margin" Value="0,4" />
+			</Style>
+		</Style>
 	</Application.Styles>
 
 	<Application.Resources>
-		<!-- AvaloniaEdit の Fluent テーマが参照するリソース (FluentAvalonia には存在しないため定義) -->
-		<SolidColorBrush x:Key="ToolTipBackground" Color="#2D2D30" />
-		<SolidColorBrush x:Key="ToolTipForeground" Color="#F1F1F1" />
-		<SolidColorBrush x:Key="ToolTipBorderBrush" Color="#3F3F46" />
-		<Thickness x:Key="ToolTipBorderThemeThickness">1</Thickness>
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<!-- LiveMarkdown.Avalonia の既定リソース (Light/Dark の ThemeDictionaries を含む) -->
+				<ResourceInclude Source="avares://LiveMarkdown.Avalonia/Defaults.axaml" />
+			</ResourceDictionary.MergedDictionaries>
+			<!-- AvaloniaEdit の Fluent テーマが StaticResource で参照する吹き出し用リソース。
+			     FluentAvalonia の ToolTip 配色に合わせてテーマ切替に追従させる。
+			     AvaloniaEdit と FluentAvalonia はテーマ辞書を Default(ライト)/Dark で構成しており、
+			     参照は Default バリアントで解決されるため辞書のキーも Default/Dark に合わせる。
+			     ToolTipBorderBrush は FluentAvalonia にも存在するが、ライト(Default)参照を確実に解決するため同値で定義する。 -->
+			<ResourceDictionary.ThemeDictionaries>
+				<ResourceDictionary x:Key="Default">
+					<SolidColorBrush x:Key="ToolTipBackground" Color="#F9F9F9" />
+					<SolidColorBrush x:Key="ToolTipForeground" Color="#E4000000" />
+					<SolidColorBrush x:Key="ToolTipBorderBrush" Color="#0F000000" />
+				</ResourceDictionary>
+				<ResourceDictionary x:Key="Dark">
+					<SolidColorBrush x:Key="ToolTipBackground" Color="#2C2C2C" />
+					<SolidColorBrush x:Key="ToolTipForeground" Color="#FFFFFF" />
+					<SolidColorBrush x:Key="ToolTipBorderBrush" Color="#33000000" />
+				</ResourceDictionary>
+			</ResourceDictionary.ThemeDictionaries>
+			<Thickness x:Key="ToolTipBorderThemeThickness">1</Thickness>
+		</ResourceDictionary>
 	</Application.Resources>
 
 	<NativeMenu.Menu>

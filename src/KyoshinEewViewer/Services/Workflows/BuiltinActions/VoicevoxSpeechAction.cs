@@ -9,6 +9,7 @@ namespace KyoshinEewViewer.Services.Workflows.BuiltinActions;
 
 public class VoicevoxSpeechAction : WorkflowAction
 {
+	[JsonIgnore]
 	public override Control DisplayControl => new VoicevoxSpeechActionControl() { DataContext = this };
 
 	private string _templateText = "アクションによる読み上げ";
@@ -40,6 +41,16 @@ public class VoicevoxSpeechAction : WorkflowAction
 	{
 		get => _sequentialMode;
 		set => this.RaiseAndSetIfChanged(ref _sequentialMode, value);
+	}
+
+	private bool _interruptPrevious = true;
+	/// <summary>
+	/// 同じアクションで再生中の音声があれば中断して新しい再生を開始する
+	/// </summary>
+	public bool InterruptPrevious
+	{
+		get => _interruptPrevious;
+		set => this.RaiseAndSetIfChanged(ref _interruptPrevious, value);
 	}
 
 	private static string[] SplitIntoSegments(string text)
@@ -80,14 +91,15 @@ public class VoicevoxSpeechAction : WorkflowAction
 		if (string.IsNullOrWhiteSpace(renderedText))
 			return;
 
+		var owner = InterruptPrevious ? this : null;
 		if (SequentialMode)
 		{
 			var segments = SplitIntoSegments(renderedText);
-			await service.PrepareAndPlaySequentiallyAsync(segments, Volume, WaitToEnd);
+			await service.PrepareAndPlaySequentiallyAsync(segments, Volume, WaitToEnd, owner);
 		}
 		else
 		{
-			await service.PlayAsync(renderedText, Volume, WaitToEnd);
+			await service.PlayAsync(renderedText, Volume, WaitToEnd, owner);
 		}
 	}
 }
