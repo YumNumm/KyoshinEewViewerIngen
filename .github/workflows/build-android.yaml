@@ -85,6 +85,16 @@ jobs:
         shell: bash
         run: dotnet workload restore src/KyoshinEewViewer.Android/KyoshinEewViewer.Android.csproj
 
+      # ランナー同梱の Android SDK に API 36 のプラットフォームや build-tools が
+      # 入っていない場合、ビルド時に XA5207 で落ちる。不足分を先に入れておく
+      - name: Android SDK の不足分を導入
+        shell: bash
+        run: |
+          dotnet build src/KyoshinEewViewer.Android/KyoshinEewViewer.Android.csproj \
+            -t:InstallAndroidDependencies \
+            -p:AndroidSdkDirectory="$ANDROID_HOME" \
+            -p:AcceptAndroidSDKLicenses=true
+
       # Release では SDK の既定 (AndroidPackageFormats=aab;apk) で AAB と APK の両方が出る。
       # 署名鍵を渡していないため、どちらも SDK が自動生成する debug キーで署名される
       - name: AAB / APK を作成
