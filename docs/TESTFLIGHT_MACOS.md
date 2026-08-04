@@ -12,21 +12,24 @@ KyoshinEewViewer の macOS 版を Mac App Store / TestFlight 向けに署名済�
 
 | 項目 | 値 |
 | --- | --- |
-| ASC App ID | `6517347515` |
-| Bundle ID | `net.yumnumm.kevi` |
+| ASC App ID | 未作成 (`APP_ID` で指定する) |
+| Bundle ID | `net.yumnumm.KyoshinEewViewerIngen` |
 | Team ID | `CPL7H8SHVM` |
 | プラットフォーム | `MAC_OS` |
 | アーキテクチャ | `osx-arm64` のみ (universal 化は「残課題」参照) |
 
-> **アプリレコードの取り違え注意**: ASC 上に紛らわしい別レコードが存在する。
+> **アプリレコードの取り違え注意**: Bundle ID を `net.yumnumm.KyoshinEewViewerIngen` に
+> 統一したため、ASC 上の既存レコードはいずれも使えない。新規に作成すること。
+> ASC のアプリレコードは作成後に Bundle ID を変更できない。
 >
 > | App ID | Bundle ID | 名前 | |
 > | --- | --- | --- | --- |
-> | `6517347515` | `net.yumnumm.kevi` | KyoshinEewViewer for ingen | **こちらを使う** |
+> | (新規作成) | `net.yumnumm.KyoshinEewViewerIngen` | KyoshinEewViewer for ingen | **こちらを使う** |
+> | `6517347515` | `net.yumnumm.kevi` | KyoshinEewViewer for ingen | 旧。build 3 まで登録済みだが使わない |
 > | `6502579684` | `net.yumnumm.KyoshinEewViewer.Desktop` | KyoshinMonitorViewer for Ingen | 使わない |
 >
-> プロビジョニングプロファイルは `net.yumnumm.kevi` 用に発行されているため、
-> もう一方へアップロードしようとしても署名が一致しない。
+> プロビジョニングプロファイルは Bundle ID ごとに発行されるため、
+> 別レコードへアップロードしようとしても署名が一致しない。
 > `asc builds next-build-number` を bundle ID で引くと、指定を間違えたときに
 > `sourcesConsidered: []` / `nextBuildNumber: 1` というもっともらしい値が返って
 > しまい気付きにくいので、**App ID (数値) で指定する**のが安全。
@@ -59,7 +62,7 @@ TestFlight 用の値はスクリプトが**コピー後のバンドル側だけ*
 
 ```bash
 asc bundle-ids list --paginate
-asc bundle-ids create --identifier "net.yumnumm.kevi" --name "KEVI" --platform MAC_OS
+asc bundle-ids create --identifier "net.yumnumm.KyoshinEewViewerIngen" --name "KyoshinEewViewer for ingen" --platform MAC_OS
 ```
 
 ### 2. 証明書 (2 種類とも必要)
@@ -121,17 +124,17 @@ security find-identity -v | grep "3rd Party"
 asc profiles create \
   --name "KEVI Mac App Store" \
   --profile-type MAC_APP_STORE \
-  --bundle "net.yumnumm.kevi" \
+  --bundle "net.yumnumm.KyoshinEewViewerIngen" \
   --certificate "<MAC_APP_DISTRIBUTION の証明書 ID>"
 
 asc profiles download --id "<PROFILE_ID>" \
-  --output ~/.kevi-signing/KEVI_MacAppStore.provisionprofile
+  --output ~/.kevi-signing/KEVI_MacAppStore_KyoshinEewViewerIngen.provisionprofile
 ```
 
 内容の確認 (entitlements の突き合わせに使う):
 
 ```bash
-asc profiles inspect --path ~/.kevi-signing/KEVI_MacAppStore.provisionprofile --entitlements --output table
+asc profiles inspect --path ~/.kevi-signing/KEVI_MacAppStore_KyoshinEewViewerIngen.provisionprofile --entitlements --output table
 ```
 
 ## スクリプトの使い方
@@ -151,15 +154,15 @@ BUILD_NUMBER=3 ./scripts/publish-testflight-macos.sh
 
 | 変数 | 既定値 | 用途 |
 | --- | --- | --- |
-| `APP_ID` | `6517347515` | ASC のアプリ ID |
-| `BUNDLE_ID` | `net.yumnumm.kevi` | CFBundleIdentifier |
+| `APP_ID` | なし (指定必須) | ASC のアプリ ID |
+| `BUNDLE_ID` | `net.yumnumm.KyoshinEewViewerIngen` | CFBundleIdentifier |
 | `TEAM_ID` | `CPL7H8SHVM` | entitlements の team-identifier |
 | `APP_VERSION` | `1.0` | CFBundleShortVersionString |
 | `BUILD_NUMBER` | ASC から自動取得 | CFBundleVersion |
 | `RID` | `osx-arm64` | .NET RuntimeIdentifier |
 | `SIGNING_IDENTITY_APP` | `3rd Party Mac Developer Application: ...` | `.app` 署名 identity |
 | `SIGNING_IDENTITY_INSTALLER` | `3rd Party Mac Developer Installer: ...` | pkg 署名 identity |
-| `PROVISIONING_PROFILE` | `~/.kevi-signing/KEVI_MacAppStore.provisionprofile` | 埋め込むプロファイル |
+| `PROVISIONING_PROFILE` | `~/.kevi-signing/KEVI_MacAppStore_KyoshinEewViewerIngen.provisionprofile` | 埋め込むプロファイル |
 | `SIGNING_KEYCHAIN` | (空) | 明示したい場合のキーチェーン |
 | `OUTPUT_DIR` | `out/testflight-macos` | 成果物の出力先 (git-ignore 済み) |
 | `SKIP_UPLOAD` | `false` | `true` で pkg 作成まで |
@@ -168,7 +171,7 @@ BUILD_NUMBER=3 ./scripts/publish-testflight-macos.sh
 ビルド番号は手で決めずに ASC へ問い合わせるのが安全。
 
 ```bash
-asc builds next-build-number --app 6517347515 --version 1.0 --platform MAC_OS
+asc builds next-build-number --app "$APP_ID" --version 1.0 --platform MAC_OS
 # {"latestProcessedBuildNumber":"1", ... ,"nextBuildNumber":"2"}
 ```
 
@@ -191,7 +194,7 @@ asc builds next-build-number --app 6517347515 --version 1.0 --platform MAC_OS
 
 | キー | 値 | 理由 |
 | --- | --- | --- |
-| `CFBundleIdentifier` | `net.yumnumm.kevi` | テンプレートは ad-hoc 用の値なので上書き必須 |
+| `CFBundleIdentifier` | `net.yumnumm.KyoshinEewViewerIngen` | テンプレートは ad-hoc 用の値なので上書き必須 |
 | `CFBundleShortVersionString` | `APP_VERSION` | テンプレートは `KEVI_VERSION` プレースホルダ |
 | `CFBundleVersion` | `BUILD_NUMBER` | ASC 側のビルド番号と一致させる |
 | `LSApplicationCategoryType` | `public.app-category.weather` | App Store ではカテゴリ必須 |
@@ -214,7 +217,7 @@ App Store 配布では App Sandbox が必須。
 | `com.apple.security.cs.allow-jit` | .NET ランタイムの JIT に必要 |
 | `com.apple.security.network.client` | 地震データ (強震モニタ / Dmdata / JMA) の取得 |
 | `com.apple.security.files.user-selected.read-write` | ファイルピッカー経由の読み書き |
-| `com.apple.application-identifier` | `CPL7H8SHVM.net.yumnumm.kevi`。プロファイルと一致必須 |
+| `com.apple.application-identifier` | `CPL7H8SHVM.net.yumnumm.KyoshinEewViewerIngen`。プロファイルと一致必須 |
 | `com.apple.developer.team-identifier` | `CPL7H8SHVM`。プロファイルと一致必須 |
 | `com.apple.security.temporary-exception.mach-lookup.global-name` | `com.apple.coreservices.launchservicesd`。**これが無いと起動時に必ずクラッシュする**。詳細は「遭遇したエラー 6」 |
 
@@ -263,7 +266,7 @@ ACL に登録されていないプロセスが読むと GUI の許可ダイア�
 
 ```bash
 # 承認後
-asc builds list --app 6517347515 --limit 5   # 4.5s で完了
+asc builds list --app "$APP_ID" --limit 5   # 4.5s で完了
 ```
 
 > **この不具合は初回のみ発生する時間依存の症状**で、承認後に検証した人には
@@ -348,7 +351,7 @@ Error: builds upload: build upload "81e8b288-..." failed with state FAILED: 9025
 `asc` はエラーコードしか返さない。詳細は以下で確認できるが、やはりコードのみ。
 
 ```bash
-asc builds uploads list --app 6517347515 --output json
+asc builds uploads list --app "$APP_ID" --output json
 asc builds uploads view --id "<UPLOAD_ID>" --output json --pretty
 ```
 
@@ -656,7 +659,7 @@ x64 publish から取り出して `lipo -create` すればよい）。
 | `MAC_APP_DIST_P12_BASE64` | `.app` 署名証明書 | `base64 -i ~/.kevi-signing/mac_app_dist.p12` |
 | `MAC_INSTALLER_DIST_P12_BASE64` | pkg 署名証明書 | `base64 -i ~/.kevi-signing/mac_installer_dist.p12` |
 | `MAC_P12_PASSWORD` | 上記 2 つの `.p12` のパスワード | `~/.kevi-signing/p12-password.txt` |
-| `MAC_PROVISIONING_PROFILE_BASE64` | プロビジョニングプロファイル | `base64 -i ~/.kevi-signing/KEVI_MacAppStore.provisionprofile` |
+| `MAC_PROVISIONING_PROFILE_BASE64` | プロビジョニングプロファイル | `base64 -i ~/.kevi-signing/KEVI_MacAppStore_KyoshinEewViewerIngen.provisionprofile` |
 | `ASC_KEY_ID` | ASC API キー ID (`JD4HMGS6HZ`) | `asc auth status` |
 | `ASC_ISSUER_ID` | ASC の issuer ID (UUID) | **`asc auth issuer-id`** |
 | `ASC_PRIVATE_KEY_B64` | `AuthKey_XXXX.p8` を base64 化 | `base64 -i ~/.asc/AuthKey_JD4HMGS6HZ.p8` |

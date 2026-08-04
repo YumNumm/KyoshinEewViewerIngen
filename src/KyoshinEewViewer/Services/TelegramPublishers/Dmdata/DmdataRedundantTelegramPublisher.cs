@@ -346,16 +346,32 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 
 	public async Task AuthorizeAsync(CancellationToken cancellationToken)
 	{
-		var credentials = await SimpleOAuthAuthenticator.AuthorizationAsync(
-			ClientBuilder.HttpClient,
-			Config.Dmdata.OAuthClientId,
-			RequiredScope.Concat(AdditionalScope).ToArray(),
-			"KyoshinEewViewer for ingen",
-			UrlOpener.OpenUrl,
-			token: cancellationToken);
-		Credential = credentials;
-		Config.Dmdata.RefreshToken = credentials.RefreshToken;
-		ApiClient = BuildApiClient(credentials);
+		var scopes = RequiredScope.Concat(AdditionalScope).ToArray();
+
+		// ループバック HTTP でコールバックを受けられないプラットフォームでは実装が登録されている
+		if (Locator.Current.GetService<IDmdataAuthenticator>() is { } authenticator)
+		{
+			var refreshToken = await authenticator.AuthorizeAsync(Config.Dmdata.OAuthClientId, scopes, cancellationToken);
+			Config.Dmdata.RefreshToken = refreshToken;
+			Credential = new OAuthRefreshTokenCredential(
+				ClientBuilder.HttpClient,
+				RequiredScope,
+				Config.Dmdata.OAuthClientId,
+				refreshToken);
+		}
+		else
+		{
+			var credentials = await SimpleOAuthAuthenticator.AuthorizationAsync(
+				ClientBuilder.HttpClient,
+				Config.Dmdata.OAuthClientId,
+				scopes,
+				"KyoshinEewViewer for ingen",
+				UrlOpener.OpenUrl,
+				token: cancellationToken);
+			Config.Dmdata.RefreshToken = credentials.RefreshToken;
+			Credential = credentials;
+		}
+		ApiClient = BuildApiClient(Credential);
 		DataProcessor.SetApiClient(ApiClient);
 		OnInformationCategoryUpdated();
 	}

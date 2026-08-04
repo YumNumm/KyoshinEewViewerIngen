@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
@@ -17,6 +18,18 @@ using System.Reactive.Linq;
 namespace KyoshinEewViewer.Views;
 public partial class MainView : UserControl
 {
+	/// <summary>
+	/// システム UI に隠れない領域の余白。デスクトップでは常に 0 になる
+	/// </summary>
+	public static readonly StyledProperty<Thickness> SafeAreaPaddingProperty
+		= AvaloniaProperty.Register<MainView, Thickness>(nameof(SafeAreaPadding));
+
+	public Thickness SafeAreaPadding
+	{
+		get => GetValue(SafeAreaPaddingProperty);
+		set => SetValue(SafeAreaPaddingProperty, value);
+	}
+
 	public MainView()
 	{
 		InitializeComponent();
@@ -50,10 +63,14 @@ public partial class MainView : UserControl
 		});
 
 		MiniMap.WhenAnyValue(m => m.Bounds).Subscribe(b => ResetMinimapPosition());
-		AttachedToVisualTree += (s, e) => 
+		AttachedToVisualTree += (s, e) =>
 		{
 			ResetMinimapPosition();
 		};
+
+		// ScaledRoot は LayoutTransformControl の子であるため、ウィンドウ拡大率を適用したあとの論理幅が得られる
+		ScaledRoot.WhenAnyValue(p => p.Bounds).Subscribe(_ => UpdateViewWidth());
+		DataContextChanged += (s, e) => UpdateViewWidth();
 
 		MessageBus.Current.Listen<MapNavigationRequest>().Subscribe(x =>
 		{
@@ -83,8 +100,17 @@ public partial class MainView : UserControl
 			{
 				insetsManager.IsSystemBarVisible = false;
 				insetsManager.DisplayEdgeToEdgePreference = true;
+				// 地図とサイドバーの背景は画面全体に描画し、操作対象のみ SafeAreaPadding で内側に寄せる
+				SafeAreaPadding = insetsManager.SafeAreaPadding;
+				insetsManager.SafeAreaChanged += (_, a) => SafeAreaPadding = a.SafeAreaPadding;
 			}
 		};
+	}
+
+	private void UpdateViewWidth()
+	{
+		if (DataContext is MainViewModel vm)
+			vm.ViewWidth = ScaledRoot.Bounds.Width;
 	}
 
 	private void ResetMinimapPosition()
