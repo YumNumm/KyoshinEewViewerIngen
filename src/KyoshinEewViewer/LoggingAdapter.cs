@@ -69,9 +69,9 @@ public static class LoggingAdapter
 				return;
 			try
 			{
-				// macOSではログディレクトリを固定、その他のプラットフォームでは設定値を使用
+				// macOS と iOS ではログディレクトリを固定、その他のプラットフォームでは設定値を使用
 				string fullPath;
-				if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+				if (!PlatformDirectories.IsLogDirectoryCustomizable)
 				{
 					fullPath = PlatformDirectories.Logs;
 				}

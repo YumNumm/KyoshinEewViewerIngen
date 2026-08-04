@@ -25,11 +25,11 @@
 		<integer>1</integer>
 		<integer>2</integer>
 	</array>
-	<!-- MainView が IsSystemBarVisible=false で全画面描画を要求するため、ステータスバーを隠す -->
-	<key>UIStatusBarHidden</key>
+	<!-- 設定ファイルとログを「ファイル」アプリから取り出せるようにする -->
+	<key>UIFileSharingEnabled</key>
 	<true/>
-	<key>UIViewControllerBasedStatusBarAppearance</key>
-	<false/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>arm64</string>

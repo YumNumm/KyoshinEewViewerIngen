@@ -26,11 +26,16 @@ public static class PlatformDirectories
 	/// Windows: %AppData%\KyoshinEewViewer\
 	/// Linux: ~/.config/KyoshinEewViewer/
 	/// macOS: ~/Library/Application Support/KyoshinEewViewer/
+	/// iOS: アプリの Documents ディレクトリ
 	/// </remarks>
 	public static string ApplicationData
 	{
 		get
 		{
+			// 「ファイル」アプリから設定やログを取り出せるようにするため Documents 配下に置く
+			if (OperatingSystem.IsIOS())
+				return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
 			if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
 			{
 				return Path.Combine(
@@ -62,12 +67,13 @@ public static class PlatformDirectories
 	/// Windows: %AppData%\KyoshinEewViewer\
 	/// Linux: ~/.config/KyoshinEewViewer/
 	/// macOS: ~/Library/Logs/KyoshinEewViewer/
+	/// iOS: アプリの Documents/Logs ディレクトリ
 	/// </remarks>
 	public static string Logs
 	{
 		get
 		{
-			if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+			if (!OperatingSystem.IsIOS() && RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
 			{
 				return Path.Combine(
 					Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
@@ -85,9 +91,11 @@ public static class PlatformDirectories
 	/// ログディレクトリのパスをカスタマイズ可能かどうかを取得します
 	/// </summary>
 	/// <remarks>
-	/// macOS では標準的なログディレクトリを使用するため、カスタマイズ不可
+	/// macOS では標準的なログディレクトリを使用するため、カスタマイズ不可。
+	/// iOS ではサンドボックス外に書き込めないため、カスタマイズ不可
 	/// </remarks>
-	public static bool IsLogDirectoryCustomizable => !RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+	public static bool IsLogDirectoryCustomizable
+		=> !OperatingSystem.IsIOS() && !RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
 	/// <summary>
 	/// 指定されたディレクトリが存在しない場合は作成します
