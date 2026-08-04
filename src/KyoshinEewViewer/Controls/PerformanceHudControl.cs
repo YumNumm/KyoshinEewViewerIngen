@@ -222,8 +222,10 @@ public class PerformanceHudControl : Control
 				stats is null ? "-" : $"{stats.MaxRenderTimeMs.ToString("F2", CultureInfo.InvariantCulture)}ms");
 			y = DrawRow(canvas, fillPaint, width, y, "フレーム間隔",
 				stats is null ? "-" : $"{stats.AverageIntervalMs.ToString("F2", CultureInfo.InvariantCulture)}ms");
+			// 等幅フォントは日本語の字形を持たないため、日本語の値はラベルと同じフォントで描く
 			y = DrawRow(canvas, fillPaint, width, y, "描画要求",
-				stats is null ? "-" : stats.IsContinuousRendering ? "連続" : "停止");
+				stats is null ? "-" : stats.IsContinuousRendering ? "連続" : "停止",
+				valueFont: LabelFont);
 			y = DrawRow(canvas, fillPaint, width, y, "レイヤー / ズーム",
 				stats is null ? "-" : $"{stats.LayerCount} / {stats.Zoom.ToString("F2", CultureInfo.InvariantCulture)}");
 			y = DrawRow(canvas, fillPaint, width, y, "マネージド", FormatBytes(Memory.ManagedBytes));
@@ -234,12 +236,12 @@ public class PerformanceHudControl : Control
 			DrawGraph(canvas, fillPaint, strokePaint, PanelPadding, y + GraphGap, width - PanelPadding * 2, GraphHeight);
 		}
 
-		private static float DrawRow(SKCanvas canvas, SKPaint paint, float width, float y, string label, string value, SKColor? valueColor = null)
+		private static float DrawRow(SKCanvas canvas, SKPaint paint, float width, float y, string label, string value, SKColor? valueColor = null, SKFont? valueFont = null)
 		{
 			paint.Color = LabelColor;
 			canvas.DrawText(label, new SKPoint(PanelPadding, y + RowBaseline), SKTextAlign.Left, LabelFont, paint);
 			paint.Color = valueColor ?? ValueColor;
-			canvas.DrawText(value, new SKPoint(width - PanelPadding, y + RowBaseline), SKTextAlign.Right, ValueFont, paint);
+			canvas.DrawText(value, new SKPoint(width - PanelPadding, y + RowBaseline), SKTextAlign.Right, valueFont ?? ValueFont, paint);
 			return y + RowHeight;
 		}
 
@@ -251,7 +253,9 @@ public class PerformanceHudControl : Control
 			var history = Statistics?.RenderTimeHistoryMs;
 			var scaleMax = SecondaryFrameTimeMs;
 			if (history is { Length: > 0 })
-				scaleMax = Math.Max(scaleMax, history.Max() * 1.1f);
+				// 起動直後などの突出したスパイクに合わせると通常フレームが潰れて読めなくなるため上限を設け、
+				// 超えた分はグラフ上端で切る
+				scaleMax = Math.Clamp(history.Max() * 1.1f, SecondaryFrameTimeMs, SecondaryFrameTimeMs * 2);
 
 			// 60fps の目安線
 			strokePaint.Color = GoodColor.WithAlpha(90);
