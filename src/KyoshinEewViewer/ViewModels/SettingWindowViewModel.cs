@@ -137,7 +137,7 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 			if (files is not { Count: > 0 } || files[0].TryGetLocalPath() is not { } localPath)
 				return;
 
-			config.FilePath = localPath;
+			config.FilePath = await LocalizeSoundFileAsync(files[0], localPath);
 			return;
 		});
 
@@ -271,6 +271,33 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 	{
 		get => _selectedWorkflow;
 		set => this.RaiseAndSetIfChanged(ref _selectedWorkflow, value);
+	}
+
+	/// <remarks>
+	/// iOS のファイルピッカーが返すパスは他アプリのコンテナを指しており、選択直後しか開けない。
+	/// 設定として保存して後から再生するには自身のコンテナへ複製しておく必要がある
+	/// </remarks>
+	private static async Task<string> LocalizeSoundFileAsync(IStorageFile file, string localPath)
+	{
+		if (!OperatingSystem.IsIOS())
+			return localPath;
+
+		try
+		{
+			var directory = Path.Combine(PlatformDirectories.ApplicationData, "Sounds");
+			PlatformDirectories.EnsureDirectoryExists(directory);
+			var destination = Path.Combine(directory, file.Name);
+
+			await using var source = await file.OpenReadAsync();
+			await using var target = File.Create(destination);
+			await source.CopyToAsync(target);
+			return destination;
+		}
+		catch (Exception ex)
+		{
+			LogHost.Default.Warn(ex, "音声ファイルの複製に失敗しました");
+			return localPath;
+		}
 	}
 
 	public void LoadWorkflows()
