@@ -29,8 +29,14 @@ using KyoshinEewViewer.Series.ObservationPointEditor;
 
 namespace KyoshinEewViewer.ViewModels;
 
-public partial class MainViewModel : ViewModelBase
+public partial class MainViewModel : NavigationPaneViewModelBase
 {
+	/// <summary>
+	/// サイドバーは幅 64px しかないが、地図とシリーズ画面のために横幅を確保したい
+	/// iPhone の縦向きは論理幅が最大でも 440px 程度、iPad の縦向きは最小でも 744px 程度であるため、その間の値とする
+	/// </summary>
+	protected override double PaneVisibleMinWidth => 500;
+
 	public string Title { get; } = "KyoshinEewViewer for ingen";
 
 	private string _version = "?";
@@ -88,63 +94,6 @@ public partial class MainViewModel : ViewModelBase
 	{
 		get => _mapPadding;
 		set => this.RaiseAndSetIfChanged(ref _mapPadding, value);
-	}
-
-	private FANavigationViewPaneDisplayMode _navigationViewPaneDisplayMode = FANavigationViewPaneDisplayMode.Left;
-	public FANavigationViewPaneDisplayMode NavigationViewPaneDisplayMode
-	{
-		get => _navigationViewPaneDisplayMode;
-		set => this.RaiseAndSetIfChanged(ref _navigationViewPaneDisplayMode, value);
-	}
-
-	/// <summary>
-	/// シリーズ切り替えのサイドバーを常時表示するために必要な最小幅
-	/// iPhone の縦向きは論理幅が最大でも 440px 程度、iPad の縦向きは最小でも 744px 程度であるため、その間の値とする
-	/// </summary>
-	private const double SidebarVisibleMinWidth = 500;
-
-	private double _viewWidth = double.PositiveInfinity;
-	/// <summary>
-	/// MainView の表示幅。ウィンドウ拡大率を適用したあとの論理サイズ
-	/// </summary>
-	public double ViewWidth
-	{
-		get => _viewWidth;
-		set {
-			if (_viewWidth == value)
-				return;
-			this.RaiseAndSetIfChanged(ref _viewWidth, value);
-			// スタンドアロン表示はシリーズを切り替えないため、幅にかかわらずサイドバーなしの表示を維持する
-			if (IsStandalone)
-				return;
-			IsNarrowLayout = value < SidebarVisibleMinWidth;
-		}
-	}
-
-	private bool _isNarrowLayout;
-	/// <summary>
-	/// サイドバーをオーバーレイ表示に切り替える画面幅かどうか
-	/// </summary>
-	public bool IsNarrowLayout
-	{
-		get => _isNarrowLayout;
-		private set {
-			if (_isNarrowLayout == value)
-				return;
-			this.RaiseAndSetIfChanged(ref _isNarrowLayout, value);
-			// LeftMinimal ではペインが画面外に隠れ、開いたときのみオーバーレイ表示になる
-			// ペインの開閉状態は FANavigationView 側で自動的に切り替わる
-			NavigationViewPaneDisplayMode = value
-				? FANavigationViewPaneDisplayMode.LeftMinimal
-				: FANavigationViewPaneDisplayMode.Left;
-		}
-	}
-
-	private bool _isNavigationPaneOpen = true;
-	public bool IsNavigationPaneOpen
-	{
-		get => _isNavigationPaneOpen;
-		set => this.RaiseAndSetIfChanged(ref _isNavigationPaneOpen, value);
 	}
 
 	private double _leftBottomControlOpacity = 1;
@@ -396,7 +345,10 @@ public partial class MainViewModel : ViewModelBase
 
 			IsStandalone = true;
 			SelectedSeries = sSeries;
+			// シリーズを切り替えないため、幅にかかわらずサイドバーなしの表示を維持する
+			IsPaneLayoutAdaptive = false;
 			NavigationViewPaneDisplayMode = FANavigationViewPaneDisplayMode.LeftMinimal;
+			IsNavigationPaneOpen = false;
 		}
 		else
 		{
@@ -469,9 +421,6 @@ public partial class MainViewModel : ViewModelBase
 
 	public void ToggleMute()
 		=> Config.Audio.IsMuted = !Config.Audio.IsMuted;
-
-	public void ToggleNavigationPane()
-		=> IsNavigationPaneOpen = !IsNavigationPaneOpen;
 
 	public void ShowSettingWindow()
 		=> MessageBus.Current.SendMessage(new ShowSettingWindowRequested());
