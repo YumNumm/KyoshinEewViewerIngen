@@ -168,6 +168,11 @@ public class App : Application
 		var config = Locator.Current.RequireService<KyoshinEewViewerConfiguration>();
 		LoggingAdapter.Setup(config);
 
+		// 共通の既定クライアントはループバック URI しか登録されていないため iOS では使えない。
+		// 既定値のままの場合のみ差し替え、ユーザーが独自に設定したクライアントは尊重する
+		if (config.Dmdata.OAuthClientId == KyoshinEewViewerConfiguration.DmdataConfig.DefaultOAuthClientId)
+			config.Dmdata.OAuthClientId = DmdataCustomSchemeAuthenticator.ClientId;
+
 		SetupIOC(Locator.GetLocator());
 		base.RegisterServices();
 	}
