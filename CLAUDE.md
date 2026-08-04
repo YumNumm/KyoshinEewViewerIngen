@@ -13,8 +13,10 @@
 
 ## GitHub / Pull Requests（厳守）
 
-- **ingen084** のリポジトリは **upstream**。ここへ PR を作成しない。
-- PR は **常に YumNumm（このリポジトリの `origin`）** のみ。`gh pr create` では **`--repo YumNumm/KyoshinEewViewerIngen`** を明示する。
+- **ingen084 のリポジトリ（upstream）へは、いかなる場合も絶対に PR を作成しない。issue やコメントの投稿もしない。**
+- PR は **常に YumNumm/KyoshinEewViewerIngen（このリポジトリの `origin`）** のみ。YumNumm への PR 作成は OK。
+- `gh pr create` では **必ず `--repo YumNumm/KyoshinEewViewerIngen` を明示**する。`--repo` を省略すると gh が upstream を既定に解決することがあるため、省略禁止。
+- push 先も `origin`（YumNumm）のみ。upstream への push は禁止。
 
 ## Project Overview
 
