@@ -36,10 +36,10 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>net.yumnumm.KyoshinEewViewerIngen.oauth</string>
+			<string>net.yumnumm.kyoshineewviewer</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>kevi</string>
+				<string>net.yumnumm.kyoshineewviewer</string>
 			</array>
 		</dict>
 	</array>

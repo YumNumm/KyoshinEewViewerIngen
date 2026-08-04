@@ -22,9 +22,16 @@ namespace KyoshinEewViewer.iOS;
 public class DmdataCustomSchemeAuthenticator : IDmdataAuthenticator
 {
 	/// <summary>
-	/// DMDATA 側のクライアント設定にも同じ値を登録しておく必要がある
+	/// カスタム URL スキームのリダイレクト先を登録した DMDATA のクライアント。
+	/// 既定のクライアントはループバック URI しか登録されていないため使えない
 	/// </summary>
-	public const string RedirectUri = "kevi://oauth";
+	public const string ClientId = "CId.jBugjghCHmrapqEeD0IWjfuOy53KYSjH6VEtnFAhFXjD";
+
+	/// <summary>
+	/// DMDATA 側のクライアント設定にも同じ値を登録しておく必要がある。
+	/// Info.plist の CFBundleURLSchemes にもスキーム部分を登録すること
+	/// </summary>
+	public const string RedirectUri = "net.yumnumm.kyoshineewviewer://login-callback";
 
 	private static readonly HttpClient HttpClient = new();
 
