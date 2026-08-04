@@ -331,7 +331,9 @@ public partial class MainViewModel : NavigationPaneViewModelBase
 		SeriesController.RegisterSeries(EarthquakeSeries.MetaData);
 		SeriesController.RegisterSeries(TsunamiSeries.MetaData);
 		SeriesController.RegisterSeries(RadarSeries.MetaData);
-		SeriesController.RegisterSeries(QzssSeries.MetaData);
+		// iOS には System.IO.Ports のネイティブが無く、USB シリアル受信機も MFi なしでは扱えない
+		if (!OperatingSystem.IsIOS())
+			SeriesController.RegisterSeries(QzssSeries.MetaData);
 
 		SeriesController.RegisterSeries(Series.Typhoon.TyphoonSeries.MetaData);
 		SeriesController.RegisterSeries(Series.Lightning.LightningSeries.MetaData);

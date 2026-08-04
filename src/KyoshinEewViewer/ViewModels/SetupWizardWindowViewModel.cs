@@ -4,6 +4,7 @@ using KyoshinEewViewer.Series.KyoshinMonitor;
 using KyoshinEewViewer.Series.Qzss;
 using KyoshinEewViewer.Series.Tsunami;
 using Splat;
+using System;
 
 namespace KyoshinEewViewer.ViewModels;
 public class SetupWizardWindowViewModel : ViewModelBase
@@ -30,6 +31,8 @@ public class SetupWizardWindowViewModel : ViewModelBase
 		get => Config.SeriesEnable.TryGetValue(QzssSeries.MetaData.Key, out var e) ? e : QzssSeries.MetaData.IsDefaultEnabled;
 		set => Config.SeriesEnable[QzssSeries.MetaData.Key] = value;
 	}
+	// iOS には System.IO.Ports のネイティブが無く、USB シリアル受信機も MFi なしでは扱えない
+	public bool IsQzssAvailable { get; } = !OperatingSystem.IsIOS();
 
 	public SetupWizardWindowViewModel(KyoshinEewViewerConfiguration config)
 	{
