@@ -11,6 +11,7 @@ using KyoshinEewViewer.CustomControl;
 using KyoshinEewViewer.Notification;
 using KyoshinEewViewer.Series;
 using KyoshinEewViewer.Services;
+using KyoshinEewViewer.Services.Audio;
 using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
 using KyoshinEewViewer.ViewModels;
 using KyoshinEewViewer.Views;
@@ -165,6 +166,8 @@ public class App : Application
 		Locator.CurrentMutable.RegisterConstant(_dmdataAuthenticator, typeof(IDmdataAuthenticator));
 		// NotificationService から解決された時点で通知の許可を要求する
 		Locator.CurrentMutable.RegisterLazySingleton(() => (NotificationProvider)new Notification.IosNotificationProvider(), typeof(NotificationProvider));
+		// BASS のネイティブが存在しないため AVFoundation の実装へ差し替える
+		Locator.CurrentMutable.RegisterLazySingleton(() => (IAudioBackend)new Audio.IosAudioBackend(), typeof(IAudioBackend));
 		var config = Locator.Current.RequireService<KyoshinEewViewerConfiguration>();
 		LoggingAdapter.Setup(config);
 

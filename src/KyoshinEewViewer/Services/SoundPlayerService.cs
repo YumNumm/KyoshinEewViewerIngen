@@ -1,6 +1,6 @@
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
-using ManagedBass;
+using KyoshinEewViewer.Services.Audio;
 using ReactiveUI;
 using Splat;
 using System;
@@ -26,6 +26,7 @@ public class SoundPlayerService
 	public bool IsAvailable { get; }
 	public Sound TestSound { get; }
 	internal ILogger Logger { get; }
+	internal IAudioBackend Backend { get; }
 
 	public SoundPlayerService(KyoshinEewViewerConfiguration config, ILogManager logManager)
 	{
@@ -33,6 +34,8 @@ public class SoundPlayerService
 
 		Config = config;
 		Logger = logManager.GetLogger<SoundPlayerService>();
+		// BASS のネイティブが存在しない iOS ではヘッド側が実装を登録している
+		Backend = Locator.Current.GetService<IAudioBackend>() ?? new BassAudioBackend();
 
 		// とりあえず初期化を試みる
 		try
@@ -44,13 +47,10 @@ public class SoundPlayerService
 			//	Logger.LogDebug($"デバイス{i}: {info.Name}");
 			//}
 
-			if (IsAvailable = Bass.Init())
+			if (IsAvailable = Backend.Initialize())
 			{
 				void UpdateVolume()
-				{
-					var volume = Config.Audio.IsMuted ? 0 : Config.Audio.GlobalVolume;
-					Bass.GlobalStreamVolume = (int)(Math.Clamp(volume, 0, 1) * 10000);
-				}
+					=> Backend.SetGlobalVolume(Config.Audio.IsMuted ? 0 : Config.Audio.GlobalVolume);
 
 				Config.Audio.WhenAnyValue(x => x.GlobalVolume)
 					.Subscribe(_ => UpdateVolume());
@@ -59,11 +59,11 @@ public class SoundPlayerService
 				UpdateVolume();
 			}
 			else
-				Logger.LogWarning($"Bass の初期化に失敗しました。 LastError:{Bass.LastError}");
+				Logger.LogWarning($"音声バックエンドの初期化に失敗しました。 LastError:{Backend.LastError}");
 		}
 		catch (Exception ex)
 		{
-			Logger.LogError(ex, "Bass の初期化に失敗しました");
+			Logger.LogError(ex, "音声バックエンドの初期化に失敗しました");
 			IsAvailable = false;
 		}
 		TestSound = RegisterSound(
@@ -82,7 +82,7 @@ public class SoundPlayerService
 	{
 		DisposeItems();
 		if (IsAvailable)
-			Bass.Free();
+			Backend.Dispose();
 	}
 
 	private Dictionary<SoundCategory, List<Sound>> Sounds { get; } = [];
@@ -92,32 +92,32 @@ public class SoundPlayerService
 	{
 		if (!IsAvailable)
 		{
-			Logger.LogWarning($"音声を再生できません。Bass が利用できません。 Path:{path}");
+			Logger.LogWarning($"音声を再生できません。音声バックエンドが利用できません。 Path:{path}");
 			return false;
 		}
 
-		var ch = Bass.CreateStream(path);
-		if (ch == 0)
+		var ch = Backend.CreateChannel(path);
+		if (ch is null)
 		{
-			Logger.LogWarning($"音声ストリームの作成に失敗しました。 LastError:{Bass.LastError} Exists:{File.Exists(path)} Path:{path}");
+			Logger.LogWarning($"音声ストリームの作成に失敗しました。 LastError:{Backend.LastError} Exists:{File.Exists(path)} Path:{path}");
 			return false;
 		}
-		Bass.ChannelSetAttribute(ch, ChannelAttribute.Volume, Math.Clamp(volume, 0, 1));
+		ch.Volume = Math.Clamp(volume, 0, 1);
 
 		var mre = new ManualResetEventSlim(false);
-		Bass.ChannelSetSync(ch, SyncFlags.Onetime | SyncFlags.End, 0, (handle, channel, data, user) =>
+		ch.SetEndCallback(() =>
 		{
-			Bass.StreamFree(ch);
+			ch.Dispose();
 			mre.Set();
 		});
-		if (Bass.ChannelPlay(ch))
+		if (ch.Play())
 		{
 			if (waitToEnd)
 				await Task.Run(mre.Wait);
 			return true;
 		}
-		Logger.LogWarning($"音声の再生開始に失敗しました。 LastError:{Bass.LastError} Path:{path}");
-		Bass.StreamFree(ch);
+		Logger.LogWarning($"音声の再生開始に失敗しました。 LastError:{Backend.LastError} Path:{path}");
+		ch.Dispose();
 		return false;
 	}
 
@@ -184,7 +184,7 @@ public class Sound : IDisposable
 	}
 
 	private string? LoadedFilePath { get; set; }
-	private int? Channel { get; set; }
+	private IAudioChannel? Channel { get; set; }
 
 	private bool IsDisposed { get; set; }
 
@@ -222,7 +222,7 @@ public class Sound : IDisposable
 
 		if (!Service.IsAvailable)
 		{
-			Service.Logger.LogWarning($"音声を再生できません。Bass が利用できません。 Sound:{ParentCategory.Name}/{Name} Path:{filePath}");
+			Service.Logger.LogWarning($"音声を再生できません。音声バックエンドが利用できません。 Sound:{ParentCategory.Name}/{Name} Path:{filePath}");
 			return false;
 		}
 
@@ -238,49 +238,46 @@ public class Sound : IDisposable
 		{
 			if (Channel is { } cachedChannel)
 			{
-				Bass.StreamFree(cachedChannel);
+				cachedChannel.Dispose();
+				Channel = null;
 				LoadedFilePath = null;
 			}
-			var ch = Bass.CreateStream(filePath);
-			if (ch == 0)
+			var ch = Service.Backend.CreateChannel(filePath);
+			if (ch is null)
 			{
-				Service.Logger.LogWarning($"音声ストリームの作成に失敗しました。 LastError:{Bass.LastError} Exists:{File.Exists(filePath)} Sound:{ParentCategory.Name}/{Name} Path:{filePath}");
+				Service.Logger.LogWarning($"音声ストリームの作成に失敗しました。 LastError:{Service.Backend.LastError} Exists:{File.Exists(filePath)} Sound:{ParentCategory.Name}/{Name} Path:{filePath}");
 				return false;
 			}
-			Bass.ChannelSetAttribute(ch, ChannelAttribute.Volume, Math.Clamp(config.Volume, 0, 1));
-			Bass.ChannelSetSync(ch, SyncFlags.Onetime | SyncFlags.End, 0, (handle, channel, data, user) => Bass.StreamFree(ch));
+			ch.Volume = Math.Clamp(config.Volume, 0, 1);
+			ch.SetEndCallback(ch.Dispose);
 
-			if (Bass.ChannelPlay(ch))
+			if (ch.Play())
 				return true;
-			Service.Logger.LogWarning($"音声の再生開始に失敗しました。 LastError:{Bass.LastError} Sound:{ParentCategory.Name}/{Name} Path:{filePath}");
-			Bass.StreamFree(ch);
+			Service.Logger.LogWarning($"音声の再生開始に失敗しました。 LastError:{Service.Backend.LastError} Sound:{ParentCategory.Name}/{Name} Path:{filePath}");
+			ch.Dispose();
 			return false;
 		}
 
-		if (Channel is null or 0 || LoadedFilePath != filePath)
+		if (Channel is null || LoadedFilePath != filePath)
 		{
 			LoadedFilePath = null;
-			if (Channel is { } cachedChannel)
-				Bass.StreamFree(cachedChannel);
-			Channel = Bass.CreateStream(filePath);
-			if (Channel == 0)
+			Channel?.Dispose();
+			Channel = Service.Backend.CreateChannel(filePath);
+			if (Channel is null)
 			{
-				Service.Logger.LogWarning($"音声ストリームの作成に失敗しました。 LastError:{Bass.LastError} Exists:{File.Exists(filePath)} Sound:{ParentCategory.Name}/{Name} Path:{filePath}");
+				Service.Logger.LogWarning($"音声ストリームの作成に失敗しました。 LastError:{Service.Backend.LastError} Exists:{File.Exists(filePath)} Sound:{ParentCategory.Name}/{Name} Path:{filePath}");
 				return false;
 			}
 			LoadedFilePath = filePath;
 		}
 
-		if (Channel is { } c and not 0)
-		{
-			Bass.ChannelSetAttribute(c, ChannelAttribute.Volume, Math.Clamp(config.Volume, 0, 1));
-			if (Bass.ChannelIsActive(c) != PlaybackState.Stopped)
-				Bass.ChannelSetPosition(c, 0);
-			if (Bass.ChannelPlay(c))
-				return true;
-			Service.Logger.LogWarning($"音声の再生開始に失敗しました。 LastError:{Bass.LastError} Sound:{ParentCategory.Name}/{Name} Path:{filePath}");
-			return false;
-		}
+		var c = Channel;
+		c.Volume = Math.Clamp(config.Volume, 0, 1);
+		if (!c.IsStopped)
+			c.Rewind();
+		if (c.Play())
+			return true;
+		Service.Logger.LogWarning($"音声の再生開始に失敗しました。 LastError:{Service.Backend.LastError} Sound:{ParentCategory.Name}/{Name} Path:{filePath}");
 		return false;
 	}
 
@@ -288,7 +285,7 @@ public class Sound : IDisposable
 	{
 		if (Channel is { } i)
 		{
-			Bass.StreamFree(i);
+			i.Dispose();
 			Channel = null;
 			LoadedFilePath = null;
 		}

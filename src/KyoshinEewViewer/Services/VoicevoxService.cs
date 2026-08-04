@@ -1,7 +1,7 @@
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
+using KyoshinEewViewer.Services.Audio;
 using KyoshinEewViewer.Services.Voicevox;
-using ManagedBass;
 using ReactiveUI;
 using Splat;
 using System;
@@ -50,7 +50,7 @@ public class VoicevoxService : ReactiveObject, IDisposable
 	private readonly ConditionalWeakTable<object, CancellationTokenSource> _ownerCts = new();
 	private readonly Lock _ownerCtsLock = new();
 
-	// BASS 中断時のフェードアウト時間 (ms)
+	// 再生中断時のフェードアウト時間 (ms)
 	private const int FadeOutDurationMs = 40;
 
 
@@ -266,7 +266,7 @@ public class VoicevoxService : ReactiveObject, IDisposable
 					nextPrepareIndex++;
 				}
 
-				// 再生（CT が発火したら BASS 即時中断で抜ける）
+				// 再生（CT が発火したら即時中断で抜ける）
 				await PlayInternalAsync(texts[i], volume, waitToEnd: true, ct);
 
 				if (ct.IsCancellationRequested) return;
@@ -314,29 +314,29 @@ public class VoicevoxService : ReactiveObject, IDisposable
 
 		try
 		{
-			var ch = Bass.CreateStream(cachedFilePath);
-			if (ch == 0)
+			var ch = SoundPlayerService.Backend.CreateChannel(cachedFilePath);
+			if (ch is null)
 			{
-				Logger.LogWarning($"CreateStream に失敗しています。 LastError:{Bass.LastError}");
+				Logger.LogWarning($"音声ストリームの作成に失敗しています。 LastError:{SoundPlayerService.Backend.LastError}");
 				return;
 			}
-			Bass.ChannelSetAttribute(ch, ChannelAttribute.Volume, (float)volume);
+			ch.Volume = volume;
 
-			// 自然終了通知用 TCS。BASS の End sync で完了する
+			// 自然終了通知用 TCS。バックエンドの再生完了コールバックで完了する
 			var endTcs = new TaskCompletionSource();
-			Bass.ChannelSetSync(ch, SyncFlags.Onetime | SyncFlags.End, 0, (handle, channel, data, user) => endTcs.TrySetResult());
+			ch.SetEndCallback(() => endTcs.TrySetResult());
 
-			if (!Bass.ChannelPlay(ch))
+			if (!ch.Play())
 			{
-				Logger.LogWarning($"ChannelPlay に失敗しています。 LastError:{Bass.LastError}");
-				Bass.StreamFree(ch);
+				Logger.LogWarning($"音声の再生開始に失敗しています。 LastError:{SoundPlayerService.Backend.LastError}");
+				ch.Dispose();
 				return;
 			}
 
-			// 自然終了かキャンセルのどちらか早い方で BASS リソースを解放する。
+			// 自然終了かキャンセルのどちらか早い方でチャンネルを解放する。
 			// waitToEnd=false でも PlayInternalAsync 終了後に走り続ける必要があるため
 			// バックグラウンドタスクとして起動する。
-			var lifetimeTask = ManageBassLifetimeAsync(ch, endTcs.Task, cancellationToken);
+			var lifetimeTask = ManageChannelLifetimeAsync(ch, endTcs.Task, cancellationToken);
 
 			if (waitToEnd)
 				await lifetimeTask;
@@ -347,7 +347,7 @@ public class VoicevoxService : ReactiveObject, IDisposable
 		}
 	}
 
-	private static async Task ManageBassLifetimeAsync(int ch, Task endTask, CancellationToken cancellationToken)
+	private static async Task ManageChannelLifetimeAsync(IAudioChannel ch, Task endTask, CancellationToken cancellationToken)
 	{
 		try
 		{
@@ -357,14 +357,14 @@ public class VoicevoxService : ReactiveObject, IDisposable
 		catch (OperationCanceledException)
 		{
 			// キャンセル：フェードアウトを開始し、完了想定時刻まで待ってから解放
-			Bass.ChannelSlideAttribute(ch, ChannelAttribute.Volume, 0, FadeOutDurationMs);
+			ch.SlideVolumeToZero(TimeSpan.FromMilliseconds(FadeOutDurationMs));
 			try
 			{
 				await Task.Delay(FadeOutDurationMs + 20, CancellationToken.None);
 			}
 			catch { /* 念のため */ }
 		}
-		Bass.StreamFree(ch);
+		ch.Dispose();
 	}
 
 	public void ClearCache()

@@ -32,6 +32,31 @@ Bundle ID `net.yumnumm.KyoshinEewViewer` 側で `CRITICAL_ALERTS` を有効化�
 
 権限が拒否された場合、Critical だけでなく通常の通知も送られない。
 
+## 音声再生
+
+`ManagedBass` は BASS のネイティブを動的ロードする前提だが、BASS の iOS 版は静的ライブラリしか
+配布されておらず `DllImport("bass")` を解決できない (`DllNotFoundException` になる)。加えて BASS は
+商用利用が有償のため、iOS では OS 標準の AVFoundation を使う。
+
+共有側の `SoundPlayerService` / `VoicevoxService` は `IAudioBackend` 経由で音を鳴らすようにしてあり、
+Splat に実装が登録されていなければ従来どおり BASS を使う。iOS ヘッドだけが
+`IosAudioBackend` (`AVAudioPlayer`) を登録している。
+
+### AVAudioSession
+
+| 設定 | 理由 |
+| --- | --- |
+| カテゴリ `Playback` | 防災通知は消音スイッチやおやすみモードでも鳴らす必要がある。`Ambient` / `SoloAmbient` は消音スイッチで無音になる |
+| オプション `DuckOthers` | 他アプリの再生を止めずに、鳴っている間だけ音量を下げる (`MixWithOthers` を暗黙に含む) |
+| 再生中だけ `SetActive(true)` | ダッキングはセッションのアクティブ化と同時に始まるため、鳴っていない間もアクティブにしておくと他アプリの音量を下げ続けてしまう |
+| 停止時に `NotifyOthersOnDeactivation` | これを付けないと他アプリが音量を戻すきっかけを得られない |
+
+### BASS との差異
+
+- `AVAudioPlayer` は OGG / FLAC を再生できない (WAV / MP3 / AAC / M4A / AIFF / CAF のみ)
+- `AVAudioPlayer.Volume` は 0-1 のみで、BASS のような 1 超の増幅ができない
+- 全体音量に相当する仕組みが無いため、チャンネル音量へ全体音量を掛け込んでいる
+
 ## ビルド
 
 - **`UseInterpreter` が必須**。本体は System.Text.Json / MessagePack / Scriban とリフレクションを
@@ -64,7 +89,6 @@ iOS では `Window` を生成できないため、設定画面とセットアッ
 
 | 機能 | 理由 |
 | --- | --- |
-| 音声再生 | `ManagedBass` に iOS 用ネイティブが無く `DllNotFoundException` になる |
 | シリアル接続 (Qzss) | `System.IO.Ports` のネイティブが無い。USB シリアルも MFi なしでは扱えない |
 | 自動更新 | App Store 配信では自己更新が禁止されている |
 
