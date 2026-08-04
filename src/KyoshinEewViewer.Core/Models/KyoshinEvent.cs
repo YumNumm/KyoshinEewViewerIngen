@@ -14,6 +14,7 @@ public class KyoshinEvent
 	{
 		Id = Guid.NewGuid();
 		CreatedAt = createdAt;
+		UpdatedAt = createdAt;
 		firstPoint.EventedAt = createdAt;
 		firstPoint.InitialEventedAt = createdAt;
 		_points.Add(firstPoint);
@@ -28,9 +29,14 @@ public class KyoshinEvent
 	}
 	public KyoshinEventLevel Level { get; set; }
 	public DateTime CreatedAt { get; }
+	public DateTime UpdatedAt { get; private set; }
+	public DateTime ExpiresAt => _points.Max(point => point.EventedExpireAt);
 	public Location TopLeft { get; }
 	public Location BottomRight { get; }
 	public int PointCount => _points.Count;
+
+	private readonly List<MergedKyoshinEvent> _mergedEvents = [];
+	public IReadOnlyList<MergedKyoshinEvent> MergedEvents => _mergedEvents;
 
 	/// <summary>
 	/// 正式なイベントとして確定しているかどうか
@@ -48,6 +54,7 @@ public class KyoshinEvent
 
 	public void AddPoint(RealtimeObservationPoint point, DateTime time, int expireSeconds)
 	{
+		UpdatedAt = time;
 		var lv = GetLevel(point.LatestIntensity);
 		// 1点のみの超過ではノイズの可能性があるためレベルアップしない
 		// 同じレベル以上の観測点が既に1点以上ある場合のみレベルアップ
@@ -84,8 +91,17 @@ public class KyoshinEvent
 		point.Event = this;
 		_points.Add(point);
 	}
-	public void MergeEvent(KyoshinEvent evt)
+	public void UpdatePointState(RealtimeObservationPoint point, DateTime time)
 	{
+		if (_points.Contains(point))
+			UpdatedAt = time;
+	}
+	public void MergeEvent(KyoshinEvent evt, DateTime mergedAt)
+	{
+		UpdatedAt = mergedAt;
+		AddMergedEvent(evt.Id, mergedAt);
+		foreach (var mergedEvent in evt.MergedEvents)
+			AddMergedEvent(mergedEvent.EventId, mergedEvent.MergedAt);
 		foreach (var p in evt._points)
 			p.Event = this;
 		if (Level < evt.Level)
@@ -110,12 +126,24 @@ public class KyoshinEvent
 			BottomRight.Latitude = evt.BottomRight.Latitude;
 		if (BottomRight.Longitude < evt.BottomRight.Longitude)
 			BottomRight.Longitude = evt.BottomRight.Longitude;
-		_points.AddRange(evt._points);
+		foreach (var point in evt._points)
+		{
+			if (!_points.Contains(point))
+				_points.Add(point);
+		}
 	}
-	public void RemovePoint(RealtimeObservationPoint point)
+
+	private void AddMergedEvent(Guid eventId, DateTime mergedAt)
+	{
+		if (eventId == Id || _mergedEvents.Any(e => e.EventId == eventId))
+			return;
+		_mergedEvents.Add(new MergedKyoshinEvent(eventId, mergedAt));
+	}
+	public void RemovePoint(RealtimeObservationPoint point, DateTime time)
 	{
 		if (!_points.Contains(point))
 			return;
+		UpdatedAt = time;
 		point.Event = null;
 		point.EventedExpireAt = DateTime.MinValue;
 		point.InitialEventedAt = DateTime.MinValue;
@@ -144,6 +172,8 @@ public class KyoshinEvent
 		new SKColor(0xda, 0xa5, 0x20, 200),
 	];
 }
+
+public readonly record struct MergedKyoshinEvent(Guid EventId, DateTime MergedAt);
 
 public enum KyoshinEventLevel
 {

@@ -77,7 +77,12 @@ internal class Program
 				tracing
 					.AddSource("ShakeDetectionProducer")
 					.AddSource("System.Net.Http")
-					.AddAspNetCoreInstrumentation()
+					.AddAspNetCoreInstrumentation(options =>
+					{
+						options.Filter = httpContext =>
+							!httpContext.Request.Path.StartsWithSegments("/health")
+							&& !httpContext.Request.Path.StartsWithSegments("/metrics");
+					})
 					.AddHttpClientInstrumentation();
 
 				if (!string.IsNullOrEmpty(otlpEndpoint))
@@ -97,6 +102,20 @@ internal class Program
 				else
 					metrics.AddConsoleExporter();
 			});
+
+		// /health・/metrics へのリクエストログを抑制
+		builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
+		builder.Logging.AddFilter("Microsoft.AspNetCore.Routing.EndpointMiddleware", LogLevel.Warning);
+
+		// 構造化ログ（Loki取り込み用）
+		builder.Logging.ClearProviders();
+		builder.Logging.AddJsonConsole(options =>
+		{
+			options.JsonWriterOptions = new System.Text.Json.JsonWriterOptions
+			{
+				Indented = false,
+			};
+		});
 
 		// サービス登録
 		builder.Services.AddSingleton<ValkeyStreamProducer>();
@@ -232,22 +251,26 @@ internal class Program
 
 				foreach (var evt in confirmedEvents)
 				{
-					var (shouldSend, changeReason) = eventTracker.ProcessEvent(evt);
-					if (!shouldSend)
-						continue;
-
-					using var sendActivity = ActivitySource.StartActivity("shake_detected.send");
-					sendActivity?.SetTag("event.id", evt.Id.ToString());
-					sendActivity?.SetTag("event.level", evt.Level.ToString());
-					sendActivity?.SetTag("event.change_reason", changeReason.ToString());
-
-					var payload = ShakeDetectedPayload.FromEvent(evt, changeReason, false);
-
+					using var sendActivity = ActivitySource.StartActivity("shake_detection.send");
 					try
 					{
-						await valkeyProducer.ProduceShakeDetectedAsync(payload);
-						logger.LogInformation("揺れ検知イベントを送信しました: {EventId} Level={Level} ChangeReason={ChangeReason}",
-							evt.Id, evt.Level, changeReason);
+						var payload = await ShakeEventPublisher.PublishAsync(
+							eventTracker,
+							evt,
+							time,
+							preparedPayload =>
+							{
+								sendActivity?.SetTag("event.id", evt.Id.ToString());
+								sendActivity?.SetTag("event.level", evt.Level.ToString());
+								sendActivity?.SetTag("event.serial_no", preparedPayload.SerialNo);
+								sendActivity?.SetTag("event.change_reasons", string.Join(',', preparedPayload.ChangeReasons));
+								return valkeyProducer.ProduceShakeDetectedAsync(preparedPayload);
+							});
+						if (payload == null)
+							continue;
+
+						logger.LogInformation("揺れ検知イベントを送信しました: {EventId} SerialNo={SerialNo} Level={Level} ChangeReasons={ChangeReasons}",
+							evt.Id, payload.SerialNo, evt.Level, payload.ChangeReasons);
 					}
 					catch (Exception ex)
 					{
@@ -277,10 +300,11 @@ internal class Program
 		};
 
 		// 起動ログ
-		var valkeyConnectionString = Environment.GetEnvironmentVariable("VALKEY_CONNECTION_STRING") ?? "localhost:6379";
+		var valkeyOptions = ValkeyStreamProducer.CreateConfigurationOptionsFromEnv();
 		var valkeyStreamKey = Environment.GetEnvironmentVariable("VALKEY_STREAM_KEY") ?? "shake-detect-events";
 		logger.LogInformation("ShakeDetectionProducer を起動します");
-		logger.LogInformation("Valkey: {ConnectionString}, StreamKey={StreamKey}", valkeyConnectionString, valkeyStreamKey);
+		logger.LogInformation("Valkey: {Endpoints}, ServiceName={ServiceName}, StreamKey={StreamKey}",
+			string.Join(",", valkeyOptions.EndPoints), valkeyOptions.ServiceName ?? "(なし)", valkeyStreamKey);
 		logger.LogInformation("ヘルスチェック: http://0.0.0.0:{Port}/health", port);
 
 		// タイマー開始

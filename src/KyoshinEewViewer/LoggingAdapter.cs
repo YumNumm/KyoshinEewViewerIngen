@@ -74,9 +74,9 @@ public static class LoggingAdapter
 				return;
 			try
 			{
-				// macOSではログディレクトリを固定、その他のプラットフォームでは設定値を使用
+				// macOS と iOS ではログディレクトリを固定、その他のプラットフォームでは設定値を使用
 				string fullPath;
-				if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+				if (!PlatformDirectories.IsLogDirectoryCustomizable
 #if INTEGRATION_TEST
 					// 結合テストではテストドライバがログを回収できるよう作業ディレクトリ配下へ出力する
 					&& StartupOptions.Current?.SmokeTest != true && StartupOptions.Current?.AutoUpdateTest != true

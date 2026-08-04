@@ -11,7 +11,7 @@ namespace ShakeDetectionProducer;
 /// Valkey Streamで送信するペイロードの基底クラス
 /// </summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
-[JsonDerivedType(typeof(ShakeDetectedPayload), "shake_detected")]
+[JsonDerivedType(typeof(ShakeDetectedPayload), "shake_detection")]
 [JsonDerivedType(typeof(ErrorPayload), "error")]
 public abstract record StreamPayload;
 
@@ -21,26 +21,39 @@ public abstract record StreamPayload;
 public record ShakeDetectedPayload : StreamPayload
 {
 	public required Guid EventId { get; init; }
+	public required int SerialNo { get; init; }
 	public required DateTime CreatedAt { get; init; }
+	public required DateTime UpdatedAt { get; init; }
+	public required DateTime ExpiresAt { get; init; }
 	public required string Level { get; init; }
 	/// <summary>
 	/// 変化理由の配列
 	/// </summary>
 	public required string[] ChangeReasons { get; init; }
-	public required bool IsReplay { get; init; }
+	public required MergedShakeEventPayload[] MergedEvents { get; init; }
 	public required int PointCount { get; init; }
 	public required RegionPayload Region { get; init; }
 	public required ObservationPointPayload[] Points { get; init; }
 
-	public static ShakeDetectedPayload FromEvent(KyoshinEvent evt, EventChangeReason changeReason, bool isReplay)
+	public static ShakeDetectedPayload FromEvent(
+		KyoshinEvent evt,
+		int serialNo,
+		EventChangeReason changeReason)
 	{
 		return new ShakeDetectedPayload
 		{
 			EventId = evt.Id,
+			SerialNo = serialNo,
 			CreatedAt = evt.CreatedAt,
+			UpdatedAt = evt.UpdatedAt,
+			ExpiresAt = evt.ExpiresAt,
 			Level = evt.Level.ToString(),
 			ChangeReasons = GetChangeReasonStrings(changeReason),
-			IsReplay = isReplay,
+			MergedEvents = evt.MergedEvents.Select(e => new MergedShakeEventPayload
+			{
+				EventId = e.EventId,
+				MergedAt = e.MergedAt,
+			}).ToArray(),
 			PointCount = evt.PointCount,
 			Region = new RegionPayload
 			{
@@ -85,8 +98,23 @@ public record ShakeDetectedPayload : StreamPayload
 			reasons.Add("region_changed");
 		if (reason.HasFlag(EventChangeReason.PointsChanged))
 			reasons.Add("points_changed");
+		if (reason.HasFlag(EventChangeReason.PointStateChanged))
+			reasons.Add("point_state_changed");
+		if (reason.HasFlag(EventChangeReason.ExpiresAtExtended))
+			reasons.Add("expires_at_extended");
+		if (reason.HasFlag(EventChangeReason.EventsMerged))
+			reasons.Add("events_merged");
 		return reasons.ToArray();
 	}
+}
+
+/// <summary>
+/// 統合済み揺れ検知イベント
+/// </summary>
+public record MergedShakeEventPayload
+{
+	public required Guid EventId { get; init; }
+	public required DateTime MergedAt { get; init; }
 }
 
 /// <summary>

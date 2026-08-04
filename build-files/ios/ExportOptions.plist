@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+	xcodebuild -exportArchive に渡すエクスポート設定。
+	署名は Cloud-managed certificates に任せるため、証明書 (.p12) やプロビジョニング
+	プロファイルをリポジトリ / Secrets に持たない。signingStyle=automatic と
+	-allowProvisioningUpdates + App Store Connect API キーの組み合わせで、
+	必要な証明書とプロファイルを Apple 側に自動発行させる。
+	詳細は scripts/publish-testflight-ios.sh を参照。
+-->
+<plist version="1.0">
+<dict>
+	<!-- ipa をローカルへ書き出すだけ。アップロードは asc CLI が行う -->
+	<key>destination</key>
+	<string>export</string>
+	<!-- Xcode 15.3 以降の名称。旧称は app-store -->
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>teamID</key>
+	<string>CPL7H8SHVM</string>
+	<!--
+		ビルド番号は asc builds next-build-number で決めて CFBundleVersion に焼き込み、
+		同じ値を asc builds upload / builds wait にも渡す。Xcode 側に管理させると
+		番号が食い違って builds wait がビルドを見つけられなくなるため false にする。
+		(destination=export では実質的に無効な設定だが、意図を明示しておく)
+	-->
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
+	<key>stripSwiftSymbols</key>
+	<true/>
+	<key>uploadSymbols</key>
+	<true/>
+</dict>
+</plist>

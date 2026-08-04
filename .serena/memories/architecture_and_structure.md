@@ -1,6 +1,7 @@
 # Architecture and Project Structure
 
 ## Series Architecture
+
 Plugin-based modular architecture separating monitoring functions:
 
 - **KyoshinMonitor**: Strong motion network monitoring and earthquake early warnings
@@ -12,6 +13,7 @@ Plugin-based modular architecture separating monitoring functions:
 - **Qzss**: Satellite disaster crisis management reporting
 
 Each Series structure (`src/KyoshinEewViewer/Series/[SeriesName]/`):
+
 - View (AXAML/ViewModel)
 - Layer (Map rendering)
 - Services (Data processing)
@@ -23,6 +25,7 @@ Each Series structure (`src/KyoshinEewViewer/Series/[SeriesName]/`):
 ## Project Structure
 
 ### Main Projects
+
 - `KyoshinEewViewer`: Main application (Series, UI, services)
 - `KyoshinEewViewer.Desktop`: Desktop version entry point
 - `KyoshinEewViewer.Core`: Shared models, themes, utilities
@@ -30,11 +33,13 @@ Each Series structure (`src/KyoshinEewViewer/Series/[SeriesName]/`):
 - `KyoshinEewViewer.CustomControl`: Custom UI controls
 
 ### Parser Libraries
+
 - `KyoshinEewViewer.JmaXmlParser`: JMA XML parsing
 - `KyoshinEewViewer.DCReportParser`: QZSS disaster crisis management report parsing
 - `KyoshinEewViewer.CsvSourceGenerator`: CSV dictionary code generation
 
 ### Test Projects
+
 - `KyoshinEewViewer.Tests`: Template system tests
 - `KyoshinEewViewer.JmaXmlParser.Tests`: XML parsing validation
 - `KyoshinEewViewer.DCReportParser.Tests`: QZSS report parsing validation

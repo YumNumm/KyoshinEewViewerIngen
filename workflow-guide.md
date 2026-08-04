@@ -52,11 +52,11 @@
 
 テスト実行以外では何も実行されないトリガーです。
 
-| 名前        | 型　       | 解説　            | 例　                                     |
-|:----------|:---------|:---------------|:---------------------------------------|
-| EventType | string   | イベント区別のための固定値  | `Test`                                 |
-| EventId   | Guid     | イベント区別のためのUUID | `a5142d28-8c81-4179-acf7-1b2116791a10` |
-| IsTest    | bool     | テストイベントかどうか    | `true`                                 |
+| 名前      | 型　     | 解説　                     | 例　                                   |
+| :-------- | :------- | :------------------------- | :------------------------------------- |
+| EventType | string   | イベント区別のための固定値 | `Test`                                 |
+| EventId   | Guid     | イベント区別のためのUUID   | `a5142d28-8c81-4179-acf7-1b2116791a10` |
+| IsTest    | bool     | テストイベントかどうか     | `true`                                 |
 | Time      | DateTime | テストボタンを押した時刻   | `2024-04-25T06:36:06.4406939+09:00`    |
 
 ### すべて
@@ -68,35 +68,37 @@
 
 アプリ起動時に1回だけ実行されるトリガーです。
 
-| 名前        | 型      | 解説             | 例                                      |
-|:----------|:-------|:---------------|:---------------------------------------|
-| EventType | string | イベント区別のための固定値  | `ApplicationStartup`                   |
-| EventId   | Guid   | イベント区別のためのUUID | `a5142d28-8c81-4179-acf7-1b2116791a10` |
-| IsTest    | bool   | テストイベントかどうか    | `true`                                 |
+| 名前      | 型     | 解説                       | 例                                     |
+| :-------- | :----- | :------------------------- | :------------------------------------- |
+| EventType | string | イベント区別のための固定値 | `ApplicationStartup`                   |
+| EventId   | Guid   | イベント区別のためのUUID   | `a5142d28-8c81-4179-acf7-1b2116791a10` |
+| IsTest    | bool   | テストイベントかどうか     | `true`                                 |
 
 ### アプリケーションの更新存在時
 
 アプリの更新が存在するときにトリガーされます。
 
 > [!IMPORTANT]
+>
 > - `定期的に更新情報をチェックする` が有効でない場合は動作しません。
 
 繰り返しトリガーする が有効の場合、アップデートチェックの度(おおよそ100分ごと)にアップデートが存在する場合トリガーされます。  
 無効の場合アップデートが見つかった時に1回だけトリガーされます。
 
-| 名前             | 型      | 解説                 | 例                                      |
-|:---------------|:-------|:-------------------|:---------------------------------------|
-| EventType      | string | イベント区別のための固定値      | `ApplicationStartup`                   |
-| EventId        | Guid   | イベント区別のためのUUID     | `a5142d28-8c81-4179-acf7-1b2116791a10` |
-| IsTest         | bool   | テストイベントかどうか        | `true`                                 |
-| IsContinuous   | bool   | アップデート存在状態が継続しているか | `true`                                 |
-| LatestVersion  | string | 最新のバージョン           | `v0.18.8`                              |
+| 名前          | 型     | 解説                                 | 例                                     |
+| :------------ | :----- | :----------------------------------- | :------------------------------------- |
+| EventType     | string | イベント区別のための固定値           | `ApplicationStartup`                   |
+| EventId       | Guid   | イベント区別のためのUUID             | `a5142d28-8c81-4179-acf7-1b2116791a10` |
+| IsTest        | bool   | テストイベントかどうか               | `true`                                 |
+| IsContinuous  | bool   | アップデート存在状態が継続しているか | `true`                                 |
+| LatestVersion | string | 最新のバージョン                     | `v0.18.8`                              |
 
 ### (強震モニタ)揺れ検知
 
 強震モニタタブで揺れを検知したときのトリガーです。
 
 > [!IMPORTANT]
+>
 > - 強震モニタ タブが表示されていない場合は動作しません。
 > - かつ、揺れの検出を有効にする オプションが有効でない場合も動作しません。
 
@@ -105,55 +107,56 @@
 
 #### データモデル
 
-|名前|型|解説|例|
-|:--|:--|:--|:--|
-|EventType|string|イベント区別のための固定値|`KyoshinShakeDetected`|
-|EventId|Guid|イベント区別のためのUUID|`a5142d28-8c81-4179-acf7-1b2116791a10`|
-|IsTest|bool|テストイベントかどうか|`true`|
-|EventedAt|DateTime|イベントが発生した強震モニタ上の時刻|`2024-04-25T06:36:06.4406939+09:00`|
-|FirstEventedAt|DateTime|イベントが初めて発生した強震モニタ上の時刻|`2024-04-25T06:36:06.4406939+09:00`|
-|KyoshinEventId|Guid|**揺れ検知イベント**区別のためのUUID|`a5142d28-8c81-4179-acf7-1b2116791a10`|
-|Level|KyoshinEventLevel|イベントの揺れの強さ|`weak`|
-|Regions|string[]|イベントに含まれている都道府県名一覧|`["東京都", "神奈川県"]`|
-|RegionDetails|ShakeDetectedRegion[]|最高レベルを検出した地域情報（階層構造）||
-|IsReplay|bool|リプレイ中(タイムシフト再生など)か|`false`|
-|IsRegionExpanded|bool|地域 (Region) が拡大したイベントかどうか|`false`|
-|IsSubRegionExpanded|bool|サブ地域 (Region+SubRegion) が拡大したイベントかどうか|`false`|
+| 名前                | 型                    | 解説                                                   | 例                                     |
+| :------------------ | :-------------------- | :----------------------------------------------------- | :------------------------------------- |
+| EventType           | string                | イベント区別のための固定値                             | `KyoshinShakeDetected`                 |
+| EventId             | Guid                  | イベント区別のためのUUID                               | `a5142d28-8c81-4179-acf7-1b2116791a10` |
+| IsTest              | bool                  | テストイベントかどうか                                 | `true`                                 |
+| EventedAt           | DateTime              | イベントが発生した強震モニタ上の時刻                   | `2024-04-25T06:36:06.4406939+09:00`    |
+| FirstEventedAt      | DateTime              | イベントが初めて発生した強震モニタ上の時刻             | `2024-04-25T06:36:06.4406939+09:00`    |
+| KyoshinEventId      | Guid                  | **揺れ検知イベント**区別のためのUUID                   | `a5142d28-8c81-4179-acf7-1b2116791a10` |
+| Level               | KyoshinEventLevel     | イベントの揺れの強さ                                   | `weak`                                 |
+| Regions             | string[]              | イベントに含まれている都道府県名一覧                   | `["東京都", "神奈川県"]`               |
+| RegionDetails       | ShakeDetectedRegion[] | 最高レベルを検出した地域情報（階層構造）               |                                        |
+| IsReplay            | bool                  | リプレイ中(タイムシフト再生など)か                     | `false`                                |
+| IsRegionExpanded    | bool                  | 地域 (Region) が拡大したイベントかどうか               | `false`                                |
+| IsSubRegionExpanded | bool                  | サブ地域 (Region+SubRegion) が拡大したイベントかどうか | `false`                                |
 
 #### ShakeDetectedRegion
 
-|名前|型|解説|例|
-|:--|:--|:--|:--|
-|Name|string|都道府県名|`石川県`|
-|IsFullRegion|bool|検知済みサブ地域が地域 (Region) 全域を示しているかどうか|`true`|
-|SubRegions|string[]|検知したサブ地域名の配列|`["能登", "加賀"]`|
+| 名前         | 型       | 解説                                                     | 例                 |
+| :----------- | :------- | :------------------------------------------------------- | :----------------- |
+| Name         | string   | 都道府県名                                               | `石川県`           |
+| IsFullRegion | bool     | 検知済みサブ地域が地域 (Region) 全域を示しているかどうか | `true`             |
+| SubRegions   | string[] | 検知したサブ地域名の配列                                 | `["能登", "加賀"]` |
 
 #### KyoshinEventLevel
 
 Jsonの場合先頭は小文字になります。
 
-|名前|揺れの強さ|
-|:--|:--|
-|`Weaker`|微弱な揺れ|
-|`Weak`|弱い揺れ(震度1未満)|
-|`Medium`|揺れ(震度1以上)|
-|`Strong`|強い揺れ(震度3程度以上)|
-|`Stronger`|非常に強い揺れ(震度5弱程度以上)|
+| 名前       | 揺れの強さ                      |
+| :--------- | :------------------------------ |
+| `Weaker`   | 微弱な揺れ                      |
+| `Weak`     | 弱い揺れ(震度1未満)             |
+| `Medium`   | 揺れ(震度1以上)                 |
+| `Strong`   | 強い揺れ(震度3程度以上)         |
+| `Stronger` | 非常に強い揺れ(震度5弱程度以上) |
 
 ### (強震モニタ)緊急地震速報
 
 強震モニタタブで緊急地震速報を受信したときのトリガーです。
 
 > [!IMPORTANT]
+>
 > - 強震モニタ タブが表示されていない場合は動作しません。
 > - 緊急地震速報 設定の `詳細な情報を表示する` が無効になっている場合、UI 上での表示条件に合わせて一部の情報を受信してもワークフローがトリガーされません。
 >   受信したすべての緊急地震速報でトリガーさせたい場合は、 `詳細な情報を表示する` を有効にしてください。
 > - 仮定震源要素の場合、マグニチュード1.0 深さ10km の固定値となり、座標も最初に検知した地震計の座標となるためご注意ください。
 
 > [!CAUTION]
+>
 > - **強震モニタが配信している緊急地震速報はあくまで強震モニタと合わせて表示するための情報であり、Webhookなどを使用して外部で単体の情報として扱うことは[強震モニタの利用条件](https://www.kyoshin.bosai.go.jp/kyoshin/docs/new_kyoshinmonitor.shtml#kmoni_useterms)から逸脱した行為となります。**  
 >   あくまでアプリの挙動のカスタマイズとして利用し、**情報を単体で利用しないでください**。
->
 > - 個人向けのプラン契約での DM-D.S.S から受信した緊急地震速報の再配信は禁止となっています。  
 >   詳細は DM-D.S.S 公式の[再配信ポリシー](https://dmdata.jp/docs/eew/#%E5%86%8D%E9%85%8D%E4%BF%A1%E3%83%9D%E3%83%AA%E3%82%B7%E3%83%BC)をご確認ください。
 >
@@ -222,87 +225,88 @@ Jsonの場合先頭は小文字になります。
 
 ### データモデル
 
-|名前|型|解説|例|
-|:--|:--|:--|:--|
-|EventType|string|イベント区別のための固定値|`Eew`|
-|EventId|Guid|イベント区別のためのUUID|`a5142d28-8c81-4179-acf7-1b2116791a10`|
-|IsTest|bool|テストイベントかどうか|`true`|
-|EventSubType|EewEventType|イベントの条件区別|`New`|
-|EewId|string|緊急地震速報のイベントID|`20240430010203`|
-|SerialNo|int|緊急地震速報の報数|`1`|
-|OccurrenceAt|DateTime|地震の推定発生時刻|`2024-04-25T06:36:06.4406939+09:00`|
-|EewSource|string|受信元|`強震モニタ`|
-|IsTrueCancelled|bool|キャンセルであることが確定しているか<br>強震モニタ上でキャンセルもしくは受信範囲外とみなした場合は false|`true`|
-|Intensity|JmaIntensity|最大震度|`Int6Upper`|
-|IntensityLongName|string|最大震度の日本語長形式|`震度6強`|
-|IsIntensityOver|bool|最大震度が上記の震度程度以上かどうか|`true`|
-|EpicenterPlaceName|string|震央地名|`石川県能登地方`|
-|EpicenterLocation|Location|震央座標||
-|Magnitude|float?|マグニチュード<br>データがない場合は null|`3.5`|
-|Depth|int|震源の深さ(km)|`10`|
-|IsTemporaryEpicenter|bool|仮定震源要素か|`false`|
-|IsWarning|bool|警報状態か|`false`|
-|WarningAreaCodes|int[]|警報地域コードの配列|`[999]`|
-|WarningAreaNames|string[]|警報地域名の配列|`["石川県"]`|
-|IsFinal|bool|最終報か|`false`|
-|IsCancelled|bool|キャンセル報か|`false`|
-|IsReplay|bool|リプレイ中(タイムシフト再生など)か|`false`|
+| 名前                 | 型           | 解説                                                                                                     | 例                                     |
+| :------------------- | :----------- | :------------------------------------------------------------------------------------------------------- | :------------------------------------- |
+| EventType            | string       | イベント区別のための固定値                                                                               | `Eew`                                  |
+| EventId              | Guid         | イベント区別のためのUUID                                                                                 | `a5142d28-8c81-4179-acf7-1b2116791a10` |
+| IsTest               | bool         | テストイベントかどうか                                                                                   | `true`                                 |
+| EventSubType         | EewEventType | イベントの条件区別                                                                                       | `New`                                  |
+| EewId                | string       | 緊急地震速報のイベントID                                                                                 | `20240430010203`                       |
+| SerialNo             | int          | 緊急地震速報の報数                                                                                       | `1`                                    |
+| OccurrenceAt         | DateTime     | 地震の推定発生時刻                                                                                       | `2024-04-25T06:36:06.4406939+09:00`    |
+| EewSource            | string       | 受信元                                                                                                   | `強震モニタ`                           |
+| IsTrueCancelled      | bool         | キャンセルであることが確定しているか<br>強震モニタ上でキャンセルもしくは受信範囲外とみなした場合は false | `true`                                 |
+| Intensity            | JmaIntensity | 最大震度                                                                                                 | `Int6Upper`                            |
+| IntensityLongName    | string       | 最大震度の日本語長形式                                                                                   | `震度6強`                              |
+| IsIntensityOver      | bool         | 最大震度が上記の震度程度以上かどうか                                                                     | `true`                                 |
+| EpicenterPlaceName   | string       | 震央地名                                                                                                 | `石川県能登地方`                       |
+| EpicenterLocation    | Location     | 震央座標                                                                                                 |                                        |
+| Magnitude            | float?       | マグニチュード<br>データがない場合は null                                                                | `3.5`                                  |
+| Depth                | int          | 震源の深さ(km)                                                                                           | `10`                                   |
+| IsTemporaryEpicenter | bool         | 仮定震源要素か                                                                                           | `false`                                |
+| IsWarning            | bool         | 警報状態か                                                                                               | `false`                                |
+| WarningAreaCodes     | int[]        | 警報地域コードの配列                                                                                     | `[999]`                                |
+| WarningAreaNames     | string[]     | 警報地域名の配列                                                                                         | `["石川県"]`                           |
+| IsFinal              | bool         | 最終報か                                                                                                 | `false`                                |
+| IsCancelled          | bool         | キャンセル報か                                                                                           | `false`                                |
+| IsReplay             | bool         | リプレイ中(タイムシフト再生など)か                                                                       | `false`                                |
 
 ### EewEventType
 
 Jsonの場合先頭は小文字になります。
 
-|名前|サブタイプ|
-|:--|:--|
-|`New`|新規発表|
-|`UpdateNewSerial`|続報発表|
-|`UpdateWithMoreAccurate`|より精度の高い情報ソースからの情報|
-|`Final`|最終報|
-|`Cancel`|キャンセル報|
-|`NewWarning`|警報新規発表|
-|`UpdateWarning`|警報続報発表|
-|`CancelWarning`|警報キャンセル|
-|`WarningLevelReached`|警報レベル到達|
-|`IncreaseMaxIntensity`|予想最大震度上昇|
-|`DecreaseMaxIntensity`|予想最大震度低下|
+| 名前                     | サブタイプ                         |
+| :----------------------- | :--------------------------------- |
+| `New`                    | 新規発表                           |
+| `UpdateNewSerial`        | 続報発表                           |
+| `UpdateWithMoreAccurate` | より精度の高い情報ソースからの情報 |
+| `Final`                  | 最終報                             |
+| `Cancel`                 | キャンセル報                       |
+| `NewWarning`             | 警報新規発表                       |
+| `UpdateWarning`          | 警報続報発表                       |
+| `CancelWarning`          | 警報キャンセル                     |
+| `WarningLevelReached`    | 警報レベル到達                     |
+| `IncreaseMaxIntensity`   | 予想最大震度上昇                   |
+| `DecreaseMaxIntensity`   | 予想最大震度低下                   |
 
 ### JmaIntensity
 
 Jsonの場合先頭は小文字になります。
 
-|名前|震度|
-|:--|:--|
-|`Unknown`|不明|
-|`Int0`|震度0|
-|`Int1`|震度1|
-|`Int2`|震度2|
-|`Int3`|震度3|
-|`Int4`|震度4|
-|`Int5Lower`|震度5弱|
-|`Int5Upper`|震度5強|
-|`Int6Lower`|震度6弱|
-|`Int6Upper`|震度6強|
-|`Int7`|震度7|
+| 名前        | 震度    |
+| :---------- | :------ |
+| `Unknown`   | 不明    |
+| `Int0`      | 震度0   |
+| `Int1`      | 震度1   |
+| `Int2`      | 震度2   |
+| `Int3`      | 震度3   |
+| `Int4`      | 震度4   |
+| `Int5Lower` | 震度5弱 |
+| `Int5Upper` | 震度5強 |
+| `Int6Lower` | 震度6弱 |
+| `Int6Upper` | 震度6強 |
+| `Int7`      | 震度7   |
 
 ### Location
 
-|名前|型|解説|
-|:--|:--|:--|
-|Latitude|float|緯度|
-|Longitude|float|経度|
+| 名前      | 型    | 解説 |
+| :-------- | :---- | :--- |
+| Latitude  | float | 緯度 |
+| Longitude | float | 経度 |
 
 ### (地震情報)地震情報受信
 
 地震情報の受信･更新時にトリガーされます。
 
 - `情報受信時` は情報の有無にかかわらず受信した時点でトリガーされます。
-    - 各情報種別のチェックボックスで切り替えることができます。
-    - 例えば、震度速報のみを受信したい場合は、`震度速報` 以外のチェックを外してください。
+  - 各情報種別のチェックボックスで切り替えることができます。
+  - 例えば、震度速報のみを受信したい場合は、`震度速報` 以外のチェックを外してください。
 - `最大震度変更時` は新規に受信したときと、最大震度が変化した際にトリガーされます。
-    - `震度が上昇したときのみ` を有効にすると、震度が下がった場合や最大震度が変わらなかった場合トリガーされません。
-    - 長周期地震動階級は考慮されません。
+  - `震度が上昇したときのみ` を有効にすると、震度が下がった場合や最大震度が変わらなかった場合トリガーされません。
+  - 長周期地震動階級は考慮されません。
 
 > [!IMPORTANT]
+>
 > - 地震情報 タブが表示されていない場合は動作しません。
 > - `Comment` は将来的に仕様が変更される可能性があります。
 > - 内部構造の都合のため、観測地点の情報は現状ありません。要望がありましたらお伝えください。
@@ -315,66 +319,66 @@ Jsonの場合先頭は小文字になります。
 
 以下の情報種別を個別に有効/無効にすることができます。
 
-| 情報種別 | 解説 |
-|:--|:--|
-| 震度速報 | 震度速報の受信時 |
-| 震源に関する情報 | 震源のみ報の受信時 |
-| 震源・震度に関する情報 | 詳細な震源・震度情報の受信時 |
+| 情報種別                           | 解説                                       |
+| :--------------------------------- | :----------------------------------------- |
+| 震度速報                           | 震度速報の受信時                           |
+| 震源に関する情報                   | 震源のみ報の受信時                         |
+| 震源・震度に関する情報             | 詳細な震源・震度情報の受信時               |
 | 顕著な地震の震源要素更新のお知らせ | 気象庁の記者会見などに伴う震源要素の更新時 |
-| 津波警報・注意報・予報 | 地震に伴う津波情報の受信時 |
-| 長周期地震動に関する観測情報 | 長周期地震動情報の受信時 |
+| 津波警報・注意報・予報             | 地震に伴う津波情報の受信時                 |
+| 長周期地震動に関する観測情報       | 長周期地震動情報の受信時                   |
 
 ### データモデル
 
-|名前|型|解説|例|
-|:--|:--|:--|:--|
-|EventType|string|イベント区別のための固定値|`EarthquakeInformation`|
-|EventId|Guid|イベント区別のためのUUID|`a5142d28-8c81-4179-acf7-1b2116791a10`|
-|IsTest|bool|テストイベントかどうか|`true`|
-|UpdatedAt|DateTime|地震情報の更新時刻|`2024-04-25T06:36:06`|
-|LatestInformationName|string|最後に受信した地震情報の名前|`震度速報` `震源に関する情報` `震源・震度に関する情報` `顕著な地震の震源要素更新のお知らせ` `津波警報・注意報・予報a` `長周期地震動に関する観測情報`|
-|EarthquakeId|string|地震情報のID|`20240425063606`|
-|IsTrainingOrTest|bool|訓練かテストか|`false`|
-|DetectedAt|DateTime?|揺れの検知時刻 震源情報が存在しない場合のみ|`2024-04-25T06:36:06`|
-|MaxIntensity|JmaIntensity|最大震度|`int3`|
-|MaxIntensityLongName|string|最大震度の日本語長形式|`震度3`|
-|PreviousMaxIntensity|JmaIntensity?|前回の最大震度 初回の場合は `null`|`int2`|
-|MaxLpgmIntensity|LpgmIntensity?|最大長周期地震動階級 未受信の場合は `null`|`lpgmInt1`|
-|Hypocenter|EarthquakeInformationEventHypocenter?|震源情報 震度速報など、存在しない場合は `null`||
-|Comment|string|電文のコメント|`この地震による津波の心配はありません。`|
-|FreeFormComment|string|電文の自由記述のコメント||
-|IsCancelled|bool|取消情報か|`false`|
-|IsHypocenterOnly|bool|震源のみ報か|`false`|
-|IsDetailIntensityApplied|bool|詳細震度情報が適用されているか|`true`|
-|IsVolcano|bool|大規模な噴火情報か|`true`|
-|VolcanoName|string?|噴火名 上手く抽出できないことがあります|`レウォトビ火山`|
+| 名前                     | 型                                    | 解説                                           | 例                                                                                                                                                   |
+| :----------------------- | :------------------------------------ | :--------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EventType                | string                                | イベント区別のための固定値                     | `EarthquakeInformation`                                                                                                                              |
+| EventId                  | Guid                                  | イベント区別のためのUUID                       | `a5142d28-8c81-4179-acf7-1b2116791a10`                                                                                                               |
+| IsTest                   | bool                                  | テストイベントかどうか                         | `true`                                                                                                                                               |
+| UpdatedAt                | DateTime                              | 地震情報の更新時刻                             | `2024-04-25T06:36:06`                                                                                                                                |
+| LatestInformationName    | string                                | 最後に受信した地震情報の名前                   | `震度速報` `震源に関する情報` `震源・震度に関する情報` `顕著な地震の震源要素更新のお知らせ` `津波警報・注意報・予報a` `長周期地震動に関する観測情報` |
+| EarthquakeId             | string                                | 地震情報のID                                   | `20240425063606`                                                                                                                                     |
+| IsTrainingOrTest         | bool                                  | 訓練かテストか                                 | `false`                                                                                                                                              |
+| DetectedAt               | DateTime?                             | 揺れの検知時刻 震源情報が存在しない場合のみ    | `2024-04-25T06:36:06`                                                                                                                                |
+| MaxIntensity             | JmaIntensity                          | 最大震度                                       | `int3`                                                                                                                                               |
+| MaxIntensityLongName     | string                                | 最大震度の日本語長形式                         | `震度3`                                                                                                                                              |
+| PreviousMaxIntensity     | JmaIntensity?                         | 前回の最大震度 初回の場合は `null`             | `int2`                                                                                                                                               |
+| MaxLpgmIntensity         | LpgmIntensity?                        | 最大長周期地震動階級 未受信の場合は `null`     | `lpgmInt1`                                                                                                                                           |
+| Hypocenter               | EarthquakeInformationEventHypocenter? | 震源情報 震度速報など、存在しない場合は `null` |                                                                                                                                                      |
+| Comment                  | string                                | 電文のコメント                                 | `この地震による津波の心配はありません。`                                                                                                             |
+| FreeFormComment          | string                                | 電文の自由記述のコメント                       |                                                                                                                                                      |
+| IsCancelled              | bool                                  | 取消情報か                                     | `false`                                                                                                                                              |
+| IsHypocenterOnly         | bool                                  | 震源のみ報か                                   | `false`                                                                                                                                              |
+| IsDetailIntensityApplied | bool                                  | 詳細震度情報が適用されているか                 | `true`                                                                                                                                               |
+| IsVolcano                | bool                                  | 大規模な噴火情報か                             | `true`                                                                                                                                               |
+| VolcanoName              | string?                               | 噴火名 上手く抽出できないことがあります        | `レウォトビ火山`                                                                                                                                     |
 
 ### EarthquakeInformationEventHypocenter
 
-|名前|型|解説|
-|:--|:--|:--|
-|OccurrenceAt|DateTime|地震の発生時刻|
-|PlaceName|string|震央地名|
-|Location|Location|震央座標|
-|Magnitude|float|マグニチュード|
-|MagnitudeAlternativeText|string?|数値で規模が表せない場合の代替テキスト|
-|Depth|int|震源の深さ(km)|
-|IsNoDepthData|bool|深さデータがないか|
-|IsVeryShallow|bool|ごく浅い震源か|
-|IsForeign|bool|遠地地震か|
+| 名前                     | 型       | 解説                                   |
+| :----------------------- | :------- | :------------------------------------- |
+| OccurrenceAt             | DateTime | 地震の発生時刻                         |
+| PlaceName                | string   | 震央地名                               |
+| Location                 | Location | 震央座標                               |
+| Magnitude                | float    | マグニチュード                         |
+| MagnitudeAlternativeText | string?  | 数値で規模が表せない場合の代替テキスト |
+| Depth                    | int      | 震源の深さ(km)                         |
+| IsNoDepthData            | bool     | 深さデータがないか                     |
+| IsVeryShallow            | bool     | ごく浅い震源か                         |
+| IsForeign                | bool     | 遠地地震か                             |
 
 ### LpgmIntensity
 
 Jsonの場合先頭は小文字になります。
 
-|名前|長周期地震動階級|
-|:--|:--|
-|`Unknown`|不明|
-|`LpgmInt0`|階級0|
-|`LpgmInt1`|階級1|
-|`LpgmInt2`|階級2|
-|`LpgmInt3`|階級3|
-|`LpgmInt4`|階級4|
+| 名前       | 長周期地震動階級 |
+| :--------- | :--------------- |
+| `Unknown`  | 不明             |
+| `LpgmInt0` | 階級0            |
+| `LpgmInt1` | 階級1            |
+| `LpgmInt2` | 階級2            |
+| `LpgmInt3` | 階級3            |
+| `LpgmInt4` | 階級4            |
 
 ### (津波情報)津波情報更新時
 
@@ -395,45 +399,46 @@ Jsonの場合先頭は小文字になります。
   - 観測値が更新されたときなど、上記以外の更新時にトリガーされます。
 
 > [!IMPORTANT]
+>
 > - 津波情報 タブが表示されていない場合は動作しません。
 > - `TsunamiInfo` は表示のためのモデルをそのまま流用しているため将来的に仕様が変更されます。
 > - 内部構造の都合のため、観測高が文字列であるなどの制約があります。要望がありましたらお伝えください。
 
 ### データモデル
 
-|名前|型|解説|例|
-|:--|:--|:--|:--|
-|EventType|string|イベント区別のための固定値|`TsunamiInformation`|
-|EventId|Guid|イベント区別のためのUUID|`a5142d28-8c81-4179-acf7-1b2116791a10`|
-|IsTest|bool|テストイベントかどうか|`true`|
-|TsunamiInfo|TsunamiInfo|津波情報のデータ||
-|Level|TsunamiLevel|津波警報の種別|`Warning`|
-|PreviousLevel|TsunamiLevel?|前回の津波警報の種別|`Advisory`|
+| 名前          | 型            | 解説                       | 例                                     |
+| :------------ | :------------ | :------------------------- | :------------------------------------- |
+| EventType     | string        | イベント区別のための固定値 | `TsunamiInformation`                   |
+| EventId       | Guid          | イベント区別のためのUUID   | `a5142d28-8c81-4179-acf7-1b2116791a10` |
+| IsTest        | bool          | テストイベントかどうか     | `true`                                 |
+| TsunamiInfo   | TsunamiInfo   | 津波情報のデータ           |                                        |
+| Level         | TsunamiLevel  | 津波警報の種別             | `Warning`                              |
+| PreviousLevel | TsunamiLevel? | 前回の津波警報の種別       | `Advisory`                             |
 
 ### TsunamiInfo
 
-|名前|型|解説|
-|:--|:--|:--|
-|EventId|string|津波情報のID|
-|SpecialState|string|電文の状態(訓練/試験)|
-|ReportedAt|DateTime|津波情報の受信時刻|
-|ExpireAt|DateTime?|津波予報の有効期限(津波予報でないときは `null`)|
-|NoTsunamiAreas|TsunamiWarningArea[]?|津波の心配がない地域の情報(観測情報のみ存在する場合)|
-|ForecastAreas|TsunamiWarningArea[]?|予報地域|
-|AdvisoryAreas|TsunamiWarningArea[]?|注意報地域|
-|WarningAreas|TsunamiWarningArea[]?|警報地域|
-|MajorWarningAreas|TsunamiWarningArea[]?|大津波警報地域|
+| 名前              | 型                    | 解説                                                 |
+| :---------------- | :-------------------- | :--------------------------------------------------- |
+| EventId           | string                | 津波情報のID                                         |
+| SpecialState      | string                | 電文の状態(訓練/試験)                                |
+| ReportedAt        | DateTime              | 津波情報の受信時刻                                   |
+| ExpireAt          | DateTime?             | 津波予報の有効期限(津波予報でないときは `null`)      |
+| NoTsunamiAreas    | TsunamiWarningArea[]? | 津波の心配がない地域の情報(観測情報のみ存在する場合) |
+| ForecastAreas     | TsunamiWarningArea[]? | 予報地域                                             |
+| AdvisoryAreas     | TsunamiWarningArea[]? | 注意報地域                                           |
+| WarningAreas      | TsunamiWarningArea[]? | 警報地域                                             |
+| MajorWarningAreas | TsunamiWarningArea[]? | 大津波警報地域                                       |
 
 ### TsunamiWarningArea
 
-|名前|型|解説|
-|:--|:--|:--|
-|Code|int|地域コード|
-|Name|string|地域名|
-|Height|string|予想高|
-|State|string|到達状況|
-|ArrivalTime|DateTime|内部でのソートに利用する到達時刻|
-|Stations|TsunamiStation[]?|観測地点の情報|
+| 名前        | 型                | 解説                             |
+| :---------- | :---------------- | :------------------------------- |
+| Code        | int               | 地域コード                       |
+| Name        | string            | 地域名                           |
+| Height      | string            | 予想高                           |
+| State       | string            | 到達状況                         |
+| ArrivalTime | DateTime          | 内部でのソートに利用する到達時刻 |
+| Stations    | TsunamiStation[]? | 観測地点の情報                   |
 
 ### TsunamiStation
 
@@ -443,19 +448,20 @@ Jsonの場合先頭は小文字になります。
 
 Jsonの場合先頭は小文字になります。
 
-|名前|津波情報の種別|
-|:--|:--|
-|`None`|なし|
-|`Forecast`|津波予報|
-|`Advisory`|津波注意報|
-|`Warning`|津波警報|
-|`MajorWarning`|大津波警報|
+| 名前           | 津波情報の種別 |
+| :------------- | :------------- |
+| `None`         | なし           |
+| `Forecast`     | 津波予報       |
+| `Advisory`     | 津波注意報     |
+| `Warning`      | 津波警報       |
+| `MajorWarning` | 大津波警報     |
 
 ### (災危通報)災危通報受信
 
 みちびき(QZSS)衛星からの災危通報を受信した際にトリガーされます。
 
 > [!IMPORTANT]
+>
 > - 災危通報 タブが表示されていない場合は動作しません。
 > - 対応した受信機が必要です。
 
@@ -474,44 +480,44 @@ Jsonの場合先頭は小文字になります。
 
 以下の情報タイプを個別に有効/無効にすることができます。
 
-| 情報タイプ | 解説 |
-|:--|:--|
-| 緊急地震速報 | 緊急地震速報 |
-| 震源 | 震源に関する情報 |
-| 震度 | 震度に関する情報 |
-| 南海トラフ | 南海トラフに関する情報 |
-| 津波 | 津波に関する情報 |
+| 情報タイプ     | 解説                       |
+| :------------- | :------------------------- |
+| 緊急地震速報   | 緊急地震速報               |
+| 震源           | 震源に関する情報           |
+| 震度           | 震度に関する情報           |
+| 南海トラフ     | 南海トラフに関する情報     |
+| 津波           | 津波に関する情報           |
 | 北西太平洋津波 | 北西太平洋津波に関する情報 |
-| 火山 | 火山に関する情報 |
-| 降灰 | 降灰に関する情報 |
-| 天気 | 天気に関する情報 |
-| 洪水 | 洪水に関する情報 |
-| 台風 | 台風に関する情報 |
-| 海上 | 海上に関する情報 |
-| 不明 | 不明な情報 |
-| DCX | DCX(未対応) |
+| 火山           | 火山に関する情報           |
+| 降灰           | 降灰に関する情報           |
+| 天気           | 天気に関する情報           |
+| 洪水           | 洪水に関する情報           |
+| 台風           | 台風に関する情報           |
+| 海上           | 海上に関する情報           |
+| 不明           | 不明な情報                 |
+| DCX            | DCX(未対応)                |
 
 ### データモデル
 
-|名前|型|解説|例|
-|:--|:--|:--|:--|
-|EventType|string|イベント区別のための固定値|`Qzss`|
-|EventId|Guid|イベント区別のためのUUID|`a5142d28-8c81-4179-acf7-1b2116791a10`|
-|IsTest|bool|テストイベントかどうか|`true`|
-|EventSubType|QzssEventType|イベントの条件区別|`NewSentenceReceived`|
-|Sentence|string|災危通報文|`0123456789AB`|
-|Information|DisasterCrisisInformation|災危通報情報のデータ||
+| 名前         | 型                        | 解説                       | 例                                     |
+| :----------- | :------------------------ | :------------------------- | :------------------------------------- |
+| EventType    | string                    | イベント区別のための固定値 | `Qzss`                                 |
+| EventId      | Guid                      | イベント区別のためのUUID   | `a5142d28-8c81-4179-acf7-1b2116791a10` |
+| IsTest       | bool                      | テストイベントかどうか     | `true`                                 |
+| EventSubType | QzssEventType             | イベントの条件区別         | `NewSentenceReceived`                  |
+| Sentence     | string                    | 災危通報文                 | `0123456789AB`                         |
+| Information  | DisasterCrisisInformation | 災危通報情報のデータ       |                                        |
 
 ### QzssEventType
 
 Jsonの場合先頭は小文字になります。
 
-|名前|サブタイプ|
-|:--|:--|
-|`NewSentenceReceived`|新文受信|
-|`ReportGroupCreated`|報告グループ作成|
-|`ReportGroupUpdated`|報告グループ更新|
-|`NankaiTroughReportCompleted`|南海トラフ報告完了|
+| 名前                          | サブタイプ         |
+| :---------------------------- | :----------------- |
+| `NewSentenceReceived`         | 新文受信           |
+| `ReportGroupCreated`          | 報告グループ作成   |
+| `ReportGroupUpdated`          | 報告グループ更新   |
+| `NankaiTroughReportCompleted` | 南海トラフ報告完了 |
 
 ## アクション解説
 
@@ -592,6 +598,7 @@ Jsonの場合先頭は小文字になります。
 `既定のアプリで開く` が有効の場合はシェル経由で、無効の場合は直接起動しようとします。
 
 > [!NOTE]
+>
 > - `既定のアプリで開く` が無効の場合はプロセスの起動引数を指定できます。
 > - 意図しない挙動になる場合があったため、実行ディレクトリを指定しない場合はアプリ本体と同じ実行ディレクトリが指定されます。
 
@@ -638,10 +645,12 @@ VOICEVOX での音声合成は処理に時間がかかるため、生成され�
 「緊急地震速報」「震源は○○」「マグニチュード○」の3つに分割して順次読み上げます。
 
 **メリット**:
+
 - 各セグメントが短いため、キャッシュにヒットしやすくなります
 - 定型文部分（「緊急地震速報」など）は初回合成後すぐに再生できます
 
 **注意点**:
+
 - 合成が追いつかない場合、セグメント間に無音の間が入ることがあります
 
 ## 利用例

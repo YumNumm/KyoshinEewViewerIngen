@@ -1,6 +1,7 @@
 # Suggested Commands for Development
 
 ## Repository Setup
+
 ```bash
 # Clone repository with submodules
 git clone --recursive https://github.com/ingen084/KyoshinEewViewerIngen.git
@@ -14,6 +15,7 @@ dotnet restore
 ```
 
 ## Development Commands
+
 ```bash
 # Run desktop application
 dotnet run --project src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj
@@ -32,6 +34,7 @@ dotnet build src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj
 ```
 
 ## Testing Commands
+
 ```bash
 # Run all tests
 dotnet test
@@ -43,6 +46,7 @@ dotnet test tests/KyoshinEewViewer.DCReportParser.Tests/
 ```
 
 ## Production Build Commands
+
 ```bash
 # Windows x64
 dotnet publish src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj \
@@ -61,6 +65,7 @@ dotnet publish src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj \
 ```
 
 ## System Commands (Linux)
+
 - **List files**: `ls`
 - **Change directory**: `cd`
 - **Search text**: `grep` or `rg` (ripgrep)

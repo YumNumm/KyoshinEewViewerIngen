@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\..\common.props" />
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0-ios</TargetFramework>
+        <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+        <Nullable>enable</Nullable>
+        <RootNamespace>KyoshinEewViewer.iOS</RootNamespace>
+        <!-- iPhone / iPad 両対応 -->
+        <ApplicationId>net.yumnumm.KyoshinEewViewerIngen</ApplicationId>
+        <ApplicationVersion>1</ApplicationVersion>
+        <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+        <!-- これが無いと actool にアプリアイコンとして渡されず Assets.car が生成されない -->
+        <AppIcon>AppIcon</AppIcon>
+        <!-- iOS では ReadyToRun を使用しない (AOT ツールチェーンが担当する)。
+             PublishTrimmed は iOS SDK が true を要求するため common.props の値を維持する -->
+        <PublishReadyToRun>false</PublishReadyToRun>
+        <!-- 本体はリフレクションを多用する (System.Text.Json / MessagePack / Scriban) ため、
+             AOT のみでは実行時に JIT 要求で落ちる。Mono インタープリタを併用する -->
+        <UseInterpreter>true</UseInterpreter>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia.iOS" Version="$(AvaloniaVersion)" />
+    </ItemGroup>
+
+    <!-- プロジェクト参照 -->
+    <ItemGroup>
+        <ProjectReference Include="..\KyoshinEewViewer\KyoshinEewViewer.csproj" />
+    </ItemGroup>
+</Project>

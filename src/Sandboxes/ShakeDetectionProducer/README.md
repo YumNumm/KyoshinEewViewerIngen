@@ -24,23 +24,23 @@ docker compose up -d
 
 ### ビルド引数
 
-| 引数 | デフォルト値 | 説明 |
-|------|-------------|------|
+| 引数                     | デフォルト値  | 説明                                                                                                                |
+| ------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `OBSERVATION_POINTS_TAG` | `v2025.12.27` | [kyoshin-monitor-observation-points](https://github.com/ingen084/kyoshin-monitor-observation-points) のリリースタグ |
 
 ### 環境変数
 
 環境変数は `.env` ファイルまたはシェルで設定できます。
 
-| 環境変数 | デフォルト値 | 説明 |
-|----------|-------------|------|
-| `OBSERVATION_POINTS_PATH` | `/app/observation-points.kmop` | 観測点データファイルのパス（イメージに含まれています） |
-| `TIMER_OFFSET_MS` | `1100` | タイマーオフセット（ミリ秒） |
-| `VALKEY_CONNECTION_STRING` | `valkey:6379` | Valkey 接続文字列 |
-| `VALKEY_STREAM_KEY` | `shake-detect-events` | Valkey Stream キー名 |
-| `VALKEY_STREAM_MAXLEN` | `10000` | Stream の最大保持メッセージ数 |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://tempo:4317` | OpenTelemetry OTLP エンドポイント (gRPC) |
-| `OTEL_SERVICE_NAME` | `shake-detection-producer` | OpenTelemetry サービス名 |
+| 環境変数                      | デフォルト値                   | 説明                                                   |
+| ----------------------------- | ------------------------------ | ------------------------------------------------------ |
+| `OBSERVATION_POINTS_PATH`     | `/app/observation-points.kmop` | 観測点データファイルのパス（イメージに含まれています） |
+| `TIMER_OFFSET_MS`             | `1100`                         | タイマーオフセット（ミリ秒）                           |
+| `VALKEY_CONNECTION_STRING`    | `valkey:6379`                  | Valkey 接続文字列                                      |
+| `VALKEY_STREAM_KEY`           | `shake-detect-events`          | Valkey Stream キー名                                   |
+| `VALKEY_STREAM_MAXLEN`        | `10000`                        | Stream の最大保持メッセージ数                          |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://tempo:4317`            | OpenTelemetry OTLP エンドポイント (gRPC)               |
+| `OTEL_SERVICE_NAME`           | `shake-detection-producer`     | OpenTelemetry サービス名                               |
 
 > **Note**: .NET の OTLP エクスポーターはデフォルトで gRPC を使用します。Kubernetes 環境では `http://alloy.monitoring.svc.cluster.local:4317` を指定してください。
 
@@ -48,15 +48,15 @@ docker compose up -d
 
 以下のスパンが計装されています：
 
-| スパン名 | 説明 |
-|----------|------|
-| `kyoshin_monitor.process` | タイマーイベント処理全体 |
-| `kyoshin_monitor.fetch_image` | 強震モニタ画像の取得 |
-| `kyoshin_monitor.decode_image` | 画像のデコード処理 |
-| `kyoshin_monitor.analyze_image` | 揺れ検知解析処理 |
-| `shake_detected.send` | 揺れ検知イベントの送信判定 |
+| スパン名                        | 説明                                   |
+| ------------------------------- | -------------------------------------- |
+| `kyoshin_monitor.process`       | タイマーイベント処理全体               |
+| `kyoshin_monitor.fetch_image`   | 強震モニタ画像の取得                   |
+| `kyoshin_monitor.decode_image`  | 画像のデコード処理                     |
+| `kyoshin_monitor.analyze_image` | 揺れ検知解析処理                       |
+| `shake_detected.send`           | 揺れ検知イベントの送信判定             |
 | `valkey.produce.shake_detected` | Valkey Stream への揺れ検知イベント送信 |
-| `valkey.produce.error` | Valkey Stream へのエラーイベント送信 |
+| `valkey.produce.error`          | Valkey Stream へのエラーイベント送信   |
 
 ## サービス構成
 
