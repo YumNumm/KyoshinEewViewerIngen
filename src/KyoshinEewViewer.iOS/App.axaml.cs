@@ -97,15 +97,6 @@ public class App : Application
 		_subWindowsService.OverlayHost = host;
 		singleViewPlatform.MainView = MainView = host;
 
-		// MainView は全画面描画を要求するため、ステータスバーやホームインジケータに
-		// 重ならないようセーフエリアの分をこちらで空ける
-		host.AttachedToVisualTree += (_, _) =>
-		{
-			if (TopLevel.GetTopLevel(host)?.InsetsManager is not { } insetsManager)
-				return;
-			mainView.Margin = insetsManager.SafeAreaPadding;
-			insetsManager.SafeAreaChanged += (_, e) => mainView.Margin = e.SafeAreaPadding;
-		};
 		ApplyHostBackground(host);
 
 		MessageBus.Current.Listen<ShowSettingWindowRequested>()

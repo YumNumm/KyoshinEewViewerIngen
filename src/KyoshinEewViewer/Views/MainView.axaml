@@ -8,6 +8,7 @@
 			 xmlns:cc="clr-namespace:KyoshinEewViewer.CustomControl;assembly=KyoshinEewViewer.CustomControl"
 			 xmlns:series="clr-namespace:KyoshinEewViewer.Series;assembly=KyoshinEewViewer"
 			 xmlns:vm="using:KyoshinEewViewer.ViewModels"
+			 xmlns:views="using:KyoshinEewViewer.Views"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
 			 x:DataType="vm:MainViewModel" x:CompileBindings="True"
              x:Class="KyoshinEewViewer.Views.MainView"
@@ -24,6 +25,8 @@
         <Style Selector="ui|FANavigationView SplitView /template/ ContentPresenter#PART_PanePresenter">
             <!--[IsBackButtonVisible=False]-->
             <Setter Property="Margin" Value="0 0 0 100" />
+            <!-- ペインの背景は画面全体に伸ばしたまま、項目だけをセーフエリア内に収める -->
+            <Setter Property="Padding" Value="{Binding $parent[views:MainView].SafeAreaPadding}" />
         </Style>
 
         <Style Selector="ui|FANavigationViewItem uip|FANavigationViewItemPresenter">
@@ -184,6 +187,7 @@
                         </Panel>
                     </Grid>
                     <cc:MinScaleViewbox Name="SeriesScaleBox"
+                                        Margin="{Binding $parent[views:MainView].SafeAreaPadding}"
                                         MinViewWidth="{Binding SelectedSeries.MinViewSize.Width}"
                                         MinViewHeight="{Binding SelectedSeries.MinViewSize.Height}">
                         <ContentControl Name="FrameView" Content="{Binding DisplayControl}"/>
@@ -227,7 +231,8 @@
                 </Panel>
             </ui:FANavigationView>
 
-            <Panel Width="64" HorizontalAlignment="Left" VerticalAlignment="Bottom">
+            <Panel Width="64" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                   Margin="{Binding $parent[views:MainView].SafeAreaPadding}">
                 <StackPanel HorizontalAlignment="Center" Spacing="3" Opacity="{Binding LeftBottomControlOpacity}" >
                     <Button Name="MuteButton" Command="{Binding ToggleMute}" Padding="10,7" Theme="{StaticResource TransparentButton}" ToolTip.Tip="音声をミュート" IsVisible="{Binding Config.Audio.ShowMuteButtonInMainWindow}">
                         <Button.Styles>

@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
@@ -17,6 +18,18 @@ using System.Reactive.Linq;
 namespace KyoshinEewViewer.Views;
 public partial class MainView : UserControl
 {
+	/// <summary>
+	/// システム UI に隠れない領域の余白。デスクトップでは常に 0 になる
+	/// </summary>
+	public static readonly StyledProperty<Thickness> SafeAreaPaddingProperty
+		= AvaloniaProperty.Register<MainView, Thickness>(nameof(SafeAreaPadding));
+
+	public Thickness SafeAreaPadding
+	{
+		get => GetValue(SafeAreaPaddingProperty);
+		set => SetValue(SafeAreaPaddingProperty, value);
+	}
+
 	public MainView()
 	{
 		InitializeComponent();
@@ -83,6 +96,9 @@ public partial class MainView : UserControl
 			{
 				insetsManager.IsSystemBarVisible = false;
 				insetsManager.DisplayEdgeToEdgePreference = true;
+				// 地図とサイドバーの背景は画面全体に描画し、操作対象のみ SafeAreaPadding で内側に寄せる
+				SafeAreaPadding = insetsManager.SafeAreaPadding;
+				insetsManager.SafeAreaChanged += (_, a) => SafeAreaPadding = a.SafeAreaPadding;
 			}
 		};
 	}
