@@ -115,13 +115,13 @@
         <LayoutTransformControl.LayoutTransform>
             <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}" />
         </LayoutTransformControl.LayoutTransform>
-        <Panel>
+        <Panel Name="ScaledRoot">
             <ui:FANavigationView Name="NavView"
                                Margin="0,-1,0,0"
 							   AlwaysShowHeader="False"
-							   IsSettingsVisible="False" 
+							   IsSettingsVisible="False"
 							   PaneDisplayMode="{Binding NavigationViewPaneDisplayMode}"
-							   IsPaneOpen="True"
+							   IsPaneOpen="{Binding IsNavigationPaneOpen, Mode=TwoWay}"
                                IsBackEnabled="False"
 							   IsBackButtonVisible="False"
 							   MenuItemsSource="{Binding SeriesController.EnabledSeries}"
@@ -234,6 +234,11 @@
             <Panel Width="64" HorizontalAlignment="Left" VerticalAlignment="Bottom"
                    Margin="{Binding $parent[views:MainView].SafeAreaPadding}">
                 <StackPanel HorizontalAlignment="Center" Spacing="3" Opacity="{Binding LeftBottomControlOpacity}" >
+                    <Button Name="ToggleNavigationPaneButton" Command="{Binding ToggleNavigationPane}" Padding="10,7" Theme="{StaticResource TransparentButton}" ToolTip.Tip="シリーズを切り替える" IsVisible="{Binding IsNarrowLayout}">
+                        <Viewbox Height="28" Margin="0,2">
+                            <ui:FASymbolIcon Symbol="GlobalNavigationButton" />
+                        </Viewbox>
+                    </Button>
                     <Button Name="MuteButton" Command="{Binding ToggleMute}" Padding="10,7" Theme="{StaticResource TransparentButton}" ToolTip.Tip="音声をミュート" IsVisible="{Binding Config.Audio.ShowMuteButtonInMainWindow}">
                         <Button.Styles>
                             <Style Selector="ui|FASymbolIcon.muted">

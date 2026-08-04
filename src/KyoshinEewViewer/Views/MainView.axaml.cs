@@ -63,10 +63,14 @@ public partial class MainView : UserControl
 		});
 
 		MiniMap.WhenAnyValue(m => m.Bounds).Subscribe(b => ResetMinimapPosition());
-		AttachedToVisualTree += (s, e) => 
+		AttachedToVisualTree += (s, e) =>
 		{
 			ResetMinimapPosition();
 		};
+
+		// ScaledRoot は LayoutTransformControl の子であるため、ウィンドウ拡大率を適用したあとの論理幅が得られる
+		ScaledRoot.WhenAnyValue(p => p.Bounds).Subscribe(_ => UpdateViewWidth());
+		DataContextChanged += (s, e) => UpdateViewWidth();
 
 		MessageBus.Current.Listen<MapNavigationRequest>().Subscribe(x =>
 		{
@@ -101,6 +105,12 @@ public partial class MainView : UserControl
 				insetsManager.SafeAreaChanged += (_, a) => SafeAreaPadding = a.SafeAreaPadding;
 			}
 		};
+	}
+
+	private void UpdateViewWidth()
+	{
+		if (DataContext is MainViewModel vm)
+			vm.ViewWidth = ScaledRoot.Bounds.Width;
 	}
 
 	private void ResetMinimapPosition()
