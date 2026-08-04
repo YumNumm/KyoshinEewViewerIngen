@@ -19,8 +19,10 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # App Store Connect 上のアプリ識別子
-APP_ID="${APP_ID:-6517347515}"
-BUNDLE_ID="${BUNDLE_ID:-net.yumnumm.kevi}"
+# net.yumnumm.KyoshinEewViewerIngen 用のアプリレコードは ASC 上に新規作成が必要なため、
+# APP_ID に既定値は置かない (旧 net.yumnumm.kevi のアプリ 6517347515 とは Bundle ID が一致しない)
+APP_ID="${APP_ID:-}"
+BUNDLE_ID="${BUNDLE_ID:-net.yumnumm.KyoshinEewViewerIngen}"
 TEAM_ID="${TEAM_ID:-CPL7H8SHVM}"
 
 # バージョン。APP_VERSION は CFBundleShortVersionString、BUILD_NUMBER は CFBundleVersion になる。
@@ -94,6 +96,7 @@ resolve_asc() {
 log "事前チェックを実行します"
 
 [ "$(uname -s)" = "Darwin" ] || die "このスクリプトは macOS 上でのみ実行できます。"
+[ -n "$APP_ID" ] || die "APP_ID を指定してください。$BUNDLE_ID のアプリレコードを ASC で作成し、その App ID を渡します (asc apps list で確認できます)。"
 [ -f "$PROVISIONING_PROFILE" ] || die "プロビジョニングプロファイルが見つかりません: $PROVISIONING_PROFILE"
 
 TEMPLATE_APP="$REPO_ROOT/build-files/KyoshinEewViewer.Desktop.app"

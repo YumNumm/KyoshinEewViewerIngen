@@ -8,7 +8,7 @@
         <Nullable>enable</Nullable>
         <RootNamespace>KyoshinEewViewer.iOS</RootNamespace>
         <!-- iPhone / iPad 両対応 -->
-        <ApplicationId>net.ingen084.kyoshineewviewer</ApplicationId>
+        <ApplicationId>net.yumnumm.KyoshinEewViewerIngen</ApplicationId>
         <ApplicationVersion>1</ApplicationVersion>
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
         <!-- iOS では ReadyToRun を使用しない (AOT ツールチェーンが担当する)。

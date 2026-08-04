@@ -7,7 +7,7 @@
 	<key>CFBundleDisplayName</key>
 	<string>KyoshinEewViewer</string>
 	<key>CFBundleIdentifier</key>
-	<string>net.ingen084.kyoshineewviewer</string>
+	<string>net.yumnumm.KyoshinEewViewerIngen</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>CFBundleShortVersionString</key>
