@@ -37,7 +37,7 @@ TFM="${TFM:-net10.0}"
 # 署名資材
 SIGNING_IDENTITY_APP="${SIGNING_IDENTITY_APP:-3rd Party Mac Developer Application: Ryotaro Onoue (CPL7H8SHVM)}"
 SIGNING_IDENTITY_INSTALLER="${SIGNING_IDENTITY_INSTALLER:-3rd Party Mac Developer Installer: Ryotaro Onoue (CPL7H8SHVM)}"
-PROVISIONING_PROFILE="${PROVISIONING_PROFILE:-$HOME/.kevi-signing/KEVI_MacAppStore_KyoshinEewViewerIngen.provisionprofile}"
+PROVISIONING_PROFILE="${PROVISIONING_PROFILE:-$HOME/.kevi-signing/KEVI_MacAppStore_KyoshinEewViewer.provisionprofile}"
 # codesign が参照するキーチェーン。専用キーチェーンを使う場合に指定する。
 SIGNING_KEYCHAIN="${SIGNING_KEYCHAIN:-}"
 
