@@ -8,30 +8,23 @@
 	<string>KyoshinEewViewer</string>
 	<key>CFBundleIdentifier</key>
 	<string>net.yumnumm.KyoshinEewViewer</string>
-	<!-- CFBundleVersion / CFBundleShortVersionString はここに書かない。
-	     iOS SDK の CompileAppManifest は Info.plist に既にあるキーを
-	     ApplicationVersion / ApplicationDisplayVersion で上書きしないため、
-	     ここへ書くと CI からビルド番号を差し込めなくなる。
-	     既定値は csproj の ApplicationVersion / ApplicationDisplayVersion に置く。 -->
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>MinimumOSVersion</key>
 	<string>15.0</string>
-	<!-- 未指定だとウィンドウのサイズが確定せず画面が真っ黒になる -->
 	<key>UILaunchScreen</key>
 	<dict/>
-	<!-- 1: iPhone / 2: iPad -->
 	<key>UIDeviceFamily</key>
 	<array>
 		<integer>1</integer>
 		<integer>2</integer>
 	</array>
-	<!-- 設定ファイルとログを「ファイル」アプリから取り出せるようにする -->
 	<key>UIFileSharingEnabled</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
-	<!-- DMDATA の認可後にアプリへ戻るためのスキーム。DMDATA 側のクライアント設定と一致させる -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -47,7 +40,6 @@
 	<array>
 		<string>arm64</string>
 	</array>
-	<!-- 全方向をサポートしないと iPad のマルチタスクとウィンドウリサイズが使えない -->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

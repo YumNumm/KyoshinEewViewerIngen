@@ -2,11 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- 震度5弱以上・津波警報以上の通知をおやすみモードや消音状態でも鳴らすために必要。
-	     Apple の個別承認が要る権限で、Bundle ID 側で CRITICAL_ALERTS を有効化済み -->
 	<key>com.apple.developer.usernotifications.critical-alerts</key>
 	<true/>
-	<!-- Critical に至らない重要な通知を時間指定モードでも通すために使う -->
 	<key>com.apple.developer.usernotifications.time-sensitive</key>
 	<true/>
 </dict>
