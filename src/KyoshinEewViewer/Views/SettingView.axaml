@@ -1,0 +1,101 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:KyoshinEewViewer.ViewModels"
+		xmlns:ui="using:FluentAvalonia.UI.Controls"
+		xmlns:uip="using:FluentAvalonia.UI.Controls.Primitives"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+
+        xmlns:series="clr-namespace:KyoshinEewViewer.Series;assembly=KyoshinEewViewer"
+
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="800"
+        x:Class="KyoshinEewViewer.Views.SettingView"
+		x:DataType="vm:SettingWindowViewModel" x:CompileBindings="True"
+
+        FontSize="16"
+        Background="{DynamicResource TitleBackgroundColor}" Foreground="{DynamicResource MainForegroundColor}"
+        FontFamily="{StaticResource MainFont}" FontWeight="Regular">
+	<UserControl.Styles>
+		<Style Selector="Label">
+			<Setter Property="Foreground" Value="{DynamicResource MainForegroundColor}" />
+		</Style>
+		<Style Selector="TextBlock">
+			<Setter Property="VerticalAlignment" Value="Center" />
+			<Setter Property="TextWrapping" Value="Wrap" />
+		</Style>
+		<Style Selector="ScrollViewer">
+			<Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+		</Style>
+		<Style Selector="TabItem:selected /template/ Border">
+			<Setter Property="Background" Value="{DynamicResource DockTitleBackgroundColor}" />
+		</Style>
+		<Style Selector="HeaderedContentControl">
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate>
+						<Grid RowDefinitions="auto,*">
+							<Border ZIndex="1" Padding="5,0" Margin="0,10,0,0">
+								<ContentPresenter Content="{TemplateBinding Header}" />
+							</Border>
+							<Border Grid.Row="1"
+                                    BorderBrush="{DynamicResource SubForegroundColor}"
+                                    BorderThickness="0" CornerRadius="4" Margin="10,0,10,10">
+								<ContentPresenter Margin="5" Content="{TemplateBinding Content}" />
+							</Border>
+						</Grid>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+		<Style Selector="ui|FASettingsExpander">
+			<Setter Property="Margin" Value="10,3,10,0" />
+		</Style>
+		<Style Selector="TabItem">
+			<Setter Property="MinHeight" Value="32" />
+			<Setter Property="Padding" Value="5,0" />
+		</Style>
+		<Style Selector="TabItem > StackPanel > TextBlock">
+			<Setter Property="FontSize" Value="16" />
+		</Style>
+		<Style Selector="TabItem > StackPanel > TextBlock.icon">
+			<Setter Property="Width" Value="20" />
+			<Setter Property="Margin" Value="0,0,5,0" />
+			<Setter Property="TextAlignment" Value="Center" />
+		</Style>
+		<Style Selector="TabItem > ScrollViewer">
+			<Setter Property="Background" Value="{DynamicResource MainBackgroundColor}" />
+		</Style>
+		<Style Selector="TabItem > Grid > ScrollViewer">
+			<Setter Property="Background" Value="{DynamicResource MainBackgroundColor}" />
+		</Style>
+        <Style Selector="ui|FANavigationView">
+            <Setter Property="MenuItemTemplate">
+                <DataTemplate x:DataType="series:ISettingPage">
+                    <ui:FANavigationViewItem IsVisible="{Binding IsVisible}" Content="{Binding Title}" IconSource="{Binding Icon}" MenuItemsSource="{Binding SubPages}" IsExpanded="True" />
+                </DataTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ui|FANavigationViewItem uip|FANavigationViewItemPresenter">
+            <Setter Property="Height" Value="32" />
+        </Style>
+    </UserControl.Styles>
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <x:Double x:Key="NavigationViewItemOnLeftIconBoxHeight">24</x:Double>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <ui:FANavigationView Name="SettingNavigationView"
+                       AlwaysShowHeader="False"
+					   IsSettingsVisible="False"
+                       PaneDisplayMode="Left"
+					   IsPaneOpen="True"
+                       IsPaneToggleButtonVisible="False"
+                       IsBackEnabled="False"
+					   IsBackButtonVisible="False"
+                       OpenPaneLength="200"
+                       MenuItemsSource="{Binding SettingPages}"
+                       SelectedItem="{Binding SelectedSettingPage}">
+        <ContentControl Background="{DynamicResource MainBackgroundColor}"
+                  Content="{Binding #SettingNavigationView.((series:ISettingPage)SelectedItem).DisplayControl}"/>
+    </ui:FANavigationView>
+</UserControl>
