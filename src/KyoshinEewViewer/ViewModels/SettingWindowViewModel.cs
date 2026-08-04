@@ -179,7 +179,8 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 			new BasicSettingPage<GeneralPage>("\xf53f", "外観･基本設定", []),
 			new BasicSettingPage<FeaturePage>("\xf085", "機能設定", []),
 			new BasicSettingPage<NotifyPage>("\xf075", "通知", []),
-			new BasicSettingPage<MultiWindowPage>("\xf2d2", "マルチウィンドウ", []),
+			// iOS では Window を生成できないためマルチウィンドウ機能を利用できない
+			new BasicSettingPage<MultiWindowPage>("\xf2d2", "マルチウィンドウ", []) { IsVisible = !OperatingSystem.IsIOS() },
 			new BasicSettingPage<SoundPage>("\xf028", "音声", []),
 			new BasicSettingPage<WorkflowPage>("\xe289", "ワークフロー", []),
 			new BasicSettingPage<VoicevoxPage>("\xf075", "VOICEVOX", []),
@@ -486,10 +487,15 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 	public bool IsLinux { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
 	public bool IsWindows { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 	public bool IsMacOs { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+	public bool IsIOS { get; } = OperatingSystem.IsIOS();
 	// トレイアイコンはデスクトップ (Windows/macOS/Linux) で利用できる
 	public bool IsDesktop { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
 	public bool IsLogDirectoryCustomizable { get; } = PlatformDirectories.IsLogDirectoryCustomizable;
 	public bool IsUseCurrentDirectoryOptionAvailable { get; } = !RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+	// macOS は優先度を変更しても効果がなく、iOS はプロセスの優先度を扱えない
+	public bool IsProcessPriorityConfigurable { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+	// App Store 配信では自己更新が禁止されているため iOS では更新チェックを行わない
+	public bool IsUpdateCheckAvailable { get; } = !OperatingSystem.IsIOS();
 
 	public void OpenLogDirectory()
 	{
@@ -511,14 +517,7 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 				: Path.Combine(PlatformDirectories.ApplicationData, Config.Logging.Directory);
 		}
 
-		try
-		{
-			UrlOpener.OpenUrl(logPath);
-		}
-		catch (Exception ex)
-		{
-			Logger.LogWarning(ex, "ログディレクトリを開けませんでした");
-		}
+		UrlOpener.OpenUrl(logPath);
 	}
 
 	public ReactiveCommand<Unit, Unit> RegistMapPosition { get; } = ReactiveCommand.Create(() => MessageBus.Current.SendMessage(new RegistMapPositionRequested()));

@@ -166,7 +166,7 @@
             </ui:FASettingsExpander>
 
             <TextBlock Text="その他" FontWeight="Bold" Margin="10,20,10,5" />
-            <ui:FASettingsExpander IsVisible="{Binding !IsMacOs}" Header="プロセスの優先度を『高』にして起動する" Description="他のアプリに処理を優先され情報が表示されないことを防ぎます">
+            <ui:FASettingsExpander IsVisible="{Binding IsProcessPriorityConfigurable}" Header="プロセスの優先度を『高』にして起動する" Description="他のアプリに処理を優先され情報が表示されないことを防ぎます">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xf2db;" FontFamily="{StaticResource IconFont}" />
                 </ui:FASettingsExpander.IconSource>
@@ -175,7 +175,7 @@
                 </ui:FASettingsExpander.Footer>
             </ui:FASettingsExpander>
 
-            <ui:FASettingsExpander Header="重複起動時に既存のウィンドウを最前面に表示する" Description="警告画面の代わりに、既に起動しているウィンドウを最前面に表示します">
+            <ui:FASettingsExpander IsVisible="{Binding IsDesktop}" Header="重複起動時に既存のウィンドウを最前面に表示する" Description="警告画面の代わりに、既に起動しているウィンドウを最前面に表示します">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xf2d0;" FontFamily="{StaticResource IconFont}" />
                 </ui:FASettingsExpander.IconSource>
@@ -210,14 +210,16 @@
                     </ui:FASettingsExpanderItem.IsVisible>
                 </ui:FASettingsExpanderItem>
 
-                <ui:FASettingsExpanderItem>
+                <ui:FASettingsExpanderItem IsVisible="{Binding !IsIOS}">
                     <ui:FASettingsExpanderItem.Footer>
                         <Button Content="ログディレクトリを開く" Command="{Binding OpenLogDirectory}" />
                     </ui:FASettingsExpanderItem.Footer>
                 </ui:FASettingsExpanderItem>
+
+                <ui:FASettingsExpanderItem Content="ログの取り出し" Description="『ファイル』アプリの「このiPhone内」から KyoshinEewViewer フォルダを開いて取り出せます。" IsVisible="{Binding IsIOS}" />
             </ui:FASettingsExpander>
 
-            <ui:FASettingsExpander Header="定期的に更新情報をチェックする">
+            <ui:FASettingsExpander IsVisible="{Binding IsUpdateCheckAvailable}" Header="定期的に更新情報をチェックする">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xf0ed;" FontFamily="{StaticResource IconFont}" />
                 </ui:FASettingsExpander.IconSource>

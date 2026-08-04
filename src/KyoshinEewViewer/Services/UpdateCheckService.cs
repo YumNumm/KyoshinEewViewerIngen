@@ -659,7 +659,15 @@ public class UpdateCheckService : ReactiveObject
 		=> Dispatcher.UIThread.Post(() => (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown());
 
 	public void StartUpdateCheckTask()
-		=> CheckUpdateTask.Change(TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(100));
+	{
+		// App Store 配信では自己更新が禁止されており、更新を検知しても案内できることがないためチェックしない
+		if (OperatingSystem.IsIOS())
+		{
+			Logger.LogDebug("iOS では自己更新できないため更新チェックを行いません");
+			return;
+		}
+		CheckUpdateTask.Change(TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(100));
+	}
 
 }
 

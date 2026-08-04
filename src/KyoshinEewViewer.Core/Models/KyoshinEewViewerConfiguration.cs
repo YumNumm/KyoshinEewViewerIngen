@@ -116,9 +116,12 @@ public class KyoshinEewViewerConfiguration : ReactiveObject, IWindowPlacementCon
 		/// <summary>
 		/// マルチウィンドウ機能を有効にするかどうか
 		/// </summary>
+		/// <remarks>
+		/// iOS では Window を生成できないため、設定値にかかわらず常に無効になる
+		/// </remarks>
 		public bool Enable
 		{
-			get => _enable;
+			get => !OperatingSystem.IsIOS() && _enable;
 			set => this.RaiseAndSetIfChanged(ref _enable, value);
 		}
 
