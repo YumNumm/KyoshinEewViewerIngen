@@ -1,7 +1,27 @@
 [tools]
 actionlint = "latest"
 dotnet = "latest"
+gitleaks = "latest"
+hk = "latest"
 pinact = "latest"
+pkl = "latest"
+shellcheck = "latest"
+zizmor = "latest"
+
+# App Store Connect CLI (asc)
+# リリースアセットは書庫ではなく生バイナリ (asc_<version>_macOS_arm64) で配布されているため、
+# mise の自動サフィックス除去だけでは asc_<version>_macOS のままになる。bin で asc に固定する。
+[tools."github:rorkai/App-Store-Connect-CLI"]
+version = "latest"
+bin = "asc"
 
 [settings]
 lockfile = true
+
+[env]
+# hk が各 linter を mise 経由で解決するようにする
+HK_MISE = "1"
+
+[hooks]
+# mise install / mise 実行時に .git/hooks を hk のものへ更新する
+postinstall = "hk install --mise"
