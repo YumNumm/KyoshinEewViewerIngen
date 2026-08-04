@@ -31,6 +31,18 @@ public class App : Application
 		set {
 			_mainView = value;
 			KyoshinEewViewerApp.TopLevelControl = TopLevel.GetTopLevel(value);
+			if (value is null || KyoshinEewViewerApp.TopLevelControl is not null)
+				return;
+
+			// ISingleViewApplicationLifetime.MainView への代入より先にこのセッターが走るため、
+			// この時点では TopLevel に未接続で GetTopLevel が null を返す。
+			// TopLevelControl は Launcher (URL やブラウザを開く) の起点なので、接続後に取り直す
+			void OnAttached(object? sender, VisualTreeAttachmentEventArgs e)
+			{
+				value.AttachedToVisualTree -= OnAttached;
+				KyoshinEewViewerApp.TopLevelControl = TopLevel.GetTopLevel(value);
+			}
+			value.AttachedToVisualTree += OnAttached;
 		}
 	}
 
