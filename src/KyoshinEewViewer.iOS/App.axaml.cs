@@ -8,6 +8,7 @@ using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Core.Models.Events;
 using KyoshinEewViewer.CustomControl;
+using KyoshinEewViewer.Notification;
 using KyoshinEewViewer.Series;
 using KyoshinEewViewer.Services;
 using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
@@ -162,6 +163,8 @@ public class App : Application
 		Locator.CurrentMutable.RegisterLazySingleton(() => new SeriesController(), typeof(SeriesController));
 		Locator.CurrentMutable.RegisterConstant(_subWindowsService, typeof(ISubWindowsService));
 		Locator.CurrentMutable.RegisterConstant(_dmdataAuthenticator, typeof(IDmdataAuthenticator));
+		// NotificationService から解決された時点で通知の許可を要求する
+		Locator.CurrentMutable.RegisterLazySingleton(() => (NotificationProvider)new Notification.IosNotificationProvider(), typeof(NotificationProvider));
 		var config = Locator.Current.RequireService<KyoshinEewViewerConfiguration>();
 		LoggingAdapter.Setup(config);
 
