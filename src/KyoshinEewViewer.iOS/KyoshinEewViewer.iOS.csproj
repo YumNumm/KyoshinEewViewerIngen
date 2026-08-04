@@ -8,7 +8,7 @@
         <Nullable>enable</Nullable>
         <RootNamespace>KyoshinEewViewer.iOS</RootNamespace>
         <!-- iPhone / iPad 両対応 -->
-        <ApplicationId>net.yumnumm.KyoshinEewViewerIngen</ApplicationId>
+        <ApplicationId>net.yumnumm.KyoshinEewViewer</ApplicationId>
         <ApplicationVersion>1</ApplicationVersion>
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
         <!-- これが無いと actool にアプリアイコンとして渡されず Assets.car が生成されない -->
@@ -19,6 +19,7 @@
         <!-- 本体はリフレクションを多用する (System.Text.Json / MessagePack / Scriban) ため、
              AOT のみでは実行時に JIT 要求で落ちる。Mono インタープリタを併用する -->
         <UseInterpreter>true</UseInterpreter>
+        <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
     </PropertyGroup>
 
     <ItemGroup>

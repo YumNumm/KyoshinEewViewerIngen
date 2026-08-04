@@ -19,10 +19,10 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # App Store Connect 上のアプリ識別子
-# net.yumnumm.KyoshinEewViewerIngen 用のアプリレコードは ASC 上に新規作成が必要なため、
-# APP_ID に既定値は置かない (旧 net.yumnumm.kevi のアプリ 6517347515 とは Bundle ID が一致しない)
-APP_ID="${APP_ID:-}"
-BUNDLE_ID="${BUNDLE_ID:-net.yumnumm.KyoshinEewViewerIngen}"
+# net.yumnumm.KyoshinEewViewer のアプリレコード
+# (旧 net.yumnumm.kevi のアプリ 6517347515 とは Bundle ID が一致しないため使えない)
+APP_ID="${APP_ID:-6797931103}"
+BUNDLE_ID="${BUNDLE_ID:-net.yumnumm.KyoshinEewViewer}"
 TEAM_ID="${TEAM_ID:-CPL7H8SHVM}"
 
 # バージョン。APP_VERSION は CFBundleShortVersionString、BUILD_NUMBER は CFBundleVersion になる。
