@@ -30,6 +30,18 @@
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
+	<!-- DMDATA の認可後にアプリへ戻るためのスキーム。DMDATA 側のクライアント設定と一致させる -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>net.yumnumm.KyoshinEewViewerIngen.oauth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>kevi</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>arm64</string>

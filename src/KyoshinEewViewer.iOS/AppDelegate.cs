@@ -13,4 +13,5 @@ public partial class AppDelegate : AvaloniaAppDelegate<App>
 		=> base.CustomizeAppBuilder(builder)
 			.UseKeviFonts()
 			.UseReactiveUI(_ => { });
+
 }

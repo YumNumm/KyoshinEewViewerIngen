@@ -10,6 +10,7 @@ using KyoshinEewViewer.Core.Models.Events;
 using KyoshinEewViewer.CustomControl;
 using KyoshinEewViewer.Series;
 using KyoshinEewViewer.Services;
+using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
 using KyoshinEewViewer.ViewModels;
 using KyoshinEewViewer.Views;
 using ReactiveUI;
@@ -33,6 +34,7 @@ public class App : Application
 	}
 
 	private readonly OverlaySubWindowsService _subWindowsService = new();
+	private readonly DmdataCustomSchemeAuthenticator _dmdataAuthenticator = new();
 
 	public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
@@ -45,6 +47,14 @@ public class App : Application
 		// "avares://KyoshinEewViewer.Core/Assets/Fonts/NotoSansJP-Bold.otf"
 		// "avares://KyoshinEewViewer.Core/Assets/Fonts/FontAwesome6Free-Solid-900.otf"
 		// "avares://FluentAvalonia/Fonts/FluentAvalonia.ttf"
+		// DMDATA の認可後にカスタム URL スキームで戻ってくる
+		if (ApplicationLifetime is IActivatableLifetime activatable)
+			activatable.Activated += (_, e) =>
+			{
+				if (e is ProtocolActivatedEventArgs protocolArgs)
+					_dmdataAuthenticator.HandleCallback(protocolArgs.Uri);
+			};
+
 		if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
 		{
 			// iOS では標準出力やログファイルを確認できないため、致命的な例外は画面上に表示する
@@ -151,6 +161,7 @@ public class App : Application
 		Locator.CurrentMutable.RegisterLazySingleton(ConfigurationLoader.Load, typeof(KyoshinEewViewerConfiguration));
 		Locator.CurrentMutable.RegisterLazySingleton(() => new SeriesController(), typeof(SeriesController));
 		Locator.CurrentMutable.RegisterConstant(_subWindowsService, typeof(ISubWindowsService));
+		Locator.CurrentMutable.RegisterConstant(_dmdataAuthenticator, typeof(IDmdataAuthenticator));
 		var config = Locator.Current.RequireService<KyoshinEewViewerConfiguration>();
 		LoggingAdapter.Setup(config);
 
