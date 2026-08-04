@@ -11,6 +11,8 @@
         <ApplicationId>net.yumnumm.KyoshinEewViewerIngen</ApplicationId>
         <ApplicationVersion>1</ApplicationVersion>
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+        <!-- これが無いと actool にアプリアイコンとして渡されず Assets.car が生成されない -->
+        <AppIcon>AppIcon</AppIcon>
         <!-- iOS では ReadyToRun を使用しない (AOT ツールチェーンが担当する)。
              PublishTrimmed は iOS SDK が true を要求するため common.props の値を維持する -->
         <PublishReadyToRun>false</PublishReadyToRun>
