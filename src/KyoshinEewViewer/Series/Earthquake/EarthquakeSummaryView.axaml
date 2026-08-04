@@ -1,0 +1,139 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:controls="clr-namespace:KyoshinEewViewer.CustomControl;assembly=KyoshinEewViewer.CustomControl"
+			 xmlns:conv="clr-namespace:KyoshinEewViewer.Series.Earthquake.Converters;assembly=KyoshinEewViewer"
+			 xmlns:local="clr-namespace:KyoshinEewViewer.Series.Earthquake;assembly=KyoshinEewViewer"
+			 mc:Ignorable="d" d:DesignWidth="240" d:DesignHeight="300"
+			 x:Class="KyoshinEewViewer.Series.Earthquake.EarthquakeSummaryView"
+			 x:DataType="local:EarthquakeSeries"
+			 Foreground="{DynamicResource MainForegroundColor}"
+			 FontFamily="{StaticResource MainFont}">
+    <UserControl.Resources>
+        <conv:IntensityToColorConverter x:Key="IntensityToColor" />
+        <conv:LpgmIntensityToColorConverter x:Key="LpgmIntensityToColor" />
+    </UserControl.Resources>
+    <StackPanel>
+        <Border Background="{DynamicResource DockTitleBackgroundColor}" CornerRadius="4,4,0,0">
+            <TextBlock
+				x:Name="InfoTitle"
+				Text="{Binding CurrentEvent.Title}" FontWeight="Regular" FontSize="19" Margin="10,0"
+				VerticalAlignment="Center" HorizontalAlignment="Center"
+				IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        </Border>
+        <Border IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNull}}"
+				Background="{DynamicResource DockTitleBackgroundColor}" CornerRadius="4">
+            <TextBlock Text="リストから選択してください" FontWeight="Regular" FontSize="16" HorizontalAlignment="Center" />
+        </Border>
+        <StackPanel Background="{DynamicResource DockBackgroundColor}"
+			IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <Panel Background="{Binding CurrentEvent.Intensity, Converter={StaticResource IntensityToColor}, ConverterParameter=Background}"
+                   IsVisible="{Binding !CurrentEvent.IsUnknownIntensity}">
+                <StackPanel Orientation="Horizontal" Margin="0,0" HorizontalAlignment="Center">
+                    <TextBlock Foreground="{Binding CurrentEvent.Intensity, Converter={StaticResource IntensityToColor}}"
+									Text="最大震度" VerticalAlignment="Bottom" FontSize="22" />
+                    <controls:IntensityIcon Intensity="{Binding CurrentEvent.Intensity}"
+											WideMode="True" Width="85" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Panel>
+
+            <Panel IsVisible="{Binding CurrentEvent.LpgmIntensity, Converter={x:Static ObjectConverters.IsNotNull}}"
+                    Background="{Binding CurrentEvent.LpgmIntensity, Converter={StaticResource LpgmIntensityToColor}, ConverterParameter=Background}">
+                <StackPanel Orientation="Horizontal" Margin="0,0" HorizontalAlignment="Center">
+                    <LayoutTransformControl>
+                        <LayoutTransformControl.LayoutTransform>
+                            <ScaleTransform ScaleX=".75" />
+                        </LayoutTransformControl.LayoutTransform>
+                        <TextBlock Foreground="{Binding CurrentEvent.LpgmIntensity, Converter={StaticResource LpgmIntensityToColor}}"
+                                    Text="長周期地震動階級" VerticalAlignment="Bottom" FontSize="22" />
+                    </LayoutTransformControl>
+                    <controls:LpgmIntensityIcon Intensity="{Binding CurrentEvent.LpgmIntensity}"
+											WideMode="True" Height="32" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Panel>
+            <StackPanel Margin="10,5">
+                    <TextBlock Text="発生時刻" FontSize="14" Margin="0,0,0,-16" IsVisible="{Binding !CurrentEvent.IsSokuhou}" />
+                    <TextBlock Text="検知時刻" FontSize="14" Margin="0,0,0,-16" IsVisible="{Binding CurrentEvent.IsSokuhou}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0" HorizontalAlignment="Right">
+                        <TextBlock
+							Text="{Binding CurrentEvent.Time, StringFormat={}{0:yyyy年MM月dd日}, Mode=OneWay}"
+							x:Name="DateText" FontSize="13" VerticalAlignment="Bottom" />
+                        <TextBlock
+							Text="{Binding CurrentEvent.Time, StringFormat={}{0:HH時mm分}, Mode=OneWay}"
+							x:Name="TimeText" Margin="0,0,0,-3" FontSize="23" VerticalAlignment="Bottom" />
+                        <TextBlock Text="頃" FontSize="14" VerticalAlignment="Bottom" />
+                    </StackPanel>
+
+                    <StackPanel IsVisible="{Binding CurrentEvent.IsHypocenterAvailable}">
+                        <TextBlock Text="震央" FontSize="14" Margin="0,0,0,-16">
+                            <TextBlock.IsVisible>
+                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding Path="CurrentEvent.Place" Converter="{x:Static StringConverters.IsNotNullOrEmpty}" />
+                                    <Binding Path="!CurrentEvent.IsVolcano" />
+                                </MultiBinding>
+                            </TextBlock.IsVisible>
+                        </TextBlock>
+                        <TextBlock Text="地域" FontSize="14" IsVisible="{Binding CurrentEvent.IsVolcano}" Margin="0,0,0,-16"/>
+                        <Viewbox Stretch="Fill" StretchDirection="DownOnly" Height="35" MaxWidth="175" HorizontalAlignment="Right"
+										IsVisible="{Binding CurrentEvent.Place, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock x:Name="HypocenterName" Text="{Binding CurrentEvent.Place}"
+											FontSize="24" FontWeight="Bold" />
+                        </Viewbox>
+
+                        <Viewbox Stretch="Fill" StretchDirection="DownOnly" Height="30" MaxWidth="230" HorizontalAlignment="Right" Margin="0,-8,0,0"
+										IsVisible="{Binding CurrentEvent.VolcanoName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Text="{Binding CurrentEvent.VolcanoName}" FontSize="20" FontWeight="Bold" />
+                        </Viewbox>
+
+
+                        <Panel>
+                            <Panel.IsVisible>
+                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding Path="CurrentEvent.IsHypocenterAvailable" />
+                                    <Binding Path="!CurrentEvent.IsVolcano" />
+                                </MultiBinding>
+                            </Panel.IsVisible>
+
+                            <TextBlock Text="規模" FontSize="14" VerticalAlignment="Top" />
+                            <StackPanel
+									IsVisible="{Binding CurrentEvent.MagnitudeAlternativeText, Converter={x:Static StringConverters.IsNullOrEmpty}}"
+									Orientation="Horizontal" HorizontalAlignment="Right">
+                                <TextBlock x:Name="MagnitudeSub" Text="M" FontSize="22" FontWeight="Bold"
+												VerticalAlignment="Bottom" />
+                                <TextBlock x:Name="Magnitude"
+												Text="{Binding CurrentEvent.Magnitude, StringFormat={}{0:0.0}, Mode=OneWay}"
+												Margin="0,0,0,-2" FontSize="28" FontWeight="Bold"
+												VerticalAlignment="Bottom" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding CurrentEvent.MagnitudeAlternativeText}"
+											IsVisible="{Binding CurrentEvent.MagnitudeAlternativeText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+											FontSize="18" FontWeight="Bold" VerticalAlignment="Bottom"
+											HorizontalAlignment="Right" />
+                        </Panel>
+
+                        <Panel x:Name="DepthBlock" IsVisible="{Binding !CurrentEvent.IsNoDepthData}">
+                            <TextBlock Text="震源の深さ" FontSize="14" VerticalAlignment="Top" />
+                            <StackPanel IsVisible="{Binding !CurrentEvent.IsVeryShallow}"
+											Orientation="Horizontal" x:Name="DepthDeep" HorizontalAlignment="Right">
+                                <TextBlock x:Name="DepthValue" Margin="0,0,0,-1"
+												Text="{Binding CurrentEvent.Depth}" FontSize="22"
+												VerticalAlignment="Bottom" />
+                                <TextBlock Text="km" FontSize="18" VerticalAlignment="Bottom" />
+                            </StackPanel>
+                            <TextBlock x:Name="DepthShallow"
+											IsVisible="{Binding CurrentEvent.IsVeryShallow}" Text="ごく浅い"
+											FontSize="21" Margin="0,1,0,0" HorizontalAlignment="Right" />
+                        </Panel>
+                    </StackPanel>
+            </StackPanel>
+        </StackPanel>
+        <Border Background="{DynamicResource DockTitleBackgroundColor}" CornerRadius="0,0,4,4">
+            <TextBlock
+				Text="{Binding CurrentEvent.UpdatedTime, StringFormat={}{0:d日HH:mm更新}, Mode=OneWay}" FontSize="14" Margin="10,0"
+                Foreground="{DynamicResource SubForegroundColor}"
+				VerticalAlignment="Center" HorizontalAlignment="Right"
+				IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        </Border>
+    </StackPanel>
+</UserControl>

@@ -1,0 +1,90 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:controls="clr-namespace:KyoshinEewViewer.CustomControl;assembly=KyoshinEewViewer.CustomControl"
+			 xmlns:conv="clr-namespace:KyoshinEewViewer.Series.Earthquake.Converters;assembly=KyoshinEewViewer"
+			 xmlns:local="clr-namespace:KyoshinEewViewer.Series.Earthquake;assembly=KyoshinEewViewer"
+			 xmlns:models="clr-namespace:KyoshinEewViewer.Series.Earthquake.Models;assembly=KyoshinEewViewer"
+			 mc:Ignorable="d" d:DesignWidth="240" d:DesignHeight="400"
+			 x:Class="KyoshinEewViewer.Series.Earthquake.ObservationIntensityListView"
+			 x:DataType="local:EarthquakeSeries"
+			 Foreground="{DynamicResource MainForegroundColor}"
+			 FontFamily="{StaticResource MainFont}">
+    <UserControl.Resources>
+        <conv:IntensityToColorConverter x:Key="IntensityToColor" />
+    </UserControl.Resources>
+    <UserControl.Styles>
+        <Style Selector="TreeViewItem">
+            <Setter Property="MinHeight" Value="24" />
+            <Setter Property="IsExpanded" Value="False" />
+        </Style>
+        <Style Selector="ContentPresenter:nth-child(1)>StackPanel>TreeView>TreeViewItem">
+            <Setter Property="IsExpanded" Value="True" />
+        </Style>
+        <Style Selector="TreeViewItem /template/ Panel#PART_ExpandCollapseChevronContainer">
+            <Setter Property="Margin" Value="-10,0,0,0" />
+        </Style>
+
+        <Style Selector="TreeViewItem /template/ Border#PART_LayoutRoot:pointerover">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="TreeViewItem:selected /template/ Border#PART_LayoutRoot">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="TreeViewItem:hover /template/ Border#PART_LayoutRoot">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <Style Selector="TreeView">
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+        <Style Selector="controls|IntensityIcon">
+            <Setter Property="Height" Value="24" />
+        </Style>
+
+        <!-- 縦向きの端末ではタッチで開閉するため、文字と行の高さを大きくする -->
+        <Style Selector="local|ObservationIntensityListView.narrow TreeView">
+            <Setter Property="FontSize" Value="16" />
+        </Style>
+        <Style Selector="local|ObservationIntensityListView.narrow TreeViewItem">
+            <Setter Property="MinHeight" Value="34" />
+        </Style>
+        <Style Selector="local|ObservationIntensityListView.narrow controls|IntensityIcon">
+            <Setter Property="Height" Value="30" />
+        </Style>
+    </UserControl.Styles>
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <Panel>
+            <TextBlock IsVisible="{Binding !ObservationIntensityGroups.Length}" Text="震度1以上を観測した地点はありません" TextWrapping="Wrap" Margin="5"/>
+            <ItemsControl ItemsSource="{Binding ObservationIntensityGroups}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="models:ObservationIntensityGroup">
+                        <StackPanel>
+                            <Grid Background="{Binding Intensity, Converter={StaticResource IntensityToColor}, ConverterParameter=Background}">
+                                <controls:IntensityIcon Intensity="{Binding Intensity}" WideMode="True" HorizontalAlignment="Left" />
+                            </Grid>
+
+                            <TreeView ItemsSource="{Binding PrefectureAreas}" Margin="-10,0,0,5" SelectionMode="Toggle">
+                                <TreeView.DataTemplates>
+                                    <TreeDataTemplate DataType="models:ObservationPrefectureArea" ItemsSource="{Binding Areas}">
+                                        <TextBlock Text="{Binding Name}" Margin="-10,0,0,0" />
+                                    </TreeDataTemplate>
+                                    <TreeDataTemplate DataType="models:ObservationMunicipalityArea">
+                                        <TextBlock Text="{Binding Name}" Margin="-10,0,0,0" />
+                                    </TreeDataTemplate>
+                                    <TreeDataTemplate DataType="models:ObservationCityArea" ItemsSource="{Binding Points}">
+                                        <TextBlock Text="{Binding Name}" Margin="-10,0,0,0" />
+                                    </TreeDataTemplate>
+                                    <DataTemplate DataType="models:ObservationPoint">
+                                        <TextBlock Text="{Binding Name}" Margin="-10,0,0,0" />
+                                    </DataTemplate>
+                                </TreeView.DataTemplates>
+                            </TreeView>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Panel>
+    </ScrollViewer>
+</UserControl>

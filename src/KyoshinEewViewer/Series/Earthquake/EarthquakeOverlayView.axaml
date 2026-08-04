@@ -1,0 +1,111 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:controls="clr-namespace:KyoshinEewViewer.CustomControl;assembly=KyoshinEewViewer.CustomControl"
+			 xmlns:kmoni="clr-namespace:KyoshinMonitorLib;assembly=KyoshinMonitorLib"
+			 xmlns:local="clr-namespace:KyoshinEewViewer.Series.Earthquake;assembly=KyoshinEewViewer"
+			 mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="500"
+			 x:Class="KyoshinEewViewer.Series.Earthquake.EarthquakeOverlayView"
+			 x:DataType="local:EarthquakeSeries"
+			 Foreground="{DynamicResource MainForegroundColor}"
+			 FontFamily="{StaticResource MainFont}">
+    <UserControl.Styles>
+        <Style Selector="TextBlock.drillSub">
+            <Setter Property="FontSize" Value="52" />
+            <Setter Property="Margin" Value="0,0,0,-50" />
+        </Style>
+        <Style Selector="TextBlock.drillMain">
+            <Setter Property="FontSize" Value="125" />
+        </Style>
+
+        <!-- 縦向きの端末では画面幅に収まらないため小さく表示する -->
+        <Style Selector="local|EarthquakeOverlayView.narrow TextBlock.drillSub">
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Margin" Value="0,0,0,-25" />
+        </Style>
+        <Style Selector="local|EarthquakeOverlayView.narrow TextBlock.drillMain">
+            <Setter Property="FontSize" Value="62" />
+        </Style>
+    </UserControl.Styles>
+    <Panel>
+        <!-- 訓練電文表示 -->
+        <StackPanel IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}" Opacity=".5">
+            <TextBlock Classes="drillSub" IsVisible="{Binding CurrentEvent.IsTraining}" Foreground="{DynamicResource SubForegroundColor}" Text="D  R  I  L  L" FontWeight="Bold" />
+            <TextBlock Classes="drillMain" IsVisible="{Binding CurrentEvent.IsTraining}" Foreground="{DynamicResource SubForegroundColor}" Text="訓練" FontWeight="Bold" />
+        </StackPanel>
+        <!-- 試験電文表示 -->
+        <StackPanel IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}" Opacity=".5">
+            <TextBlock Classes="drillSub" IsVisible="{Binding CurrentEvent.IsTest}" Foreground="{DynamicResource SubForegroundColor}" Text="  T  E  S  T" FontWeight="Bold" />
+            <TextBlock Classes="drillMain" IsVisible="{Binding CurrentEvent.IsTest}" Foreground="{DynamicResource SubForegroundColor}" Text="試験" FontWeight="Bold" />
+        </StackPanel>
+
+        <!-- 凡例表示
+        <Border IsVisible="{Binding RemarksIntensities, Converter={x:Static ObjectConverters.IsNotNull}}" Background="{DynamicResource DockTitleBackgroundColor}" CornerRadius="4" Margin="5" ClipToBounds="True" HorizontalAlignment="Left" VerticalAlignment="Top">
+            <StackPanel>
+                <TextBlock Text="震度" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" />
+                <ItemsControl ItemsSource="{Binding RemarksIntensities}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="kmoni:JmaIntensity">
+                            <controls:IntensityIcon Intensity="{Binding}" WideMode="True" Height="24" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border> -->
+
+        <!-- コメント表示 -->
+        <StackPanel Margin="5" VerticalAlignment="Bottom" HorizontalAlignment="Right"
+					IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <Border VerticalAlignment="Bottom" HorizontalAlignment="Right" IsVisible="{Binding CurrentEvent.FreeFormComment, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+					Background="{DynamicResource DockBackgroundColor}" CornerRadius="4" Margin="0,5">
+                <TextBlock Text="{Binding CurrentEvent.FreeFormComment}" Margin="5,0" FontSize="12"
+                           HorizontalAlignment="Right" TextWrapping="Wrap" />
+            </Border>
+            <Border VerticalAlignment="Bottom" HorizontalAlignment="Right" IsVisible="{Binding CurrentEvent.Comment, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+					Background="{DynamicResource DockBackgroundColor}" CornerRadius="4">
+                <TextBlock Text="{Binding CurrentEvent.Comment}" Margin="5,0" FontSize="18" HorizontalAlignment="Right" TextWrapping="Wrap" />
+            </Border>
+        </StackPanel>
+
+        <!-- 取り消し表示 -->
+        <Panel IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}"
+			VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Border IsVisible="{Binding CurrentEvent.IsCancelled}" Background="{DynamicResource DockBackgroundColor}" CornerRadius="4">
+                <StackPanel Margin="10">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock Text="&#xf05e;" Classes="icon" FontSize="24" VerticalAlignment="Center" Margin="5,3,5,0" />
+                        <TextBlock Text="この情報は取り消されました。" FontWeight="Bold" FontSize="24" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <TextBlock Text="This information is cancelled." FontSize="16" TextWrapping="Wrap" HorizontalAlignment="Center" Margin="0,10,0,0" />
+                </StackPanel>
+            </Border>
+        </Panel>
+
+        <!-- 訂正表示
+        <Border IsVisible="{Binding CurrentEvent.IsCorrected}"
+			Background="{DynamicResource DockBackgroundColor}" CornerRadius="4"
+			VerticalAlignment="Center" HorizontalAlignment="Center">
+            <StackPanel Margin="10">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock Text="&#xf05e;" Classes="icon" FontSize="24" VerticalAlignment="Center" Margin="5,3,5,0" />
+                    <TextBlock Text="この情報は訂正されました。" FontWeight="Bold" FontSize="24" />
+                </StackPanel>
+                <TextBlock Text="より新しい情報で訂正されています。" FontSize="16" TextWrapping="Wrap" HorizontalAlignment="Center" Margin="0,10,0,0" />
+            </StackPanel>
+        </Border>-->
+
+        <!-- 読み込み失敗表示 -->
+        <Border IsVisible="{Binding TelegramProcessError, Converter={x:Static ObjectConverters.IsNotNull}}"
+			Background="{DynamicResource DockBackgroundColor}" CornerRadius="4"
+			VerticalAlignment="Center" HorizontalAlignment="Center">
+            <StackPanel Margin="10">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock Text="&#xf1e2;" Classes="icon" FontSize="24" VerticalAlignment="Center" Margin="5,3,5,0" />
+                    <TextBlock Text="読み込みに失敗しました。" FontWeight="Bold" FontSize="24" TextWrapping="Wrap" />
+                </StackPanel>
+                <TextBlock Text="{Binding TelegramProcessError}" FontSize="16" TextWrapping="Wrap" HorizontalAlignment="Center" Margin="0,10,0,0" />
+            </StackPanel>
+        </Border>
+    </Panel>
+</UserControl>
