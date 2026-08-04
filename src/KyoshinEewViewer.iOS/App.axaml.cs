@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 using Avalonia.Threading;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
@@ -88,12 +89,24 @@ public class App : Application
 
 		// サブウィンドウをオーバーレイとして重ねるため、MainView を Panel で包む
 		var host = new Panel();
-		host.Children.Add(new MainView
+		var mainView = new MainView
 		{
 			DataContext = Locator.Current.RequireService<MainViewModel>(),
-		});
+		};
+		host.Children.Add(mainView);
 		_subWindowsService.OverlayHost = host;
 		singleViewPlatform.MainView = MainView = host;
+
+		// MainView は全画面描画を要求するため、ステータスバーやホームインジケータに
+		// 重ならないようセーフエリアの分をこちらで空ける
+		host.AttachedToVisualTree += (_, _) =>
+		{
+			if (TopLevel.GetTopLevel(host)?.InsetsManager is not { } insetsManager)
+				return;
+			mainView.Margin = insetsManager.SafeAreaPadding;
+			insetsManager.SafeAreaChanged += (_, e) => mainView.Margin = e.SafeAreaPadding;
+		};
+		ApplyHostBackground(host);
 
 		MessageBus.Current.Listen<ShowSettingWindowRequested>()
 			.Subscribe(_ => Dispatcher.UIThread.Post(_subWindowsService.ShowSettingWindow));
@@ -119,6 +132,8 @@ public class App : Application
 				// MainView は論理ツリー未接続の場合にテーマリソースを解決できないため Application から引く
 				Dispatcher.UIThread.Post(() => FixedObjectRenderer.UpdateIntensityPaintCache(this));
 			});
+		KyoshinEewViewerApp.Selector.WhenAnyValue(x => x.SelectedWindowTheme)
+			.Subscribe(_ => Dispatcher.UIThread.Post(() => ApplyHostBackground(host)));
 
 		if (config.ShowWizard)
 			Dispatcher.UIThread.Post(async () =>
@@ -127,6 +142,13 @@ public class App : Application
 				config.ShowWizard = false;
 				ConfigurationLoader.Save(config);
 			});
+	}
+
+	// セーフエリア分の余白は MainView の外側に出るため、テーマの背景色で埋める
+	private void ApplyHostBackground(Panel host)
+	{
+		if (this.FindResource("MainBackgroundColor") is Color color)
+			host.Background = new SolidColorBrush(color);
 	}
 
 	/// <summary>
