@@ -29,8 +29,14 @@ using System.Threading.Tasks;
 
 namespace KyoshinEewViewer.ViewModels;
 
-public class SettingWindowViewModel : ViewModelBase
+public class SettingWindowViewModel : NavigationPaneViewModelBase
 {
+	/// <summary>
+	/// 設定項目の一覧のペインは幅 200px あるため、設定内容側に狭い端末の画面幅と同程度 (360px) を残せる幅を下限とする
+	/// 設定ウィンドウの MinWidth (640px) より小さいため、デスクトップでは常に一覧を表示したままになる
+	/// </summary>
+	protected override double PaneVisibleMinWidth => 560;
+
 	public static Dictionary<KyoshinEventLevel, string> KyoshinEventLevelNames { get; } = new()
 	{
 		{ KyoshinEventLevel.Weaker, "微弱(非推奨)" },
