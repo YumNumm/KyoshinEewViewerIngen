@@ -136,10 +136,24 @@ jobs:
       # ワークロードの入った SDK と別の SDK を引きかねない。
       # asc は github: バックエンドから取得するため、GITHUB_TOKEN が無いと
       # GitHub API のレート制限に当たる (docs/TESTFLIGHT_MACOS.md 参照)
+      # mise 本体だけ入れ、ツールの導入は次のステップで行う。
+      # dotnet は asdf バックエンドのプラグインを要し、未導入だと mise が同意を求めて
+      # 非対話環境で失敗するため、プラグインを明示的に入れてから install する
       - name: Setup mise (.NET SDK / asc CLI)
         uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
+        with:
+          install: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install tools via mise
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          mise plugins install --yes dotnet
+          mise install --yes
+          mise ls --current
 
       # ios ワークロードが無いと net10.0-ios をビルドできない。
       # mise の dotnet はユーザー領域に入るため sudo は不要
@@ -306,10 +320,24 @@ jobs:
         with:
           xcode-version: ${{ env.XCODE_VERSION }}
 
+      # mise 本体だけ入れ、ツールの導入は次のステップで行う。
+      # dotnet は asdf バックエンドのプラグインを要し、未導入だと mise が同意を求めて
+      # 非対話環境で失敗するため、プラグインを明示的に入れてから install する
       - name: Setup mise (.NET SDK / asc CLI)
         uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
+        with:
+          install: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install tools via mise
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          mise plugins install --yes dotnet
+          mise install --yes
+          mise ls --current
 
       - name: ビルド番号を決定
         id: version

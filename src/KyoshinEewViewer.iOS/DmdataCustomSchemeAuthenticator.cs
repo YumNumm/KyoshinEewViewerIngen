@@ -78,7 +78,11 @@ public class DmdataCustomSchemeAuthenticator : IDmdataAuthenticator
 		{
 			using var registration = cancellationToken.Register(() => _callback?.TrySetCanceled(cancellationToken));
 
-			if (KyoshinEewViewerApp.TopLevelControl?.Launcher is not { } launcher)
+			// TopLevelControl は MainView の接続完了時に設定されるが、取り違えを避けるため
+			// 表示中のビューからも引けるようにしておく
+			var launcher = KyoshinEewViewerApp.TopLevelControl?.Launcher
+				?? TopLevel.GetTopLevel(App.MainView)?.Launcher;
+			if (launcher is null)
 				throw new InvalidOperationException("ブラウザを開けませんでした");
 			if (!await launcher.LaunchUriAsync(authorizeUri))
 				throw new InvalidOperationException("認可ページを開けませんでした");
