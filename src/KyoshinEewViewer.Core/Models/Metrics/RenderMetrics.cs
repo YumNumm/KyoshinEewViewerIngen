@@ -79,3 +79,66 @@ public class FrameRenderMetrics
 	/// </summary>
 	public RectD ViewAreaRect { get; init; }
 }
+
+/// <summary>
+/// 一定期間分をまとめたフレーム統計
+/// レイヤーごとの内訳を持たない軽量な集計で、常時表示するオーバーレイ向け
+/// </summary>
+public sealed class FrameStatistics
+{
+	/// <summary>
+	/// 集計期間中の平均フレームレート
+	/// </summary>
+	public required double Fps { get; init; }
+
+	/// <summary>
+	/// 1フレームあたりの平均描画時間 (ミリ秒)
+	/// </summary>
+	public required double AverageRenderTimeMs { get; init; }
+
+	/// <summary>
+	/// 集計期間中で最も遅かったフレームの描画時間 (ミリ秒)
+	/// </summary>
+	public required double MaxRenderTimeMs { get; init; }
+
+	/// <summary>
+	/// フレーム開始間隔の平均 (ミリ秒)
+	/// </summary>
+	public required double AverageIntervalMs { get; init; }
+
+	/// <summary>
+	/// 描画中のレイヤー数
+	/// </summary>
+	public required int LayerCount { get; init; }
+
+	/// <summary>
+	/// ズームレベル
+	/// </summary>
+	public required double Zoom { get; init; }
+
+	/// <summary>
+	/// 実ピクセルでの描画幅
+	/// </summary>
+	public required int RenderWidth { get; init; }
+
+	/// <summary>
+	/// 実ピクセルでの描画高さ
+	/// </summary>
+	public required int RenderHeight { get; init; }
+
+	/// <summary>
+	/// 論理ピクセルに対する実ピクセルの倍率
+	/// </summary>
+	public required double RenderScaling { get; init; }
+
+	/// <summary>
+	/// 継続的な再描画を要求している状態かどうか
+	/// アニメーションも更新要求もない間はフレームレートが 0 になるため、その区別に使う
+	/// </summary>
+	public required bool IsContinuousRendering { get; init; }
+
+	/// <summary>
+	/// 直近フレームの描画時間履歴 (ミリ秒、古い順)
+	/// </summary>
+	public required float[] RenderTimeHistoryMs { get; init; }
+}

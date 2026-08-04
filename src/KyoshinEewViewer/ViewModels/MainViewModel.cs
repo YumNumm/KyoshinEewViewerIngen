@@ -219,6 +219,16 @@ public partial class MainViewModel : NavigationPaneViewModelBase
 		set => this.RaiseAndSetIfChanged(ref _isMetricsEnabled, value);
 	}
 
+	private FrameStatistics? _frameStatistics;
+	/// <summary>
+	/// パフォーマンス HUD に表示する地図のフレーム統計
+	/// </summary>
+	public FrameStatistics? FrameStatistics
+	{
+		get => _frameStatistics;
+		set => this.RaiseAndSetIfChanged(ref _frameStatistics, value);
+	}
+
 	private Rect _bounds;
 	public Rect Bounds
 	{

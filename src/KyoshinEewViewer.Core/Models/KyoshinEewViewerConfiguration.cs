@@ -1179,6 +1179,25 @@ public class KyoshinEewViewerConfiguration : ReactiveObject, IWindowPlacementCon
 			set => this.RaiseAndSetIfChanged(ref _jwt, value);
 		}
 	}
+
+	private DebugConfig _debug = new();
+	public DebugConfig Debug
+	{
+		get => _debug;
+		set => this.RaiseAndSetIfChanged(ref _debug, value);
+	}
+	public class DebugConfig : ReactiveObject
+	{
+		private bool _showPerformanceHud;
+		/// <summary>
+		/// パフォーマンス HUD をメイン画面へオーバーレイ表示するかどうか
+		/// </summary>
+		public bool ShowPerformanceHud
+		{
+			get => _showPerformanceHud;
+			set => this.RaiseAndSetIfChanged(ref _showPerformanceHud, value);
+		}
+	}
 }
 
 /// <summary>
