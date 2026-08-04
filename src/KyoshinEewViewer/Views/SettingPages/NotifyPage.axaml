@@ -21,6 +21,13 @@
     </UserControl.Styles>
     <ScrollViewer>
         <StackPanel>
+            <ui:FAInfoBar IsOpen="{Binding IsIOS}"
+                          IsClosable="False"
+                          Severity="Warning"
+                          Title="アプリを閉じている間は通知されません"
+                          Message="iOS ではアプリがバックグラウンドに回ると強震モニタ･電文の受信自体が停止します。画面を開いていない間に緊急地震速報を受け取ることはできません。"
+                          Margin="10,20,10,0" />
+
             <StackPanel IsVisible="{Binding IsDesktop}">
                 <TextBlock Text="トレイアイコン" FontWeight="Bold" Margin="10,20,10,5" />
                 <ui:FASettingsExpander Header="タスクトレイのアイコンを利用する" Description="(再起動後反映)通知領域にアイコンを常駐させ、右クリックメニューやウィンドウ格納を利用できます。">
