@@ -90,6 +90,7 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 		}
 	}
 	private BasicSettingPage<UpdatePage> UpdatePage { get; }
+	private BasicSettingPage<DebugMenuPage> DebugMenuPage { get; }
 	public ISettingPage[] SettingPages { get; }
 
 	public SettingWindowViewModel(
@@ -174,6 +175,8 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 			}).FirstOrDefault(s => s.SpeakerId == config.Voicevox.SpeakerId)?.Name ?? "不明");
 
 		UpdatePage = new BasicSettingPage<UpdatePage>("\xf071", "アプリの更新", []) { IsVisible = false };
+		// リリースビルドでも設定ボタンの長押しから開けるようにするため、ページ自体は常に用意する
+		DebugMenuPage = new BasicSettingPage<DebugMenuPage>("\xf188", "デバッグメニュー", []) { IsVisible = false };
 		SettingPages = [
 			UpdatePage,
 			new BasicSettingPage<GeneralPage>("\xf53f", "外観･基本設定", []),
@@ -193,9 +196,7 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 			feedbackPage,
 			new BasicSettingPage<AboutPage>("\xf129", "このアプリについて", []),
 			new BasicSettingPage<LicencePage>("\xf2c2", "ライセンス", []),
-#if DEBUG
-			new BasicSettingPage<DebugMenuPage>("\xf188", "デバッグメニュー", []),
-#endif
+			DebugMenuPage,
 		];
 		_selectedSettingPage = SettingPages[1];
 		if ((updateCheckService.AvailableUpdateVersions?.Length ?? 0) > 0)
@@ -224,7 +225,17 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 		}
 #if DEBUG
 		IsDebug = true;
+		DebugMenuPage.IsVisible = true;
 #endif
+	}
+
+	/// <summary>
+	/// デバッグメニューを表示して選択する。設定ボタンの長押しから呼ばれる
+	/// </summary>
+	public void ShowDebugMenu()
+	{
+		DebugMenuPage.IsVisible = true;
+		SelectedSettingPage = DebugMenuPage;
 	}
 
 	public string Title { get; } = "設定 - KyoshinEewViewer for ingen";

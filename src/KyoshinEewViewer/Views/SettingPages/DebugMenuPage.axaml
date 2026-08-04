@@ -74,7 +74,7 @@
                 </StackPanel>
             </HeaderedContentControl>
 
-            <Button Content="アプリをクラッシュさせる" FontSize="24" Command="{Binding CrashApp}" HorizontalAlignment="Center">
+            <Button Content="アプリをクラッシュさせる" FontSize="24" Command="{Binding CrashApp}" HorizontalAlignment="Center" IsVisible="{Binding IsDebug}">
                 <Button.Styles>
                     <Style>
                         <Style.Resources>

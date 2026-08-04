@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using KyoshinEewViewer.Core;
@@ -94,6 +95,11 @@ public partial class MainView : UserControl
 				SaveMapToFile(path);
 		});
 
+		// タッチだけでなくマウスの長押しでも拾えるようにする
+		OpenSettingWindowButton.SetValue(InputElement.IsHoldingEnabledProperty, true);
+		OpenSettingWindowButton.SetValue(InputElement.IsHoldWithMouseEnabledProperty, true);
+		OpenSettingWindowButton.AddHandler(InputElement.HoldingEvent, OnSettingButtonHolding);
+
 		AttachedToVisualTree += (s, e) =>
 		{
 			if (TopLevel.GetTopLevel(this) is { } topLevel && topLevel.InsetsManager is { } insetsManager)
@@ -119,6 +125,17 @@ public partial class MainView : UserControl
 			return;
 		//MiniMap.Navigate(new RectD(new PointD(24.127, 123.585), new PointD(28.546, 129.803)), TimeSpan.Zero, true);
 		MiniMap.Navigate(new RectD(new PointD(22.289, 121.207), new PointD(31.128, 132.100)), TimeSpan.Zero, true);
+	}
+
+	// リリースビルドではデバッグメニューを隠しているため、長押しで解放する
+	private void OnSettingButtonHolding(object? sender, HoldingRoutedEventArgs e)
+	{
+		if (e.HoldingState != HoldingState.Started)
+			return;
+		e.Handled = true;
+		LogHost.Default.Info("設定ボタンの長押しによりデバッグメニューを表示します");
+		Locator.Current.GetService<SettingWindowViewModel>()?.ShowDebugMenu();
+		MessageBus.Current.SendMessage(new ShowSettingWindowRequested());
 	}
 
 	private void HomeButton_Click(object? sender, RoutedEventArgs e)
