@@ -13,18 +13,18 @@ KyoshinEewViewer の macOS 版を Mac App Store / TestFlight 向けに署名済�
 | 項目 | 値 |
 | --- | --- |
 | ASC App ID | 未作成 (`APP_ID` で指定する) |
-| Bundle ID | `net.yumnumm.KyoshinEewViewerIngen` |
+| Bundle ID | `net.yumnumm.KyoshinEewViewer` |
 | Team ID | `CPL7H8SHVM` |
 | プラットフォーム | `MAC_OS` |
 | アーキテクチャ | `osx-arm64` のみ (universal 化は「残課題」参照) |
 
-> **アプリレコードの取り違え注意**: Bundle ID を `net.yumnumm.KyoshinEewViewerIngen` に
+> **アプリレコードの取り違え注意**: Bundle ID を `net.yumnumm.KyoshinEewViewer` に
 > 統一したため、ASC 上の既存レコードはいずれも使えない。新規に作成すること。
 > ASC のアプリレコードは作成後に Bundle ID を変更できない。
 >
 > | App ID | Bundle ID | 名前 | |
 > | --- | --- | --- | --- |
-> | (新規作成) | `net.yumnumm.KyoshinEewViewerIngen` | KyoshinEewViewer for ingen | **こちらを使う** |
+> | (新規作成) | `net.yumnumm.KyoshinEewViewer` | KyoshinEewViewer for ingen | **こちらを使う** |
 > | `6517347515` | `net.yumnumm.kevi` | KyoshinEewViewer for ingen | 旧。build 3 まで登録済みだが使わない |
 > | `6502579684` | `net.yumnumm.KyoshinEewViewer.Desktop` | KyoshinMonitorViewer for Ingen | 使わない |
 >
@@ -62,7 +62,7 @@ TestFlight 用の値はスクリプトが**コピー後のバンドル側だけ*
 
 ```bash
 asc bundle-ids list --paginate
-asc bundle-ids create --identifier "net.yumnumm.KyoshinEewViewerIngen" --name "KyoshinEewViewer for ingen" --platform MAC_OS
+asc bundle-ids create --identifier "net.yumnumm.KyoshinEewViewer" --name "KyoshinEewViewer for ingen" --platform MAC_OS
 ```
 
 ### 2. 証明書 (2 種類とも必要)
@@ -124,7 +124,7 @@ security find-identity -v | grep "3rd Party"
 asc profiles create \
   --name "KEVI Mac App Store" \
   --profile-type MAC_APP_STORE \
-  --bundle "net.yumnumm.KyoshinEewViewerIngen" \
+  --bundle "net.yumnumm.KyoshinEewViewer" \
   --certificate "<MAC_APP_DISTRIBUTION の証明書 ID>"
 
 asc profiles download --id "<PROFILE_ID>" \
@@ -155,7 +155,7 @@ BUILD_NUMBER=3 ./scripts/publish-testflight-macos.sh
 | 変数 | 既定値 | 用途 |
 | --- | --- | --- |
 | `APP_ID` | なし (指定必須) | ASC のアプリ ID |
-| `BUNDLE_ID` | `net.yumnumm.KyoshinEewViewerIngen` | CFBundleIdentifier |
+| `BUNDLE_ID` | `net.yumnumm.KyoshinEewViewer` | CFBundleIdentifier |
 | `TEAM_ID` | `CPL7H8SHVM` | entitlements の team-identifier |
 | `APP_VERSION` | `1.0` | CFBundleShortVersionString |
 | `BUILD_NUMBER` | ASC から自動取得 | CFBundleVersion |
@@ -194,7 +194,7 @@ asc builds next-build-number --app "$APP_ID" --version 1.0 --platform MAC_OS
 
 | キー | 値 | 理由 |
 | --- | --- | --- |
-| `CFBundleIdentifier` | `net.yumnumm.KyoshinEewViewerIngen` | テンプレートは ad-hoc 用の値なので上書き必須 |
+| `CFBundleIdentifier` | `net.yumnumm.KyoshinEewViewer` | テンプレートは ad-hoc 用の値なので上書き必須 |
 | `CFBundleShortVersionString` | `APP_VERSION` | テンプレートは `KEVI_VERSION` プレースホルダ |
 | `CFBundleVersion` | `BUILD_NUMBER` | ASC 側のビルド番号と一致させる |
 | `LSApplicationCategoryType` | `public.app-category.weather` | App Store ではカテゴリ必須 |
@@ -217,7 +217,7 @@ App Store 配布では App Sandbox が必須。
 | `com.apple.security.cs.allow-jit` | .NET ランタイムの JIT に必要 |
 | `com.apple.security.network.client` | 地震データ (強震モニタ / Dmdata / JMA) の取得 |
 | `com.apple.security.files.user-selected.read-write` | ファイルピッカー経由の読み書き |
-| `com.apple.application-identifier` | `CPL7H8SHVM.net.yumnumm.KyoshinEewViewerIngen`。プロファイルと一致必須 |
+| `com.apple.application-identifier` | `CPL7H8SHVM.net.yumnumm.KyoshinEewViewer`。プロファイルと一致必須 |
 | `com.apple.developer.team-identifier` | `CPL7H8SHVM`。プロファイルと一致必須 |
 | `com.apple.security.temporary-exception.mach-lookup.global-name` | `com.apple.coreservices.launchservicesd`。**これが無いと起動時に必ずクラッシュする**。詳細は「遭遇したエラー 6」 |
 

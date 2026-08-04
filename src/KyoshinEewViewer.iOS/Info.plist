@@ -7,7 +7,7 @@
 	<key>CFBundleDisplayName</key>
 	<string>KyoshinEewViewer</string>
 	<key>CFBundleIdentifier</key>
-	<string>net.yumnumm.KyoshinEewViewerIngen</string>
+	<string>net.yumnumm.KyoshinEewViewer</string>
 	<!-- CFBundleVersion / CFBundleShortVersionString はここに書かない。
 	     iOS SDK の CompileAppManifest は Info.plist に既にあるキーを
 	     ApplicationVersion / ApplicationDisplayVersion で上書きしないため、
@@ -36,7 +36,7 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>net.yumnumm.KyoshinEewViewerIngen.oauth</string>
+			<string>net.yumnumm.KyoshinEewViewer.oauth</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>kevi</string>

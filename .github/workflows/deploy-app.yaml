@@ -13,7 +13,7 @@ name: deploy-app
 #
 # 必要な Secrets / Variables:
 #   ASC_APP_ID                      Variables 推奨。ASC のアプリ ID (数値)。
-#                                   net.yumnumm.KyoshinEewViewerIngen のアプリレコードを作成してから設定する
+#                                   net.yumnumm.KyoshinEewViewer のアプリレコードを作成してから設定する
 #   ASC_KEY_ID                      ASC API キー ID
 #   ASC_ISSUER_ID                   ASC の issuer ID (UUID)。asc auth issuer-id で取得
 #   ASC_PRIVATE_KEY_B64             AuthKey_<KEY_ID>.p8 を base64 化したもの
@@ -153,7 +153,7 @@ jobs:
         shell: bash
         run: |
           if [ -z "$ASC_APP_ID" ]; then
-            echo "::error::ASC_APP_ID が未設定です。net.yumnumm.KyoshinEewViewerIngen のアプリレコードを App Store Connect で作成し、Variables (または Secrets) の ASC_APP_ID に App ID を設定してください。"
+            echo "::error::ASC_APP_ID が未設定です。net.yumnumm.KyoshinEewViewer のアプリレコードを App Store Connect で作成し、Variables (または Secrets) の ASC_APP_ID に App ID を設定してください。"
             exit 1
           fi
           BUILD_NUMBER="$INPUT_BUILD_NUMBER"
@@ -316,7 +316,7 @@ jobs:
         shell: bash
         run: |
           if [ -z "$ASC_APP_ID" ]; then
-            echo "::error::ASC_APP_ID が未設定です。net.yumnumm.KyoshinEewViewerIngen のアプリレコードを App Store Connect で作成し、Variables (または Secrets) の ASC_APP_ID に App ID を設定してください。"
+            echo "::error::ASC_APP_ID が未設定です。net.yumnumm.KyoshinEewViewer のアプリレコードを App Store Connect で作成し、Variables (または Secrets) の ASC_APP_ID に App ID を設定してください。"
             exit 1
           fi
           BUILD_NUMBER="$INPUT_BUILD_NUMBER"

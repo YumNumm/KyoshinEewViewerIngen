@@ -25,10 +25,10 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# ASC のアプリレコードは net.yumnumm.KyoshinEewViewerIngen 用に新規作成が必要なため、
-# APP_ID に既定値は置かない (docs/TESTFLIGHT_MACOS.md の「アプリレコードの取り違え注意」参照)
-APP_ID="${APP_ID:-}"
-BUNDLE_ID="${BUNDLE_ID:-net.yumnumm.KyoshinEewViewerIngen}"
+# net.yumnumm.KyoshinEewViewer のアプリレコード (docs/TESTFLIGHT_MACOS.md の
+# 「アプリレコードの取り違え注意」参照。旧 net.yumnumm.kevi のものとは別)
+APP_ID="${APP_ID:-6797931103}"
+BUNDLE_ID="${BUNDLE_ID:-net.yumnumm.KyoshinEewViewer}"
 TEAM_ID="${TEAM_ID:-CPL7H8SHVM}"
 
 # バージョン。APP_VERSION は CFBundleShortVersionString、BUILD_NUMBER は CFBundleVersion になる。
