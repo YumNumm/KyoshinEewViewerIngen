@@ -22,6 +22,11 @@ public static class LoggingAdapter
 	public static bool EnableConsoleLogger { get; set; }
 	public static bool EnableDebugLog { get; set; }
 
+	/// <summary>
+	/// ファイルロガーが実際に使用しているログディレクトリ。ファイル出力が無効な場合は null
+	/// </summary>
+	public static string? LogDirectory { get; private set; }
+
 	public static void Setup(KyoshinEewViewerConfiguration config)
 	{
 		// メモリ内ログプロバイダーを作成
@@ -71,7 +76,12 @@ public static class LoggingAdapter
 			{
 				// macOS と iOS ではログディレクトリを固定、その他のプラットフォームでは設定値を使用
 				string fullPath;
-				if (!PlatformDirectories.IsLogDirectoryCustomizable)
+				if (!PlatformDirectories.IsLogDirectoryCustomizable
+#if INTEGRATION_TEST
+					// 結合テストではテストドライバがログを回収できるよう作業ディレクトリ配下へ出力する
+					&& StartupOptions.Current?.SmokeTest != true && StartupOptions.Current?.AutoUpdateTest != true
+#endif
+				)
 				{
 					fullPath = PlatformDirectories.Logs;
 				}
@@ -91,6 +101,7 @@ public static class LoggingAdapter
 				}
 
 				PlatformDirectories.EnsureDirectoryExists(fullPath);
+				LogDirectory = fullPath;
 
 				builder.AddFile(Path.Combine(fullPath, "KEVi_{0:yyyy}-{0:MM}-{0:dd}.log"), fileLoggerOpts =>
 				{
