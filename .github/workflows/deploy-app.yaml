@@ -6,7 +6,9 @@ name: deploy-app
 #   - deploy.yaml     : コンテナイメージと ad-hoc 配布 (GitHub Releases)。無署名 + ad-hoc 署名
 #   - deploy-app.yaml : ストア配信。正式な署名とビルド番号の管理が必要
 #
-# 誤って外部配信してしまわないよう、起動は workflow_dispatch のみに限定している。
+# develop への push で iOS / macOS を自動でビルドしてアップロードする。
+# TestFlight のベータグループへの配布は testflight_group を指定したときだけ行うため、
+# push 由来のビルドは内部にアップロードされるだけで外部配信はされない。
 # environment は 2 つ使う。
 #   - testflight-build : ビルド用。Secrets の参照範囲を絞るためだけのもので承認は不要
 #   - testflight       : アップロード用。外部への配信になるため必要に応じて承認者を設定する
@@ -26,6 +28,9 @@ name: deploy-app
 # macOS (Mac App Store) はクラウド署名に対応していないため .p12 が必要。
 
 on:
+  push:
+    branches:
+      - develop
   workflow_dispatch:
     inputs:
       platform:
@@ -66,6 +71,8 @@ env:
   XCODE_VERSION: "26.6"
   # asc CLI を非対話環境向けに設定する (docs/TESTFLIGHT_MACOS.md「遭遇したエラー 2」)
   # キーチェーン方式は GUI の許可ダイアログ待ちでハングし得るため CI では必ず環境変数認証にする
+  # mise が asdf の dotnet プラグインを入れる際に同意を求めて失敗するため非対話で許可する
+  MISE_YES: "1"
   ASC_BYPASS_KEYCHAIN: "1"
   # スピナーの制御文字でログが汚れるのを防ぐ
   ASC_SPINNER_DISABLED: "1"
@@ -101,7 +108,7 @@ jobs:
   # ---------------------------------------------------------------------------
   build-ios:
     name: iOS ビルド
-    if: inputs.platform == 'ios' || inputs.platform == 'all'
+    if: github.event_name == 'push' || inputs.platform == 'ios' || inputs.platform == 'all'
     runs-on: macos-26
     timeout-minutes: 120
     # 承認ゲートは deploy 側に置く。ここで environment を指定しているのは
@@ -148,7 +155,7 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
-          APP_VERSION: ${{ inputs.app_version }}
+          APP_VERSION: ${{ inputs.app_version || '1.0' }}
           INPUT_BUILD_NUMBER: ${{ inputs.build_number }}
         shell: bash
         run: |
@@ -278,7 +285,7 @@ jobs:
   # 実処理は既存の scripts/publish-testflight-macos.sh に任せる。
   build-macos:
     name: macOS ビルド
-    if: inputs.platform == 'macos' || inputs.platform == 'all'
+    if: github.event_name == 'push' || inputs.platform == 'macos' || inputs.platform == 'all'
     runs-on: macos-26
     timeout-minutes: 90
     # build-ios と同じ理由で environment を指定する (承認ゲートは deploy 側)
@@ -311,7 +318,7 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
-          APP_VERSION: ${{ inputs.app_version }}
+          APP_VERSION: ${{ inputs.app_version || '1.0' }}
           INPUT_BUILD_NUMBER: ${{ inputs.build_number }}
         shell: bash
         run: |
