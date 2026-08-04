@@ -85,6 +85,31 @@ Splat に実装が登録されていなければ従来どおり BASS を使う�
 iOS では `Window` を生成できないため、設定画面とセットアップウィザードは
 `OverlaySubWindowsService` で `MainView` の上にオーバーレイとして表示する。
 
+## URL スキームによる復帰 (DMDATA の認可)
+
+ループバック HTTP サーバーを立てられないため、認可ページを外部ブラウザで開き、
+カスタム URL スキームでアプリに戻ってきたところを拾う。
+
+**購読は `AppDelegate` 自身の `IAvaloniaAppDelegate.Activated` で行う。**
+`IActivatableLifetime` は `AvaloniaLocator` へ後から束縛されるため取得タイミングに
+依存し、`Application.TryGetFeature` でも `null` になり得る。また iOS の
+`SingleViewLifetime` は `IActivatableLifetime` を実装しないので、
+`ApplicationLifetime` へのキャストは**常に失敗する**。
+
+`UIApplicationSceneManifest` は不要。Avalonia の `application:openURL:options:` が
+`ProtocolActivatedEventArgs` で `Activated` を発火する。
+
+DMDATA 側には専用クライアントが必要で、リダイレクト URI とスコープの両方を
+登録しておく必要がある。スコープが 1 つでも欠けると `invalid_scope` になる
+(要求するのは `DmdataRedundantTelegramPublisher` の `RequiredScope` + `AdditionalScope`)。
+
+## ファイルピッカーで選んだファイル
+
+**ピッカーが返すパスは他アプリのコンテナ (`File Provider Storage`) を指しており、
+選択直後しか開けない。** 設定として保存して後から使う場合は
+`IStorageFile.OpenReadAsync()` で読み出して自身のコンテナへ複製すること。
+生のパスを保存すると、再生時に `Exists:False` や `OSStatus -54` になる。
+
 ## 利用できない機能
 
 | 機能 | 理由 |
@@ -105,3 +130,19 @@ iOS では `Window` を生成できないため、設定画面とセットアッ
 無署名の `.app` から `.xcarchive` を組み立てて `xcodebuild -exportArchive` に
 `-allowProvisioningUpdates` と ASC API キーを渡し、Apple 側に証明書とプロファイルを
 自動発行させている (Cloud-managed certificates)。
+
+`develop` への push で `.github/workflows/deploy-app.yaml` が iOS / macOS を
+ビルドしてアップロードする。TestFlight のベータグループへの配布は
+`testflight_group` を指定したときだけなので、push 由来のビルドは内部に留まる。
+
+macOS (Mac App Store) はクラウド署名に対応していないため `.p12` が必要で、
+`scripts/publish-testflight-macos.sh` を使う。
+
+### CI の mise セットアップ
+
+**`mise-action` に `install: false` を渡し、`mise install --yes` を別ステップで実行すること。**
+アクションは `--yes` を渡さないため、プラグイン未導入の環境では同意待ちで失敗する。
+
+`mise.lock` の dotnet は `core:dotnet` を使う。以前は `asdf:dotnet` だったが、
+mise 2026.8 で dotnet が core プラグイン化して asdf バックエンドが使えなくなり、
+fresh な環境でセットアップが必ず失敗していた。
