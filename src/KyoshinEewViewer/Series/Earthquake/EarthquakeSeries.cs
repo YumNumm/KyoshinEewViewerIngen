@@ -105,7 +105,6 @@ public class EarthquakeSeries : SeriesBase
 		Service = watchService;
 
 		MapDisplayParameter = new() {
-			Padding = new(240, 0, 0, 0),
 			OverlayLayers = [EarthquakeLayer],
 		};
 		IsHistoryShown = Config.Earthquake.ShowHistory;
@@ -212,7 +211,9 @@ public class EarthquakeSeries : SeriesBase
 		await TelegramProvideService.RestoreAsync();
 	}
 
-	public override Size MinViewSize { get; } = new(800, 600);
+	// 狭い画面では一覧をシートに移す縦向きレイアウトへ切り替わるため、
+	// スケーリングによる文字の縮小が起きないよう最小サイズはスマートフォン相当に留める
+	public override Size MinViewSize { get; } = new(380, 400);
 
 	private EarthquakeView? _control;
 	public override Control DisplayControl => _control ?? throw new InvalidOperationException("初期化前にコントロールが呼ばれています");
@@ -602,9 +603,99 @@ public class EarthquakeSeries : SeriesBase
 		get => _isHistoryShown;
 		set {
 			this.RaiseAndSetIfChanged(ref _isHistoryShown, value);
-			MapDisplayParameter = MapDisplayParameter with { Padding = new(MapDisplayParameter.Padding.Left, MapDisplayParameter.Padding.Top, value ? 240 : 0, MapDisplayParameter.Padding.Bottom) };
+			UpdateMapPadding();
 			Config.Earthquake.ShowHistory = value;
 		}
+	}
+
+	/// <summary>
+	/// 一覧を並べて表示せずシートに移す画面幅の上限
+	/// 240px の情報カードと 240px の一覧を地図と並べられない幅では縦向きレイアウトに切り替える
+	/// </summary>
+	private const double NarrowLayoutMaxWidth = 700;
+
+	/// <summary>
+	/// 縦向きレイアウトで情報カードが地図に重なる高さの目安
+	/// カードの高さは選択中の地震情報によって変わるため固定値で近似する
+	/// </summary>
+	private const double NarrowLayoutTopPadding = 250;
+
+	private double _viewWidth = double.PositiveInfinity;
+	/// <summary>
+	/// ビューの表示幅。ウィンドウ拡大率を適用したあとの論理サイズ
+	/// </summary>
+	public double ViewWidth
+	{
+		get => _viewWidth;
+		set {
+			if (_viewWidth == value)
+				return;
+			this.RaiseAndSetIfChanged(ref _viewWidth, value);
+			IsNarrowLayout = value < NarrowLayoutMaxWidth;
+		}
+	}
+
+	private bool _isNarrowLayout;
+	/// <summary>
+	/// 各地の震度･過去の地震をシートで表示する画面幅かどうか
+	/// </summary>
+	public bool IsNarrowLayout
+	{
+		get => _isNarrowLayout;
+		private set {
+			if (_isNarrowLayout == value)
+				return;
+			this.RaiseAndSetIfChanged(ref _isNarrowLayout, value);
+			UpdateMapPadding();
+			// 広い画面に戻った際はインライン表示になるためシートは閉じる
+			if (!value)
+				CloseSheets();
+		}
+	}
+
+	private void UpdateMapPadding()
+		=> MapDisplayParameter = MapDisplayParameter with {
+			Padding = IsNarrowLayout
+				? new Thickness(0, NarrowLayoutTopPadding, 0, 0)
+				: new Thickness(240, 0, IsHistoryShown ? 240 : 0, 0),
+		};
+
+	private bool _isObservationSheetOpen;
+	/// <summary>
+	/// 各地の震度のシートを表示しているかどうか
+	/// </summary>
+	public bool IsObservationSheetOpen
+	{
+		get => _isObservationSheetOpen;
+		set {
+			if (_isObservationSheetOpen == value)
+				return;
+			this.RaiseAndSetIfChanged(ref _isObservationSheetOpen, value);
+			if (value)
+				IsHistorySheetOpen = false;
+		}
+	}
+
+	private bool _isHistorySheetOpen;
+	/// <summary>
+	/// 過去の地震のシートを表示しているかどうか
+	/// </summary>
+	public bool IsHistorySheetOpen
+	{
+		get => _isHistorySheetOpen;
+		set {
+			if (_isHistorySheetOpen == value)
+				return;
+			this.RaiseAndSetIfChanged(ref _isHistorySheetOpen, value);
+			if (value)
+				IsObservationSheetOpen = false;
+		}
+	}
+
+	public void CloseSheets()
+	{
+		IsObservationSheetOpen = false;
+		IsHistorySheetOpen = false;
 	}
 
 	private EarthquakeEvent? _currentEvent;
@@ -623,8 +714,13 @@ public class EarthquakeSeries : SeriesBase
 				RemarksIntensities = null;
 				return;
 			}
+			// IsSelecting が未設定なのは一覧から選ばれた場合のみで、
+			// シートから選んだ直後は選択した情報を見せたいためシートを閉じる
 			if (!_currentEvent.IsSelecting)
+			{
+				CloseSheets();
 				ProcessEarthquakeEvent(_currentEvent).ConfigureAwait(false);
+			}
 			_currentEvent.IsSelecting = true;
 
 			// 震度2以上の時のみ凡例を表示させる
