@@ -113,8 +113,10 @@ public class ImageTileLayer : MapLayer
 						//}
 						else
 						{
+#if DEBUG
 							canvas.DrawLine(new SKPoint(cx, cy), new SKPoint(cx, cy + ch - 2), DebugPen);
 							canvas.DrawLine(new SKPoint(cx, cy), new SKPoint(cx + MercatorProjection.TileSize - 2, cy), DebugPen);
+#endif
 							canvas.DrawRect(cx, cy, MercatorProjection.TileSize, ch, PlaceHolderPaint);
 						}
 					}
