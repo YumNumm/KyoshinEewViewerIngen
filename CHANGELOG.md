@@ -1,9 +1,26 @@
 # Changelog
 
+## [1.0.8](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.7...1.0.8) - 2026-07-27
+- fix(shake-detection-producer): Valkey publish時刻にJSTタイムゾーンを付与 by @YumNumm in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/25
+
+## [1.0.7](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.6...1.0.7) - 2026-07-24
+- fix: 揺れ検知Snapshotの更新時刻を正規化 by @YumNumm in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/22
+
+## [1.0.6](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.5...1.0.6) - 2026-07-19
+- feat: publish canonical shake detection state payloads by @YumNumm in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/19
+
+## [1.0.5](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.4...1.0.5) - 2026-06-04
+
+- chore: PR は YumNumm（origin）のみ — Cursor ルールと CLAUDE 追記 by @YumNumm in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/13
+- Bump the nuget group with 1 update by @dependabot[bot] in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/14
+- fix(ReplayGenerator): アクティブセッションがない場合は snapshot fetch をスキップ by @YumNumm in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/16
+
 ## [1.0.4](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.3...1.0.4) - 2026-03-31
+
 - Bump the nuget group with 1 update by @dependabot[bot] in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/11
 
 ## [1.0.3](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.2...1.0.3) - 2026-03-31
+
 - feat: EqMonitorEewReplayData + ReplayGenerator Worker Service by @YumNumm in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/8
 
 ## [1.0.2](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.1...1.0.2) - 2026-03-30
@@ -11,6 +28,7 @@
 ## [1.0.1](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.0...1.0.1) - 2026-01-25
 
 ## [1.0.0](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/0.13.11...1.0.0) - 2026-01-09
+
 - 過度なAvalonia依存を削除 by @ingen084 in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/4
 - upstream取り込み by @YumNumm in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/5
 

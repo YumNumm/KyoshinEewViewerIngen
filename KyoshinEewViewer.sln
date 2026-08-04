@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31717.71
@@ -77,6 +77,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KyoshinEewViewer.iOS", "src\KyoshinEewViewer.iOS\KyoshinEewViewer.iOS.csproj", "{5991ED6C-3B2E-4B54-B2ED-2E44C73EEA39}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShakeDetectionProducer.Tests", "src\Sandboxes\ShakeDetectionProducer.Tests\ShakeDetectionProducer.Tests.csproj", "{51B08C96-FBB9-472A-A3D2-D32781C1EB5D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -440,6 +442,18 @@ Global
 		{5991ED6C-3B2E-4B54-B2ED-2E44C73EEA39}.Release|x64.Build.0 = Release|Any CPU
 		{5991ED6C-3B2E-4B54-B2ED-2E44C73EEA39}.Release|x86.ActiveCfg = Release|Any CPU
 		{5991ED6C-3B2E-4B54-B2ED-2E44C73EEA39}.Release|x86.Build.0 = Release|Any CPU
+		{51B08C96-FBB9-472A-A3D2-D32781C1EB5D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{51B08C96-FBB9-472A-A3D2-D32781C1EB5D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{51B08C96-FBB9-472A-A3D2-D32781C1EB5D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{51B08C96-FBB9-472A-A3D2-D32781C1EB5D}.Debug|x64.Build.0 = Debug|Any CPU
+		{51B08C96-FBB9-472A-A3D2-D32781C1EB5D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{51B08C96-FBB9-472A-A3D2-D32781C1EB5D}.Debug|x86.Build.0 = Debug|Any CPU
+		{51B08C96-FBB9-472A-A3D2-D32781C1EB5D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{51B08C96-FBB9-472A-A3D2-D32781C1EB5D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{51B08C96-FBB9-472A-A3D2-D32781C1EB5D}.Release|x64.ActiveCfg = Release|Any CPU
+		{51B08C96-FBB9-472A-A3D2-D32781C1EB5D}.Release|x64.Build.0 = Release|Any CPU
+		{51B08C96-FBB9-472A-A3D2-D32781C1EB5D}.Release|x86.ActiveCfg = Release|Any CPU
+		{51B08C96-FBB9-472A-A3D2-D32781C1EB5D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -459,6 +473,7 @@ Global
 		{18ADCF8E-A46C-46EF-A04B-7EEA225D322F} = {AE1F2F80-E888-4E19-A3E8-BBDCFE8E9ADB}
 		{1F397A2C-6996-4AC1-A180-B1E00D431695} = {8F086BB8-E3DD-45DD-BDEF-984600946420}
 		{5991ED6C-3B2E-4B54-B2ED-2E44C73EEA39} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{51B08C96-FBB9-472A-A3D2-D32781C1EB5D} = {8F086BB8-E3DD-45DD-BDEF-984600946420}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1ACD1D75-B7AC-4DEC-B2E3-E707294A51C5}

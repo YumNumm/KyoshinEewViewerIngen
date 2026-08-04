@@ -65,6 +65,11 @@ public class ShakeDetectionTracker
 	}
 
 	/// <summary>
+	/// アクティブな揺れ検知セッションが存在するかどうか
+	/// </summary>
+	public bool HasActiveSession => _current != null;
+
+	/// <summary>
 	/// EEW 情報を関連付ける
 	/// </summary>
 	public async Task SetEewSnapshot(string eewJson)
@@ -72,6 +77,21 @@ public class ShakeDetectionTracker
 		if (_current == null) return;
 		_current.EewJson = eewJson;
 		await _state.SaveShakeState(_current);
+	}
+
+	/// <summary>
+	/// EEW最終報を揺れ検知セッションに関連付ける（マージ処理用）
+	/// </summary>
+	public async Task AssociateEew(string eewEventId, DateTime? originTime, DateTime reportTime, double? magnitude, double? depthKm)
+	{
+		if (_current == null) return;
+		_current.AssociatedEewEventId = eewEventId;
+		_current.AssociatedEewOriginTime = originTime;
+		_current.AssociatedEewReportTime = reportTime;
+		_current.AssociatedEewMagnitude = magnitude;
+		_current.AssociatedEewDepthKm = depthKm;
+		await _state.SaveShakeState(_current);
+		_logger.LogInformation($"EEW最終報を揺れ検知セッションに関連付けました: shake={_current.ShakeEventId}, eew={eewEventId}");
 	}
 
 	/// <summary>

@@ -4,6 +4,7 @@ public enum TriggerType
 {
 	ShakeDetection,
 	Earthquake,
+	Eew,
 }
 
 public enum SessionStatus

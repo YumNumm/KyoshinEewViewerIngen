@@ -119,6 +119,8 @@ public class ShakeDetectionEngine(ILogManager? logManager = null, ShakeDetection
 				point.IsTmpDisabled = false;
 			}
 
+			point.Event?.UpdatePointState(point, time);
+
 			// 除外されている観測点はイベントの検出に使用しない
 			if (point.IsTmpDisabled)
 				continue;
@@ -130,7 +132,7 @@ public class ShakeDetectionEngine(ILogManager? logManager = null, ShakeDetection
 				{
 					Logger?.LogDebug($"揺れ検知終了: {point.Code} {evt.Id} {time} {point.EventedAt} {point.EventedExpireAt}");
 					point.Event = null;
-					evt.RemovePoint(point);
+					evt.RemovePoint(point, time);
 
 					if (evt.PointCount <= 0)
 					{
@@ -227,7 +229,7 @@ public class ShakeDetectionEngine(ILogManager? logManager = null, ShakeDetection
 				{
 					if (evt == firstEvent)
 						continue;
-					firstEvent.MergeEvent(evt);
+					firstEvent.MergeEvent(evt, time);
 					KyoshinEvents.Remove(evt);
 					//Logger.LogDebug($"イベント統合: {firstEvent.Id} <- {evt.Id}");
 				}
@@ -274,7 +276,7 @@ public class ShakeDetectionEngine(ILogManager? logManager = null, ShakeDetection
 				var mergeDistance = Parameters.GetMergeDistance(evt.Level > evt2.Level ? evt.Level : evt2.Level);
 				if (!evt.CheckNearby(evt2, mergeDistance))
 					continue;
-				evt.MergeEvent(evt2);
+				evt.MergeEvent(evt2, time);
 				KyoshinEvents.Remove(evt2);
 				Logger?.LogDebug($"イベント距離統合: {evt.Id} <- {evt2.Id}");
 			}

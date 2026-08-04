@@ -42,18 +42,18 @@ public sealed class ValkeyStreamProducer : IAsyncDisposable
 	private static readonly JsonSerializerOptions JsonOptions = new()
 	{
 		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-		DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+		DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+		Converters = { new JstDateTimeJsonConverter() }
 	};
 
 	public ValkeyStreamProducer(ILogger<ValkeyStreamProducer> logger)
 	{
 		_logger = logger;
 
-		var connectionString = Environment.GetEnvironmentVariable("VALKEY_CONNECTION_STRING") ?? "localhost:6379";
 		_streamKey = Environment.GetEnvironmentVariable("VALKEY_STREAM_KEY") ?? "shake-detect-events";
 		_maxLength = int.Parse(Environment.GetEnvironmentVariable("VALKEY_STREAM_MAXLEN") ?? "10000");
 
-		var options = ConfigurationOptions.Parse(connectionString);
+		var options = CreateConfigurationOptionsFromEnv();
 		options.ClientName = "shake-detection-producer";
 		options.ConnectTimeout = 5000;
 		options.SyncTimeout = 5000;
@@ -67,8 +67,30 @@ public sealed class ValkeyStreamProducer : IAsyncDisposable
 
 		_database = _connection.GetDatabase();
 
-		_logger.LogInformation("Valkey Stream Producerを初期化しました: {ConnectionString}, StreamKey={StreamKey}, MaxLen={MaxLen}",
-			connectionString, _streamKey, _maxLength);
+		_logger.LogInformation("Valkey Stream Producerを初期化しました: {Endpoints}, ServiceName={ServiceName}, StreamKey={StreamKey}, MaxLen={MaxLen}",
+			string.Join(",", options.EndPoints), options.ServiceName ?? "(なし)", _streamKey, _maxLength);
+	}
+
+	internal static ConfigurationOptions CreateConfigurationOptionsFromEnv()
+	{
+		var sentinelAddrs = Environment.GetEnvironmentVariable("REDIS_SENTINEL_ADDRS");
+		if (!string.IsNullOrEmpty(sentinelAddrs))
+		{
+			var options = new ConfigurationOptions
+			{
+				ServiceName = Environment.GetEnvironmentVariable("REDIS_MASTER_NAME") ?? "eqmonitor",
+			};
+			foreach (var addr in sentinelAddrs.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+				options.EndPoints.Add(addr);
+			return options;
+		}
+
+		var url = Environment.GetEnvironmentVariable("REDIS_URL")
+			?? Environment.GetEnvironmentVariable("VALKEY_CONNECTION_STRING")
+			?? "localhost:6379";
+		if (url.StartsWith("redis://", StringComparison.OrdinalIgnoreCase))
+			url = url["redis://".Length..];
+		return ConfigurationOptions.Parse(url);
 	}
 
 	/// <summary>
@@ -76,8 +98,9 @@ public sealed class ValkeyStreamProducer : IAsyncDisposable
 	/// </summary>
 	public async Task ProduceShakeDetectedAsync(ShakeDetectedPayload payload, CancellationToken cancellationToken = default)
 	{
-		using var activity = ActivitySource.StartActivity("valkey.produce.shake_detected");
+		using var activity = ActivitySource.StartActivity("valkey.produce.shake_detection");
 		activity?.SetTag("event.id", payload.EventId.ToString());
+		activity?.SetTag("event.serial_no", payload.SerialNo);
 		activity?.SetTag("event.level", payload.Level);
 
 		var stopwatch = Stopwatch.StartNew();
@@ -88,7 +111,7 @@ public sealed class ValkeyStreamProducer : IAsyncDisposable
 			var entries = new NameValueEntry[]
 			{
 				new("eventId", payload.EventId.ToString()),
-				new("type", "shake_detected"),
+				new("type", "shake_detection"),
 				new("payload", json)
 			};
 
@@ -180,5 +203,24 @@ public sealed class ValkeyStreamProducer : IAsyncDisposable
 	{
 		await _connection.CloseAsync();
 		_connection.Dispose();
+	}
+}
+
+/// <summary>
+/// Producer内のDateTimeは一貫してJST（+09:00）のwall-clockとして扱われるため、
+/// KindがUnspecified/Utcのいずれであっても常に+09:00オフセット付きで出力するConverter。
+/// これにより受信側（valibot isoTimestamp、TZ必須）でのパース失敗を防ぐ。
+/// </summary>
+internal sealed class JstDateTimeJsonConverter : JsonConverter<DateTime>
+{
+	private static readonly TimeSpan JstOffset = TimeSpan.FromHours(9);
+
+	public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+		=> reader.GetDateTimeOffset().DateTime;
+
+	public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+	{
+		var jst = new DateTimeOffset(DateTime.SpecifyKind(value, DateTimeKind.Unspecified), JstOffset);
+		writer.WriteStringValue(jst.ToString("yyyy-MM-ddTHH:mm:ss.fffffffzzz", System.Globalization.CultureInfo.InvariantCulture));
 	}
 }

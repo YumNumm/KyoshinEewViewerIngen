@@ -1,5 +1,4 @@
 using KyoshinEewViewer.Core.Models;
-using KyoshinMonitorLib;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,122 +12,184 @@ namespace ShakeDetectionProducer.Services;
 public enum EventChangeReason
 {
 	None = 0,
-	/// <summary>新規イベント</summary>
 	NewEvent = 1 << 0,
-	/// <summary>レベルアップ</summary>
 	LevelUp = 1 << 1,
-	/// <summary>レベルダウン</summary>
 	LevelDown = 1 << 2,
-	/// <summary>範囲が変化</summary>
 	RegionChanged = 1 << 3,
-	/// <summary>検出点が変化（追加・削除・点数変化）</summary>
 	PointsChanged = 1 << 4,
+	/// <summary>観測点の公開状態が変化</summary>
+	PointStateChanged = 1 << 5,
+	/// <summary>イベントの有効期限が延長</summary>
+	ExpiresAtExtended = 1 << 6,
+	/// <summary>別イベントを統合</summary>
+	EventsMerged = 1 << 7,
 }
 
+internal readonly record struct EventPointState(double? Intensity, double IntensityDiff);
+
 /// <summary>
-/// イベントの状態をキャッシュするための構造体
+/// 送信済み、または送信待ちのイベント状態のスナップショット
 /// </summary>
-internal record EventCacheEntry
+internal record EventStateSnapshot
 {
 	public required KyoshinEventLevel Level { get; init; }
-	public required Location TopLeft { get; init; }
-	public required Location BottomRight { get; init; }
-	public required HashSet<string> PointCodes { get; init; }
+	public required float TopLatitude { get; init; }
+	public required float TopLongitude { get; init; }
+	public required float BottomLatitude { get; init; }
+	public required float BottomLongitude { get; init; }
+	public required Dictionary<string, EventPointState> Points { get; init; }
+	public required HashSet<Guid> MergedEventIds { get; init; }
+	public required DateTime ExpiresAt { get; init; }
 
-	public static EventCacheEntry FromEvent(KyoshinEvent evt)
-	{
-		return new EventCacheEntry
+	public static EventStateSnapshot FromEvent(KyoshinEvent evt)
+		=> new()
 		{
 			Level = evt.Level,
-			TopLeft = evt.TopLeft,
-			BottomRight = evt.BottomRight,
-			PointCodes = evt.Points.Select(p => p.Code).ToHashSet()
+			TopLatitude = evt.TopLeft.Latitude,
+			TopLongitude = evt.TopLeft.Longitude,
+			BottomLatitude = evt.BottomRight.Latitude,
+			BottomLongitude = evt.BottomRight.Longitude,
+			Points = evt.Points.ToDictionary(
+				p => p.Code,
+				p => new EventPointState(p.LatestIntensity, p.IntensityDiff)),
+			MergedEventIds = evt.MergedEvents.Select(e => e.EventId).ToHashSet(),
+			ExpiresAt = evt.ExpiresAt,
 		};
-	}
 }
 
+internal record EventCacheEntry
+{
+	public required EventStateSnapshot State { get; init; }
+	public required int SerialNo { get; init; }
+	public required DateTime LastSentAt { get; init; }
+}
+
+internal record PendingEventEntry
+{
+	public required EventStateSnapshot State { get; init; }
+	public required ShakeDetectedPayload Payload { get; init; }
+}
 /// <summary>
-/// 揺れイベントの変化を追跡するトラッカー
+/// 揺れイベントの送信済み状態と送信待ち revision を追跡するトラッカー
 /// </summary>
 public class ShakeEventTracker
 {
-	/// <summary>
-	/// イベントIDとキャッシュエントリのマップ
-	/// </summary>
+	private static readonly TimeSpan ExpiryHeartbeatInterval = TimeSpan.FromSeconds(5);
+
 	private Dictionary<Guid, EventCacheEntry> EventCache { get; } = [];
+	private Dictionary<Guid, PendingEventEntry> PendingEvents { get; } = [];
 
 	/// <summary>
-	/// イベントを処理して、送信が必要かどうかと変化理由を判定する
+	/// 現在のイベントから次の送信 payload を準備する。
+	/// 送信待ちがある場合は、成功するまで同一 payload を返す。
 	/// </summary>
-	/// <param name="evt">処理対象のイベント</param>
-	/// <returns>
-	/// ShouldSend: 送信が必要かどうか（何らかの変化があった場合）
-	/// ChangeReason: 変化理由のフラグ
-	/// </returns>
-	public (bool ShouldSend, EventChangeReason ChangeReason) ProcessEvent(KyoshinEvent evt)
+	public ShakeDetectedPayload? PrepareEvent(KyoshinEvent evt, DateTime observedAt)
 	{
-		var newEntry = EventCacheEntry.FromEvent(evt);
+		if (PendingEvents.TryGetValue(evt.Id, out var pending))
+			return pending.Payload;
 
-		// 新規イベントの場合
-		if (!EventCache.TryGetValue(evt.Id, out var cachedEntry))
+		var current = EventStateSnapshot.FromEvent(evt);
+		EventChangeReason changeReason;
+		int serialNo;
+
+		if (!EventCache.TryGetValue(evt.Id, out var cached))
 		{
-			EventCache[evt.Id] = newEntry;
-			return (true, EventChangeReason.NewEvent);
+			changeReason = EventChangeReason.NewEvent;
+			serialNo = 1;
+		}
+		else
+		{
+			changeReason = Compare(current, cached.State);
+			if (changeReason == EventChangeReason.None)
+				return null;
+
+			var expiryOnly = changeReason == EventChangeReason.ExpiresAtExtended;
+			if (expiryOnly && observedAt - cached.LastSentAt < ExpiryHeartbeatInterval)
+				return null;
+
+			serialNo = cached.SerialNo + 1;
 		}
 
-		var changeReason = EventChangeReason.None;
-
-		// レベル変化の検出
-		if (newEntry.Level > cachedEntry.Level)
-			changeReason |= EventChangeReason.LevelUp;
-		else if (newEntry.Level < cachedEntry.Level)
-			changeReason |= EventChangeReason.LevelDown;
-
-		// 範囲変化の検出（緯度経度が変化した場合）
-		if (!IsLocationEqual(newEntry.TopLeft, cachedEntry.TopLeft) ||
-		    !IsLocationEqual(newEntry.BottomRight, cachedEntry.BottomRight))
-			changeReason |= EventChangeReason.RegionChanged;
-
-		// 検出点の変化（追加・削除・点数変化）
-		if (!newEntry.PointCodes.SetEquals(cachedEntry.PointCodes))
-			changeReason |= EventChangeReason.PointsChanged;
-
-		// キャッシュを更新
-		EventCache[evt.Id] = newEntry;
-
-		return (changeReason != EventChangeReason.None, changeReason);
+		var payload = ShakeDetectedPayload.FromEvent(evt, serialNo, changeReason);
+		PendingEvents[evt.Id] = new PendingEventEntry
+		{
+			State = current,
+			Payload = payload,
+		};
+		return payload;
 	}
 
 	/// <summary>
-	/// 2つの座標が同一かどうかを判定
+	/// Valkey への送信成功後にだけ prepared revision を送信済みとして確定する。
 	/// </summary>
-	private static bool IsLocationEqual(Location a, Location b)
+	public void Commit(ShakeDetectedPayload payload, DateTime sentAt)
+	{
+		if (!PendingEvents.TryGetValue(payload.EventId, out var pending) ||
+			!ReferenceEquals(pending.Payload, payload))
+			throw new InvalidOperationException("送信待ちではない揺れ検知 payload は確定できません。");
+
+		EventCache[payload.EventId] = new EventCacheEntry
+		{
+			State = pending.State,
+			SerialNo = payload.SerialNo,
+			LastSentAt = sentAt,
+		};
+		PendingEvents.Remove(payload.EventId);
+	}
+
+	private static EventChangeReason Compare(EventStateSnapshot current, EventStateSnapshot cached)
+	{
+		var reason = EventChangeReason.None;
+
+		if (current.Level > cached.Level)
+			reason |= EventChangeReason.LevelUp;
+		else if (current.Level < cached.Level)
+			reason |= EventChangeReason.LevelDown;
+
+		if (!IsCoordinateEqual(current.TopLatitude, cached.TopLatitude) ||
+			!IsCoordinateEqual(current.TopLongitude, cached.TopLongitude) ||
+			!IsCoordinateEqual(current.BottomLatitude, cached.BottomLatitude) ||
+			!IsCoordinateEqual(current.BottomLongitude, cached.BottomLongitude))
+			reason |= EventChangeReason.RegionChanged;
+
+		var currentCodes = current.Points.Keys.ToHashSet();
+		var cachedCodes = cached.Points.Keys.ToHashSet();
+		if (!currentCodes.SetEquals(cachedCodes))
+			reason |= EventChangeReason.PointsChanged;
+
+		if (currentCodes.Intersect(cachedCodes).Any(code => current.Points[code] != cached.Points[code]))
+			reason |= EventChangeReason.PointStateChanged;
+
+		if (!current.MergedEventIds.SetEquals(cached.MergedEventIds))
+			reason |= EventChangeReason.EventsMerged;
+
+		if (current.ExpiresAt > cached.ExpiresAt)
+			reason |= EventChangeReason.ExpiresAtExtended;
+
+		return reason;
+	}
+
+	private static bool IsCoordinateEqual(float a, float b)
 	{
 		const float tolerance = 0.0001f;
-		return Math.Abs(a.Latitude - b.Latitude) < tolerance &&
-		       Math.Abs(a.Longitude - b.Longitude) < tolerance;
+		return Math.Abs(a - b) < tolerance;
 	}
 
-	/// <summary>
-	/// 存在しなくなったイベントのキャッシュをクリーンアップする
-	/// </summary>
-	/// <param name="currentEvents">現在存在するイベントの配列</param>
 	public void CleanupCache(KyoshinEvent[] currentEvents)
 	{
 		var currentEventIds = currentEvents.Select(e => e.Id).ToHashSet();
-
-		foreach (var key in EventCache.Keys.ToArray())
+		foreach (var key in EventCache.Keys.Concat(PendingEvents.Keys).Distinct().ToArray())
 		{
-			if (!currentEventIds.Contains(key))
-				EventCache.Remove(key);
+			if (currentEventIds.Contains(key))
+				continue;
+			EventCache.Remove(key);
+			PendingEvents.Remove(key);
 		}
 	}
 
-	/// <summary>
-	/// キャッシュをクリアする
-	/// </summary>
 	public void Clear()
 	{
 		EventCache.Clear();
+		PendingEvents.Clear();
 	}
 }

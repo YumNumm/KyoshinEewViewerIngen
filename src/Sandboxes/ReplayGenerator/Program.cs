@@ -33,6 +33,7 @@ internal class Program
 		builder.Services.AddSingleton<ValkeyStateManager>();
 		builder.Services.AddSingleton<ShakeDetectionTracker>();
 		builder.Services.AddSingleton<EarthquakeTracker>();
+		builder.Services.AddSingleton<EewTracker>();
 		builder.Services.AddSingleton(sp =>
 		{
 			var logger = sp.GetRequiredService<ILogger<ReplayRepository>>();

@@ -1,0 +1,43 @@
+# .NET build outputs
+**/bin/
+**/obj/
+**/Debug/
+**/Release/
+artifacts/
+**/artifacts/
+TestResults/
+**/TestResults/
+BenchmarkDotNet.Artifacts/
+**/BenchmarkDotNet.Artifacts/
+
+# Git and IDE metadata
+.git/
+.gitignore
+.vs/
+**/.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Environment files and credentials
+.env
+.env.*
+**/.env
+**/.env.*
+.config/
+**/.config/
+credentials/
+**/credentials/
+*.p8
+*.p12
+*.pem
+*.key
+
+# Logs and local temporary files
+*.log
+**/*.log
+*.tmp
+**/*.tmp

@@ -21,6 +21,7 @@ public class ReplayGeneratorWorker : BackgroundService
 	private readonly ValkeyStateManager _stateManager;
 	private readonly ShakeDetectionTracker _shakeTracker;
 	private readonly EarthquakeTracker _earthquakeTracker;
+	private readonly EewTracker _eewTracker;
 	private readonly ReplayFileBuilder _replayBuilder;
 	private readonly ObjectStorageClient _storageClient;
 	private readonly ReplayRepository _repository;
@@ -33,6 +34,7 @@ public class ReplayGeneratorWorker : BackgroundService
 		ValkeyStateManager stateManager,
 		ShakeDetectionTracker shakeTracker,
 		EarthquakeTracker earthquakeTracker,
+		EewTracker eewTracker,
 		ReplayFileBuilder replayBuilder,
 		ObjectStorageClient storageClient,
 		ReplayRepository repository)
@@ -42,6 +44,7 @@ public class ReplayGeneratorWorker : BackgroundService
 		_stateManager = stateManager;
 		_shakeTracker = shakeTracker;
 		_earthquakeTracker = earthquakeTracker;
+		_eewTracker = eewTracker;
 		_replayBuilder = replayBuilder;
 		_storageClient = storageClient;
 		_repository = repository;
@@ -73,10 +76,13 @@ public class ReplayGeneratorWorker : BackgroundService
 		{
 			try
 			{
-				var snapshot = await _stateManager.GetRealtimeSnapshot();
-				var (shouldGenerate, state) = await _shakeTracker.CheckTimerAsync(snapshot);
-				if (shouldGenerate && state != null)
-					await GenerateFromShake(state, snapshot);
+				if (_shakeTracker.HasActiveSession)
+				{
+					var snapshot = await _stateManager.GetRealtimeSnapshot();
+					var (shouldGenerate, state) = await _shakeTracker.CheckTimerAsync(snapshot);
+					if (shouldGenerate && state != null)
+						await GenerateFromShake(state, snapshot);
+				}
 			}
 			catch (Exception ex)
 			{
@@ -108,11 +114,14 @@ public class ReplayGeneratorWorker : BackgroundService
 				break;
 
 			case "EEW":
-				if (root.TryGetProperty("event", out var eewEvent))
+				if (root.TryGetProperty("item", out var eewItem))
 				{
 					var snapshot = await _stateManager.GetRealtimeSnapshot();
 					if (snapshot != null)
 						await _shakeTracker.SetEewSnapshot(snapshot);
+
+					if (eewItem.TryGetProperty("is_last_info", out var lastInfoProp) && lastInfoProp.GetBoolean())
+						await HandleEewFinalReport(eewItem);
 				}
 				break;
 
@@ -129,6 +138,50 @@ public class ReplayGeneratorWorker : BackgroundService
 		}
 	}
 
+	private async Task HandleEewFinalReport(JsonElement eewItem)
+	{
+		var eventId = eewItem.TryGetProperty("event_id", out var eidProp) ? eidProp.GetString() : null;
+		if (string.IsNullOrEmpty(eventId)) return;
+
+		DateTime? originTime = null;
+		if (eewItem.TryGetProperty("origin_time", out var otProp) && otProp.ValueKind == JsonValueKind.String)
+		{
+			var s = otProp.GetString();
+			if (!string.IsNullOrEmpty(s) && DateTime.TryParse(s, null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsed))
+				originTime = parsed.Kind == DateTimeKind.Utc ? parsed : parsed.ToUniversalTime();
+		}
+
+		var reportTime = DateTime.UtcNow;
+		if (eewItem.TryGetProperty("report_time", out var rtProp) && rtProp.ValueKind == JsonValueKind.String)
+		{
+			var s = rtProp.GetString();
+			if (!string.IsNullOrEmpty(s) && DateTime.TryParse(s, null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsed))
+				reportTime = parsed.Kind == DateTimeKind.Utc ? parsed : parsed.ToUniversalTime();
+		}
+
+		double? magnitude = eewItem.TryGetProperty("magnitude", out var magProp) && magProp.ValueKind == JsonValueKind.Number
+			? magProp.GetDouble() : null;
+
+		double? depthKm = null;
+		if (eewItem.TryGetProperty("hypocenter", out var hypo) && hypo.TryGetProperty("depth", out var depthProp))
+		{
+			if (depthProp.TryGetProperty("value", out var depthVal) && depthVal.ValueKind == JsonValueKind.Number)
+				depthKm = depthVal.GetDouble();
+		}
+
+		// 揺れ検知セッションが活性中ならマージ、そうでなければEEW単独生成
+		if (_shakeTracker.HasActiveSession)
+		{
+			await _shakeTracker.AssociateEew(eventId, originTime, reportTime, magnitude, depthKm);
+		}
+		else
+		{
+			var eewState = await _eewTracker.OnEewFinalReport(eventId, originTime, reportTime, magnitude, depthKm);
+			if (eewState != null)
+				await GenerateFromEew(eewState);
+		}
+	}
+
 	private async Task GenerateFromShake(ShakeState state, string? snapshotJson)
 	{
 		_logger.LogInformation($"揺れ検知リプレイファイル生成開始: {state.ShakeEventId}");
@@ -136,8 +189,23 @@ public class ReplayGeneratorWorker : BackgroundService
 		var sw = Stopwatch.StartNew();
 		try
 		{
-			var startTime = state.StartTime.AddSeconds(-10);
-			var endTime = state.LastEventTime.AddSeconds(5);
+			var shakeStart = state.StartTime.AddSeconds(-10);
+			var shakeEnd = state.LastEventTime.AddSeconds(5);
+
+			var startTime = shakeStart;
+			var endTime = shakeEnd;
+
+			// EEW関連付けがある場合は時間窓をマージ
+			if (state.AssociatedEewEventId != null && state.AssociatedEewReportTime.HasValue)
+			{
+				var (pre, post) = EewReplayWindow.ComputeMargins(state.AssociatedEewMagnitude, state.AssociatedEewDepthKm);
+				var eewAnchor = state.AssociatedEewOriginTime ?? state.AssociatedEewReportTime.Value;
+				var eewStart = eewAnchor.AddSeconds(-pre);
+				var eewEnd = state.AssociatedEewReportTime.Value.AddSeconds(post);
+				startTime = new DateTime(Math.Min(shakeStart.Ticks, eewStart.Ticks), DateTimeKind.Utc);
+				endTime = new DateTime(Math.Max(shakeEnd.Ticks, eewEnd.Ticks), DateTimeKind.Utc);
+				_logger.LogInformation($"EEW関連付けにより時間窓をマージ: {startTime:O} ～ {endTime:O}");
+			}
 
 			var (fileBytes, fileName) = await _replayBuilder.BuildAsync(startTime, endTime, snapshotJson);
 
@@ -147,6 +215,9 @@ public class ReplayGeneratorWorker : BackgroundService
 
 			var replayFileId = await _repository.InsertReplayFile(startTime, endTime, objectKey, (int)size);
 			await _repository.InsertTrigger(replayFileId, "shake_detection", state.ShakeEventId);
+
+			if (state.AssociatedEewEventId != null)
+				await _repository.InsertTrigger(replayFileId, "eew", state.AssociatedEewEventId);
 
 			_logger.LogInformation($"揺れ検知リプレイファイル生成完了: {fileName}");
 			ReplayMetrics.RecordGeneration("shake_detection", true, sw.Elapsed);
@@ -195,6 +266,42 @@ public class ReplayGeneratorWorker : BackgroundService
 		finally
 		{
 			await _earthquakeTracker.CompleteAsync(state.EventId);
+		}
+	}
+
+	private async Task GenerateFromEew(EewState state)
+	{
+		_logger.LogInformation($"EEWリプレイファイル生成開始: {state.EventId}");
+
+		var sw = Stopwatch.StartNew();
+		try
+		{
+			var (preSeconds, postSeconds) = EewReplayWindow.ComputeMargins(state.Magnitude, state.DepthKm);
+			var anchor = state.OriginTime ?? state.ReportTime;
+			var startTime = anchor.AddSeconds(-preSeconds);
+			var endTime = state.ReportTime.AddSeconds(postSeconds);
+
+			var snapshotJson = await _stateManager.GetRealtimeSnapshot();
+			var (fileBytes, fileName) = await _replayBuilder.BuildAsync(startTime, endTime, snapshotJson);
+
+			using var stream = new MemoryStream(fileBytes);
+			var objectKey = $"replay/{fileName}";
+			var size = await _storageClient.UploadAsync(objectKey, stream);
+
+			var replayFileId = await _repository.InsertReplayFile(startTime, endTime, objectKey, (int)size);
+			await _repository.InsertTrigger(replayFileId, "eew", state.EventId);
+
+			_logger.LogInformation($"EEWリプレイファイル生成完了: {fileName}");
+			ReplayMetrics.RecordGeneration("eew", true, sw.Elapsed);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogWarning($"EEWリプレイファイル生成エラー: {ex.Message}");
+			ReplayMetrics.RecordGeneration("eew", false, sw.Elapsed);
+		}
+		finally
+		{
+			await _eewTracker.CompleteAsync(state.EventId);
 		}
 	}
 }
