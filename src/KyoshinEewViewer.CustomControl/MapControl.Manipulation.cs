@@ -54,7 +54,17 @@ public partial class MapControl
 	protected override void OnPointerMoved(PointerEventArgs e)
 	{
 		if (!_positions.ContainsKey(e.Pointer))
+		{
+			// ボタン未押下(ドラッグ中でない)場合はホバーイベントとしてレイヤーへ伝播する
+			// 再描画はレイヤー側が必要に応じて RefreshRequest() で行うため、ここでは行わない
+			if (PaddedRect.Width > 0 && PaddedRect.Height > 0)
+			{
+				var hoverScreenPos = e.GetCurrentPoint(this).Position;
+				var hoverLocation = GetLocation(hoverScreenPos);
+				LayerHost.OnPointerMoved(hoverLocation, new PointD(hoverScreenPos.X, hoverScreenPos.Y), RenderParameter);
+			}
 			return;
+		}
 
 		var pos = e.GetCurrentPoint(this).Position;
 		var screenPos = new ScreenPosition(pos.X, pos.Y);
@@ -91,6 +101,13 @@ public partial class MapControl
 		_manipulationTracker.Manipulate(GetPositions(), OnManipulation);
 
 		base.OnPointerMoved(e);
+	}
+
+	protected override void OnPointerExited(PointerEventArgs e)
+	{
+		// ポインタが描画領域外に出た場合はレイヤーのホバー状態を解除する
+		LayerHost.OnPointerExited();
+		base.OnPointerExited(e);
 	}
 
 	/// <summary>
@@ -249,7 +266,11 @@ public partial class MapControl
 		_inertiaAnimation = new InertiaAnimation(velocity);
 		_inertiaAnimation.Start();
 		_lastInertiaFrameTime = DateTime.Now;
-		Dispatcher.UIThread.Post(InvalidateVisual);
+		Dispatcher.UIThread.Post(() =>
+		{
+			RequestRedraw();
+			RequestAnimationFrameIfNeeded();
+		});
 	}
 
 	/// <summary>
@@ -265,7 +286,11 @@ public partial class MapControl
 		_inertiaAnimation = new InertiaAnimation(velocity, useCenterZoom: true);
 		_inertiaAnimation.Start();
 		_lastInertiaFrameTime = DateTime.Now;
-		Dispatcher.UIThread.Post(InvalidateVisual);
+		Dispatcher.UIThread.Post(() =>
+		{
+			RequestRedraw();
+			RequestAnimationFrameIfNeeded();
+		});
 	}
 
 	/// <summary>
@@ -309,7 +334,11 @@ public partial class MapControl
 		_inertiaAnimation = new InertiaAnimation(velocity, useCenterZoom: false);
 		_inertiaAnimation.Start();
 		_lastInertiaFrameTime = DateTime.Now;
-		Dispatcher.UIThread.Post(InvalidateVisual);
+		Dispatcher.UIThread.Post(() =>
+		{
+			RequestRedraw();
+			RequestAnimationFrameIfNeeded();
+		});
 	}
 
 	/// <summary>
@@ -391,7 +420,11 @@ public partial class MapControl
 			_wheelZoomTracker.AddWheelEvent(e.Delta.Y, screenPos);
 
 			// 描画を要求
-			Dispatcher.UIThread.Post(InvalidateVisual);
+			Dispatcher.UIThread.Post(() =>
+			{
+				RequestRedraw();
+				RequestAnimationFrameIfNeeded();
+			});
 		}
 		else
 		{
@@ -438,6 +471,10 @@ public partial class MapControl
 
 		// 再描画を要求
 		if (_wheelZoomTracker.IsRunning)
-			Dispatcher.UIThread.Post(InvalidateVisual, DispatcherPriority.Background);
+			Dispatcher.UIThread.Post(() =>
+			{
+				RequestRedraw();
+				RequestAnimationFrameIfNeeded();
+			}, DispatcherPriority.Background);
 	}
 }

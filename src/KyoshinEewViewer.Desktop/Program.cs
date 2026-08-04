@@ -38,6 +38,8 @@ internal static class Program
 		.With(new X11PlatformOptions
 		{
 			OverlayPopups = true,
+			// .desktop の StartupWMClass と一致させ、通知・タスクバーでアプリと紐付ける
+			WmClass = "KyoshinEewViewer",
 		})
 		.With(new MacOSPlatformOptions
 		{
@@ -46,5 +48,6 @@ internal static class Program
 		.LogToTrace(Avalonia.Logging.LogEventLevel.Error)
 		.UseKeviFonts()
 		.UseSkia()
+		.UseHarfBuzz()
 		.UseReactiveUI(_ => { });
 }

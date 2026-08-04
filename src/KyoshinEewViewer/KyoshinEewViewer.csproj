@@ -1,9 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
+	<!-- プラットフォーム依存の通知実装は KyoshinEewViewer.Desktop に切り出したため、本体は単一 TFM でよい -->
 	<Import Project="..\..\common.props" />
 
 	<PropertyGroup>
-		<!-- マルチターゲット化 -->
-		<TargetFrameworks>net10.0;net10.0-macos</TargetFrameworks>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<!-- publish / -r 指定時の NETSDK1047 回避（project.assets.json に RID グラフを含める） -->
 		<RuntimeIdentifiers>osx-arm64;osx-x64;win-x64;win-arm64;linux-x64;linux-arm64</RuntimeIdentifiers>
@@ -16,35 +15,30 @@
 	<!-- プロジェクト参照 -->
 	<ItemGroup>
 		<ProjectReference Include="..\KyoshinEewViewer.Core\KyoshinEewViewer.Core.csproj" />
-		<ProjectReference
-			Include="..\KyoshinEewViewer.DCReportParser\KyoshinEewViewer.DCReportParser.csproj" />
-		<ProjectReference
-			Include="..\KyoshinEewViewer.JmaXmlParser\KyoshinEewViewer.JmaXmlParser.csproj" />
+		<ProjectReference Include="..\KyoshinEewViewer.DCReportParser\KyoshinEewViewer.DCReportParser.csproj" />
+		<ProjectReference Include="..\KyoshinEewViewer.JmaXmlParser\KyoshinEewViewer.JmaXmlParser.csproj" />
 		<ProjectReference Include="..\KyoshinEewViewer.Map\KyoshinEewViewer.Map.csproj" />
-		<ProjectReference
-			Include="..\KyoshinEewViewer.TravelTimeTable\KyoshinEewViewer.TravelTimeTable.csproj" />
-		<ProjectReference
-			Include="..\KyoshinEewViewer.CustomControl\KyoshinEewViewer.CustomControl.csproj" />
-		<ProjectReference
-			Include="..\KyoshinEewViewer.CsvSourceGenerator\KyoshinEewViewer.CsvSourceGenerator.csproj"
-			OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+		<ProjectReference Include="..\KyoshinEewViewer.TravelTimeTable\KyoshinEewViewer.TravelTimeTable.csproj" />
+		<ProjectReference Include="..\KyoshinEewViewer.CustomControl\KyoshinEewViewer.CustomControl.csproj" />
+		<ProjectReference Include="..\KyoshinEewViewer.CodeAnalysis\KyoshinEewViewer.CodeAnalysis.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="ManagedBass" Version="4.0.2" />
+		<PackageReference Include="MessagePack" Version="3.1.8" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="$(DotnetVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="$(DotnetVersion)" />
 		<PackageReference Include="System.IO.Ports" Version="$(DotnetVersion)" />
-		<PackageReference Include="Sentry.Extensions.Logging" Version="6.3.0" />
+		<PackageReference Include="Sentry.Extensions.Logging" Version="6.6.0" />
 		<PackageReference Include="Splat.Microsoft.Extensions.Logging" Version="$(SplatVersion)" />
 
-		<PackageReference Include="Xaml.Behaviors.Avalonia" Version="11.3.9.5" />
-		<PackageReference Include="Markdown.Avalonia" Version="11.0.2" />
-		<PackageReference Include="Avalonia.AvaloniaEdit" Version="11.4.1" />
+		<PackageReference Include="Xaml.Behaviors.Avalonia" Version="12.0.5" />
+		<PackageReference Include="LiveMarkdown.Avalonia" Version="2.2.0" />
+		<PackageReference Include="Avalonia.AvaloniaEdit" Version="12.0.0" />
 		<PackageReference Include="System.ServiceModel.Syndication" Version="$(DotnetVersion)" />
 		<PackageReference Include="System.Text.Encoding.CodePages" Version="$(DotnetVersion)" />
 
-		<PackageReference Include="Scriban" Version="7.0.6" />
+		<PackageReference Include="Scriban" Version="7.2.5" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -10,7 +10,7 @@
              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
              x:Class="KyoshinEewViewer.Series.ObservationPointEditor.View.ObservationPointEditorView"
              x:DataType="local:ObservationPointEditorSeries"
-             Foreground="{DynamicResource ForegroundColor}"
+             Foreground="{DynamicResource MainForegroundColor}"
              HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
              FontFamily="{StaticResource MainFont}">
     <Grid RowDefinitions="*,5,300" ColumnDefinitions="400,5,*">
@@ -182,7 +182,7 @@
                             <StackPanel Orientation="Horizontal" Spacing="5">
                                 <TextBlock Text="検索:" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                 <TextBox Text="{Binding Model.SearchText}"
-                                         Watermark="観測点コード・名前・地域で検索"
+                                         PlaceholderText="観測点コード・名前・地域で検索"
                                          Width="200"/>
                             </StackPanel>
                             

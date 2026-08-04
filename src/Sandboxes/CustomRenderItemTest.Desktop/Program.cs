@@ -20,5 +20,6 @@ class Program
 			.UsePlatformDetect()
 			.LogToTrace()
 			.UseSkia()
-			.UseReactiveUI();
+			.UseHarfBuzz()
+			.UseReactiveUI(_ => { });
 }

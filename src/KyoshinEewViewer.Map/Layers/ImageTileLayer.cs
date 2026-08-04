@@ -14,6 +14,7 @@ public class ImageTileLayer : MapLayer
 		Color = new SKColor(255, 0, 0, 100),
 		PathEffect = SKPathEffect.Create2DLine(1, SKMatrix.CreateScale(8, 8).PreConcat(SKMatrix.CreateRotationDegrees(-30, 0, 0)))
 	};
+#if DEBUG
 	private static readonly SKPaint DebugPen = new()
 	{
 		Style = SKPaintStyle.Fill,
@@ -25,6 +26,8 @@ public class ImageTileLayer : MapLayer
 		Color = SKColors.White.WithAlpha(100),
 		StrokeWidth = 2,
 	};
+	private static readonly SKFont DebugFont = new(SKTypeface.Default, 12);
+#endif
 	private static readonly SKPaint ImageBlender = new()
 	{
 		// ImageFilter = SKImageFilter.CreateBlendMode(SKBlendMode.SrcIn, SKImageFilter.CreateColorFilter(SKColorFilter.CreateBlendMode(SKColors.White.WithAlpha(200), SKBlendMode.SrcIn))),
@@ -95,8 +98,10 @@ public class ImageTileLayer : MapLayer
 						{
 							canvas.DrawBitmap(image, new SKRect(cx, cy, cx + MercatorProjection.TileSize, cy + ch), ImageBlender);
 
-							canvas.DrawText($"Z{baseZoom} {{{xTileOffset + x}, {yTileOffset + y}}}", cx, cy, DebugBorderPen);
-							canvas.DrawText($"Z{baseZoom} {{{xTileOffset + x}, {yTileOffset + y}}}", cx, cy, DebugPen);
+#if DEBUG
+							canvas.DrawText($"Z{baseZoom} {{{xTileOffset + x}, {yTileOffset + y}}}", cx, cy, SKTextAlign.Left, DebugFont, DebugBorderPen);
+							canvas.DrawText($"Z{baseZoom} {{{xTileOffset + x}, {yTileOffset + y}}}", cx, cy, SKTextAlign.Left, DebugFont, DebugPen);
+#endif
 						}
 						// -1 ズーム倍率へのフォールバックだが気象庁のHPではズームが2レベルごとなので活用できてないのでコメントアウト
 						//else if (Provider.TryGetTileBitmap(baseZoom - 1, tx / 2, ty / 2, true, out image) && image is { })
@@ -108,8 +113,10 @@ public class ImageTileLayer : MapLayer
 						//}
 						else
 						{
+#if DEBUG
 							canvas.DrawLine(new SKPoint(cx, cy), new SKPoint(cx, cy + ch - 2), DebugPen);
 							canvas.DrawLine(new SKPoint(cx, cy), new SKPoint(cx + MercatorProjection.TileSize - 2, cy), DebugPen);
+#endif
 							canvas.DrawRect(cx, cy, MercatorProjection.TileSize, ch, PlaceHolderPaint);
 						}
 					}

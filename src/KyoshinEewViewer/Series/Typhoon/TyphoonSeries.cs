@@ -12,6 +12,7 @@ using Splat;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Location = KyoshinMonitorLib.Location;
 
@@ -19,7 +20,7 @@ namespace KyoshinEewViewer.Series.Typhoon;
 
 internal class TyphoonSeries : SeriesBase
 {
-	public static SeriesMeta MetaData { get; } = new(typeof(TyphoonSeries), "typhoon", "台風情報α", new FontIconSource { Glyph = "\xf751", FontFamily = new(Utils.IconFontName) }, false, "台風の実況･予報円を表示します。");
+	public static SeriesMeta MetaData { get; } = new(typeof(TyphoonSeries), "typhoon", "台風情報α", new FAFontIconSource { Glyph = "\xf751", FontFamily = new(Utils.IconFontName) }, false, "台風の実況･予報円を表示します。");
 
 	private ILogger Logger { get; }
 	private TyphoonWatchService TyphoonWatchService { get; set; }
@@ -68,13 +69,15 @@ internal class TyphoonSeries : SeriesBase
 		}
 
 		// 台風情報更新時
-		TyphoonWatchService.TyphoonUpdated += t =>
-		{
-			if (!Enabled)
-				return;
-			Typhoons = TyphoonWatchService.Typhoons.ToArray();
-			SelectedTyphoon = t;
-		};
+		TyphoonWatchService.TyphoonUpdated
+			.ObserveOn(RxSchedulers.MainThreadScheduler)
+			.Subscribe(t =>
+			{
+				if (!Enabled)
+					return;
+				Typhoons = TyphoonWatchService.Typhoons.ToArray();
+				SelectedTyphoon = t;
+			});
 
 		this.WhenAnyValue(x => x.SelectedTyphoon).Subscribe(i =>
 		{

@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
 using DynamicData.Binding;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
@@ -35,7 +36,15 @@ public class UpdateCheckService : ReactiveObject
 	public event Action<VersionInfo[]?>? Updated;
 
 
+#if INTEGRATION_TEST
+	// 結合テストビルド専用: 環境変数でモックサーバーへ差し替えられるようにする
+	private static readonly string GithubReleasesUrl =
+		Environment.GetEnvironmentVariable("KEVI_UPDATE_API_URL") ?? "https://api.github.com/repos/ingen084/KyoshinEewViewerIngen/releases";
+	private static bool IsEndpointOverridden
+		=> Environment.GetEnvironmentVariable("KEVI_UPDATE_API_URL") != null;
+#else
 	private const string GithubReleasesUrl = "https://api.github.com/repos/ingen084/KyoshinEewViewerIngen/releases";
+#endif
 	private const string UpdateCheckUrl = "https://svs.ingen084.net/kyoshineewviewer/updates.json";
 
 	// RIDとGitHub Releasesアセット名のマッピング
@@ -57,6 +66,10 @@ public class UpdateCheckService : ReactiveObject
 		Config = config;
 		WorkflowService = workflowService;
 		Client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "KEVi;" + Utils.Version);
+#if INTEGRATION_TEST
+		if (IsEndpointOverridden)
+			Logger.LogWarning($"結合テストビルド: 更新チェックのエンドポイントが差し替えられています: {GithubReleasesUrl}");
+#endif
 		CheckUpdateTask = new Timer(async s =>
 		{
 			if (!config.Update.Enable)
@@ -67,8 +80,14 @@ public class UpdateCheckService : ReactiveObject
 				var currentVersionString = Utils.InternalVersion;
 				var (currentVersion, currentSuffix) = Utils.ParseVersionString(currentVersionString);
 
+#if INTEGRATION_TEST
+				// 結合テスト時は統計用リクエストを本番サーバーへ送らない
+				if (!IsEndpointOverridden)
+					await Client.GetStringAsync(UpdateCheckUrl);
+#else
 				// 暫定でリクエストは残しておく
 				await Client.GetStringAsync(UpdateCheckUrl);
+#endif
 
 				// 取得してでかい順に並べる
 				var releases = (await GitHubRelease.GetReleasesAsync(Client, GithubReleasesUrl))
@@ -113,6 +132,14 @@ public class UpdateCheckService : ReactiveObject
 				WorkflowService.PublishEvent(new UpdateAvailableEvent(AvailableUpdateVersions?.Length > 0, releases.First().TagName));
 				AvailableUpdateVersions = newVersions;
 				Updated?.Invoke(AvailableUpdateVersions);
+
+#if INTEGRATION_TEST
+				if (StartupOptions.Current?.AutoUpdateTest == true)
+				{
+					Logger.LogWarning("結合テストモード: 更新を検出したため自動で自己更新を開始します");
+					_ = StartUpdater();
+				}
+#endif
 			}
 			catch (Exception ex)
 			{
@@ -419,7 +446,7 @@ public class UpdateCheckService : ReactiveObject
 
 		// 再起動
 		Process.Start(currentExe);
-		(Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+		RequestShutdown();
 	}
 
 	/// <summary>
@@ -432,10 +459,10 @@ public class UpdateCheckService : ReactiveObject
 		var currentExe = Environment.ProcessPath!;
 		var tempDir = Path.Combine(Path.GetTempPath(), "kevi-update-" + Guid.NewGuid());
 
+		Directory.CreateDirectory(tempDir);
 		try
 		{
 			// ZIPを展開
-			Directory.CreateDirectory(tempDir);
 			await Task.Run(() => ZipFile.ExtractToDirectory(newVersionZip, tempDir));
 
 			var newExe = Path.Combine(tempDir, "KyoshinEewViewer");
@@ -447,40 +474,46 @@ public class UpdateCheckService : ReactiveObject
 			if (chmod != null)
 				await chmod.WaitForExitAsync();
 
-			// 古いファイルを削除（iノードは保持される）
-			File.Delete(currentExe);
-
-			// 新バージョンを配置（新しいiノードで作成）
-			File.Move(newExe, currentExe);
-
-			Logger.LogInfo("更新が完了しました。アプリケーションを再起動します");
-
 			// 設定を保存
 			ConfigurationLoader.Save(Config);
 
-			await Task.Delay(500);
-
+			const string script = """
+				exec >>"$1" 2>&1
+				echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] 更新ヘルパーを開始しました (対象PID: $2, 実行ファイル: $3)"
+				while kill -0 "$2" 2>/dev/null; do sleep 0.2; done
+				mv -f "$4" "$3" || exit 1
+				rm -rf "$5"
+				echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] 差し替えが完了したため新バージョンを起動します"
+				exec "$3"
+				""";
+			StartUpdateHelper(script, currentExe, newExe, tempDir);
+		}
+		catch
+		{
+			// ヘルパーへ引き継げなかった場合は一時ディレクトリを残さない
+			try
+			{
+				Directory.Delete(tempDir, true);
+			}
+			catch { }
+			throw;
 		}
 		finally
 		{
-			// 一時ファイルをクリーンアップ
 			try
 			{
 				if (File.Exists(newVersionZip))
 					File.Delete(newVersionZip);
-				if (Directory.Exists(tempDir))
-					Directory.Delete(tempDir, true);
 			}
 			catch { }
 		}
 
-		// 再起動
-		Process.Start(currentExe);
-		(Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+		Logger.LogInfo("更新の準備が完了しました。アプリケーションを終了します");
+		RequestShutdown();
 	}
 
 	/// <summary>
-	/// macOS用の自己更新処理（認証ダイアログ付き）
+	/// macOS用の自己更新処理
 	/// </summary>
 	private async Task UpdateMacOS(string newVersionZip)
 	{
@@ -512,10 +545,10 @@ public class UpdateCheckService : ReactiveObject
 
 		var tempDir = Path.Combine(Path.GetTempPath(), "kevi-update-" + Guid.NewGuid());
 
+		Directory.CreateDirectory(tempDir);
 		try
 		{
 			// ZIPを展開
-			Directory.CreateDirectory(tempDir);
 			await Task.Run(() => ZipFile.ExtractToDirectory(newVersionZip, tempDir));
 
 			var newAppPath = Path.Combine(tempDir, "KyoshinEewViewer.Desktop.app");
@@ -553,45 +586,77 @@ public class UpdateCheckService : ReactiveObject
 				Logger.LogWarning(ex, "xattrコマンドの実行に失敗しました（続行します）");
 			}
 
-			// 古い.appバンドルを削除（iノードは保持）
-			Directory.Delete(appPath, true);
-
-			// 新しい.appを配置
-			Directory.Move(newAppPath, appPath);
-
-			Logger.LogInfo("更新が完了しました。アプリケーションを再起動します");
-
 			// 設定を保存
 			ConfigurationLoader.Save(Config);
 
-			await Task.Delay(500);
+			var appToReplace = appPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+			const string script = """
+				exec >>"$1" 2>&1
+				echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] 更新ヘルパーを開始しました (対象PID: $2, バンドル: $3)"
+				while kill -0 "$2" 2>/dev/null; do sleep 0.2; done
+				rm -rf "$3" || exit 1
+				mv -f "$4" "$3" || exit 1
+				rm -rf "$5"
+				/usr/bin/open "$3"
+				echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] 新バージョンの起動を要求しました (open の終了コード: $?)"
+				""";
+			StartUpdateHelper(script, appToReplace, newAppPath, tempDir);
+		}
+		catch
+		{
+			// ヘルパーへ引き継げなかった場合は一時ディレクトリを残さない
+			try
+			{
+				Directory.Delete(tempDir, true);
+			}
+			catch { }
+			throw;
 		}
 		finally
 		{
-			// 一時ファイルをクリーンアップ
 			try
 			{
 				if (File.Exists(newVersionZip))
 					File.Delete(newVersionZip);
-				if (Directory.Exists(tempDir))
-					Directory.Delete(tempDir, true);
 			}
 			catch { }
 		}
 
-		// 再起動（-nオプションで新しいインスタンスを強制起動）
-		var openProc = new ProcessStartInfo
-		{
-			FileName = "open",
-			ArgumentList = { "-n", "-a", appPath },
-			UseShellExecute = false,
-			CreateNoWindow = true
-		};
-		Process.Start(openProc);
-		
-		await Task.Delay(1000);
-		(Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+		Logger.LogInfo("更新の準備が完了しました。アプリケーションを終了します");
+		RequestShutdown();
 	}
+
+	/// <summary>
+	/// 自プロセスの終了を待ってから更新の適用と再起動を行うシェルヘルパーを起動する
+	/// </summary>
+	/// <remarks>
+	/// 単一ファイル発行では未ロードのアセンブリを実行中に自身の実行ファイルから読み込むため、
+	/// 実行中に自身を差し替えると以降のアセンブリ読み込みが壊れてプロセスがクラッシュする。
+	/// そのため差し替えと再起動は自プロセスの外で行う必要がある。
+	/// </remarks>
+	private void StartUpdateHelper(string script, params string[] args)
+	{
+		var logPath = Path.Combine(LoggingAdapter.LogDirectory ?? Path.GetTempPath(), "kevi-update-helper.log");
+		var psi = new ProcessStartInfo
+		{
+			FileName = "/bin/sh",
+			// シェルスクリプトはargvで渡すため、差し替え後にスクリプトファイルを参照しない
+			ArgumentList = { "-c", script, "kevi-update-helper", logPath, Environment.ProcessId.ToString() },
+			UseShellExecute = false,
+			CreateNoWindow = true,
+		};
+		foreach (var arg in args)
+			psi.ArgumentList.Add(arg);
+
+		Process.Start(psi);
+		Logger.LogInfo($"更新ヘルパーを起動しました。ログ: {logPath}");
+	}
+
+	/// <summary>
+	/// アプリケーションの終了を要求する
+	/// </summary>
+	private static void RequestShutdown()
+		=> Dispatcher.UIThread.Post(() => (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown());
 
 	public void StartUpdateCheckTask()
 		=> CheckUpdateTask.Change(TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(100));

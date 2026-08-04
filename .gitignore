@@ -329,6 +329,9 @@ ASALocalRun/
 # MFractors (Xamarin productivity tool) working folder
 .mfractor/
 
+# macOS Related
+.DS_Store
+
 /tmp
 /out
 KyoshinEewViewer.jitprofile
@@ -343,3 +346,15 @@ output/
 .claude/settings.local.json
 
 .DS_Store
+tmp-*
+/eval-results
+
+# 署名関連の秘密情報 (誤コミット防止)
+*.p8
+*.p12
+*.cer
+*.csr
+*.mobileprovision
+*.provisionprofile
+AuthKey_*.p8
+signing/

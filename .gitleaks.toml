@@ -1,0 +1,22 @@
+title = "KyoshinEewViewer for ingen gitleaks"
+
+# デフォルトルール: https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Dmdata の OAuth public client ID (PKCE 前提のパブリッククライアントでありシークレットではない)"
+regexes = [
+  '''^CId\._xg46xWbfdrOqxN7WtwNfBUL3fhKLH9roksSfV8RV3Nj$''',
+]
+
+[[allowlists]]
+description = "XAML/AXAML のリソースキー属性 (震度テーマの色定義などが generic-api-key に誤検知される)"
+condition = "AND"
+regexTarget = "match"
+paths = [
+  '''\.(axaml|xaml)$''',
+]
+regexes = [
+  '''Key="[A-Za-z0-9_.]+"''',
+]

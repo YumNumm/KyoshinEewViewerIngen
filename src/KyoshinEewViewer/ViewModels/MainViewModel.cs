@@ -29,8 +29,14 @@ using KyoshinEewViewer.Series.ObservationPointEditor;
 
 namespace KyoshinEewViewer.ViewModels;
 
-public partial class MainViewModel : ViewModelBase
+public partial class MainViewModel : NavigationPaneViewModelBase
 {
+	/// <summary>
+	/// サイドバーは幅 64px しかないが、地図とシリーズ画面のために横幅を確保したい
+	/// iPhone の縦向きは論理幅が最大でも 440px 程度、iPad の縦向きは最小でも 744px 程度であるため、その間の値とする
+	/// </summary>
+	protected override double PaneVisibleMinWidth => 500;
+
 	public string Title { get; } = "KyoshinEewViewer for ingen";
 
 	private string _version = "?";
@@ -88,13 +94,6 @@ public partial class MainViewModel : ViewModelBase
 	{
 		get => _mapPadding;
 		set => this.RaiseAndSetIfChanged(ref _mapPadding, value);
-	}
-
-	private NavigationViewPaneDisplayMode _navigationViewPaneDisplayMode = NavigationViewPaneDisplayMode.Left;
-	public NavigationViewPaneDisplayMode NavigationViewPaneDisplayMode
-	{
-		get => _navigationViewPaneDisplayMode;
-		set => this.RaiseAndSetIfChanged(ref _navigationViewPaneDisplayMode, value);
 	}
 
 	private double _leftBottomControlOpacity = 1;
@@ -346,7 +345,10 @@ public partial class MainViewModel : ViewModelBase
 
 			IsStandalone = true;
 			SelectedSeries = sSeries;
-			NavigationViewPaneDisplayMode = NavigationViewPaneDisplayMode.LeftMinimal;
+			// シリーズを切り替えないため、幅にかかわらずサイドバーなしの表示を維持する
+			IsPaneLayoutAdaptive = false;
+			NavigationViewPaneDisplayMode = FANavigationViewPaneDisplayMode.LeftMinimal;
+			IsNavigationPaneOpen = false;
 		}
 		else
 		{
@@ -417,9 +419,6 @@ public partial class MainViewModel : ViewModelBase
 		return true;
 	}
 
-	public void ReturnToHomeMap()
-		=> MessageBus.Current.SendMessage(SelectedSeries?.MapNavigationRequest ?? new MapNavigationRequest(null));
-
 	public void ToggleMute()
 		=> Config.Audio.IsMuted = !Config.Audio.IsMuted;
 
@@ -432,8 +431,12 @@ public partial class MainViewModel : ViewModelBase
 	public void ShowDebugWindow()
 		=> MessageBus.Current.SendMessage(new DebugWindowOpenRequested());
 
-	public void SeparateSeries(SeriesBase series)
-		=> SubWindowsService?.ShowSeriesWindow(series);
+	public void SeparateSeries(object? parameter)
+	{
+		if (parameter is not SeriesBase series)
+			return;
+		SubWindowsService?.ShowSeriesWindow(series);
+	}
 
 	private void RestoreSeparatedSeriesWindows()
 	{

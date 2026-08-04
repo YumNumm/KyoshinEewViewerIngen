@@ -5,6 +5,7 @@ using ReactiveUI;
 using Splat;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -24,7 +25,7 @@ public class SoundPlayerService
 	/// </summary>
 	public bool IsAvailable { get; }
 	public Sound TestSound { get; }
-	private ILogger Logger { get; }
+	internal ILogger Logger { get; }
 
 	public SoundPlayerService(KyoshinEewViewerConfiguration config, ILogManager logManager)
 	{
@@ -57,6 +58,8 @@ public class SoundPlayerService
 					.Subscribe(_ => UpdateVolume());
 				UpdateVolume();
 			}
+			else
+				Logger.LogWarning($"Bass の初期化に失敗しました。 LastError:{Bass.LastError}");
 		}
 		catch (Exception ex)
 		{
@@ -88,11 +91,17 @@ public class SoundPlayerService
 	public async Task<bool> PlayAsync(string path, double volume, bool waitToEnd)
 	{
 		if (!IsAvailable)
+		{
+			Logger.LogWarning($"音声を再生できません。Bass が利用できません。 Path:{path}");
 			return false;
+		}
 
 		var ch = Bass.CreateStream(path);
 		if (ch == 0)
+		{
+			Logger.LogWarning($"音声ストリームの作成に失敗しました。 LastError:{Bass.LastError} Exists:{File.Exists(path)} Path:{path}");
 			return false;
+		}
 		Bass.ChannelSetAttribute(ch, ChannelAttribute.Volume, Math.Clamp(volume, 0, 1));
 
 		var mre = new ManualResetEventSlim(false);
@@ -107,6 +116,8 @@ public class SoundPlayerService
 				await Task.Run(mre.Wait);
 			return true;
 		}
+		Logger.LogWarning($"音声の再生開始に失敗しました。 LastError:{Bass.LastError} Path:{path}");
+		Bass.StreamFree(ch);
 		return false;
 	}
 
@@ -180,12 +191,15 @@ public class Sound : IDisposable
 	/// <summary>
 	/// 音声を再生する
 	/// </summary>
-	public bool Play(Dictionary<string, string>? parameters = null)
+	public bool Play() => Play(null);
+
+	/// <summary>
+	/// 音声を再生する
+	/// </summary>
+	/// <param name="parameters">ファイルパスの置換に使用するパラメータ</param>
+	public bool Play(Dictionary<string, string>? parameters)
 	{
 		var config = Config;
-
-		if (!Service.IsAvailable || IsDisposed)
-			return false;
 
 		string GetFilePath()
 		{
@@ -206,6 +220,18 @@ public class Sound : IDisposable
 		if (!config.Enabled || string.IsNullOrWhiteSpace(filePath))
 			return false;
 
+		if (!Service.IsAvailable)
+		{
+			Service.Logger.LogWarning($"音声を再生できません。Bass が利用できません。 Sound:{ParentCategory.Name}/{Name} Path:{filePath}");
+			return false;
+		}
+
+		if (IsDisposed)
+		{
+			Service.Logger.LogWarning($"破棄済みの音声を再生しようとしました。 Sound:{ParentCategory.Name}/{Name} Path:{filePath}");
+			return false;
+		}
+
 		// AllowMultiPlayが有効な場合クラス内部のキャッシュは使用しない
 		// 再生ごとにファイルの読み込み･再生完了時に開放を行う
 		if (config.AllowMultiPlay)
@@ -217,11 +243,18 @@ public class Sound : IDisposable
 			}
 			var ch = Bass.CreateStream(filePath);
 			if (ch == 0)
+			{
+				Service.Logger.LogWarning($"音声ストリームの作成に失敗しました。 LastError:{Bass.LastError} Exists:{File.Exists(filePath)} Sound:{ParentCategory.Name}/{Name} Path:{filePath}");
 				return false;
+			}
 			Bass.ChannelSetAttribute(ch, ChannelAttribute.Volume, Math.Clamp(config.Volume, 0, 1));
 			Bass.ChannelSetSync(ch, SyncFlags.Onetime | SyncFlags.End, 0, (handle, channel, data, user) => Bass.StreamFree(ch));
 
-			return Bass.ChannelPlay(ch);
+			if (Bass.ChannelPlay(ch))
+				return true;
+			Service.Logger.LogWarning($"音声の再生開始に失敗しました。 LastError:{Bass.LastError} Sound:{ParentCategory.Name}/{Name} Path:{filePath}");
+			Bass.StreamFree(ch);
+			return false;
 		}
 
 		if (Channel is null or 0 || LoadedFilePath != filePath)
@@ -231,7 +264,10 @@ public class Sound : IDisposable
 				Bass.StreamFree(cachedChannel);
 			Channel = Bass.CreateStream(filePath);
 			if (Channel == 0)
+			{
+				Service.Logger.LogWarning($"音声ストリームの作成に失敗しました。 LastError:{Bass.LastError} Exists:{File.Exists(filePath)} Sound:{ParentCategory.Name}/{Name} Path:{filePath}");
 				return false;
+			}
 			LoadedFilePath = filePath;
 		}
 
@@ -240,7 +276,10 @@ public class Sound : IDisposable
 			Bass.ChannelSetAttribute(c, ChannelAttribute.Volume, Math.Clamp(config.Volume, 0, 1));
 			if (Bass.ChannelIsActive(c) != PlaybackState.Stopped)
 				Bass.ChannelSetPosition(c, 0);
-			return Bass.ChannelPlay(c);
+			if (Bass.ChannelPlay(c))
+				return true;
+			Service.Logger.LogWarning($"音声の再生開始に失敗しました。 LastError:{Bass.LastError} Sound:{ParentCategory.Name}/{Name} Path:{filePath}");
+			return false;
 		}
 		return false;
 	}

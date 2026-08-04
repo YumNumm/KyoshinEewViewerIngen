@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:md="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
+             xmlns:control="clr-namespace:KyoshinEewViewer.Controls;assembly=KyoshinEewViewer"
              xmlns:p="clr-namespace:KyoshinEewViewer.Properties;assembly=KyoshinEewViewer"
 			 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
 			 FontSize="16"
@@ -14,14 +14,13 @@
 				<Setter Property="TextWrapping" Value="Wrap" />
 			</Style>
 		</StackPanel.Styles>
-		<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-			<Image Source="avares://KyoshinEewViewer.Desktop/Assets/logo.ico" Width="46" Height="46" Margin="5,20,5,5" VerticalAlignment="Center" />
-			<TextBlock x:Name="TitleText" Text="{x:Static p:Resources.SetupWizardWelcomePageTitle}" FontSize="32" VerticalAlignment="Center" />
-		</StackPanel>
-		<md:MarkdownScrollViewer Markdown="{x:Static p:Resources.SetupWizardWelcomePageFunctionDetail}">
-			<md:MarkdownScrollViewer.Styles>
-				<StyleInclude Source="avares://KyoshinEewViewer/MarkdownStyles.axaml" />
-			</md:MarkdownScrollViewer.Styles>
-		</md:MarkdownScrollViewer>
+		<!-- タイトルは横並びのため折り返せない。狭い画面でははみ出すので縮小して収める -->
+		<Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Center">
+			<StackPanel Orientation="Horizontal">
+				<Image Source="avares://KyoshinEewViewer/Assets/logo.ico" Width="46" Height="46" Margin="5,20,5,5" VerticalAlignment="Center" />
+				<TextBlock x:Name="TitleText" Text="{x:Static p:Resources.SetupWizardWelcomePageTitle}" FontSize="32" VerticalAlignment="Center" />
+			</StackPanel>
+		</Viewbox>
+		<control:MarkdownViewer Markdown="{x:Static p:Resources.SetupWizardWelcomePageFunctionDetail}" />
 	</StackPanel>
 </UserControl>
