@@ -115,13 +115,13 @@
         <LayoutTransformControl.LayoutTransform>
             <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}" />
         </LayoutTransformControl.LayoutTransform>
-        <Panel>
+        <Panel Name="ScaledRoot">
             <ui:FANavigationView Name="NavView"
                                Margin="0,-1,0,0"
 							   AlwaysShowHeader="False"
-							   IsSettingsVisible="False" 
+							   IsSettingsVisible="False"
 							   PaneDisplayMode="{Binding NavigationViewPaneDisplayMode}"
-							   IsPaneOpen="True"
+							   IsPaneOpen="{Binding IsNavigationPaneOpen, Mode=TwoWay}"
                                IsBackEnabled="False"
 							   IsBackButtonVisible="False"
 							   MenuItemsSource="{Binding SeriesController.EnabledSeries}"
@@ -233,37 +233,52 @@
 
             <Panel Width="64" HorizontalAlignment="Left" VerticalAlignment="Bottom"
                    Margin="{Binding $parent[views:MainView].SafeAreaPadding}">
-                <StackPanel HorizontalAlignment="Center" Spacing="3" Opacity="{Binding LeftBottomControlOpacity}" >
-                    <Button Name="MuteButton" Command="{Binding ToggleMute}" Padding="10,7" Theme="{StaticResource TransparentButton}" ToolTip.Tip="音声をミュート" IsVisible="{Binding Config.Audio.ShowMuteButtonInMainWindow}">
-                        <Button.Styles>
-                            <Style Selector="ui|FASymbolIcon.muted">
-                                <Setter Property="Foreground" Value="{DynamicResource EmphasisForegroundColor}" />
-                            </Style>
-                        </Button.Styles>
-                        <Viewbox Height="28" Margin="0,2">
-                            <ui:FASymbolIcon Symbol="{Binding Config.Audio.IsMuted, Converter={x:Static converter:BoolToStringConverter.VolumeIcon}}" Classes.muted="{Binding Config.Audio.IsMuted}" />
-                        </Viewbox>
-                    </Button>
-                    <Button Name="HomeButton" Click="HomeButton_Click" Padding="10,7" Theme="{StaticResource TransparentButton}" ToolTip.Tip="地図の座標を戻す">
-                        <Viewbox Height="28" Margin="0,2">
-                            <ui:FASymbolIcon Symbol="Home" />
-                        </Viewbox>
-                    </Button>
-                    <Button Name="OpenSettingWindowButton" Command="{Binding ShowSettingWindow}" Padding="10,7" Theme="{StaticResource TransparentButton}" ToolTip.Tip="設定画面を開く">
-                        <Panel>
+                <Border Opacity="{Binding LeftBottomControlOpacity}"
+                        CornerRadius="{StaticResource OverlayCornerRadius}"
+                        Classes.narrow="{Binding IsNarrowLayout}">
+                    <Border.Styles>
+                        <!-- サイドバーを表示しない幅では地図の上に直接重なるため、視認性を確保するために背景を敷く -->
+                        <Style Selector="Border.narrow">
+                            <Setter Property="Background" Value="{DynamicResource SolidBackgroundFillColorBaseBrush}" />
+                        </Style>
+                    </Border.Styles>
+                    <StackPanel HorizontalAlignment="Center" Spacing="3">
+                        <Button Name="ToggleNavigationPaneButton" Command="{Binding ToggleNavigationPane}" Padding="10,7" Theme="{StaticResource TransparentButton}" ToolTip.Tip="シリーズを切り替える" IsVisible="{Binding IsNarrowLayout}">
                             <Viewbox Height="28" Margin="0,2">
-                                <ui:FASymbolIcon Symbol="Setting" />
+                                <ui:FASymbolIcon Symbol="GlobalNavigationButton" />
                             </Viewbox>
-                            <ui:FAInfoBadge IsVisible="{Binding UpdateAvailable}" Classes="Caution Icon" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-2,-5,0" />
-                        </Panel>
-                    </Button>
-                    <TextBlock Text="{Binding Version, StringFormat={}v{0}}"
-								Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-								FontSize="8"
-								IsVisible="{Binding !IsStandalone}"
-								IsHitTestVisible="False"
-								HorizontalAlignment="Center" />
-                </StackPanel>
+                        </Button>
+                        <Button Name="MuteButton" Command="{Binding ToggleMute}" Padding="10,7" Theme="{StaticResource TransparentButton}" ToolTip.Tip="音声をミュート" IsVisible="{Binding Config.Audio.ShowMuteButtonInMainWindow}">
+                            <Button.Styles>
+                                <Style Selector="ui|FASymbolIcon.muted">
+                                    <Setter Property="Foreground" Value="{DynamicResource EmphasisForegroundColor}" />
+                                </Style>
+                            </Button.Styles>
+                            <Viewbox Height="28" Margin="0,2">
+                                <ui:FASymbolIcon Symbol="{Binding Config.Audio.IsMuted, Converter={x:Static converter:BoolToStringConverter.VolumeIcon}}" Classes.muted="{Binding Config.Audio.IsMuted}" />
+                            </Viewbox>
+                        </Button>
+                        <Button Name="HomeButton" Click="HomeButton_Click" Padding="10,7" Theme="{StaticResource TransparentButton}" ToolTip.Tip="地図の座標を戻す">
+                            <Viewbox Height="28" Margin="0,2">
+                                <ui:FASymbolIcon Symbol="Home" />
+                            </Viewbox>
+                        </Button>
+                        <Button Name="OpenSettingWindowButton" Command="{Binding ShowSettingWindow}" Padding="10,7" Theme="{StaticResource TransparentButton}" ToolTip.Tip="設定画面を開く">
+                            <Panel>
+                                <Viewbox Height="28" Margin="0,2">
+                                    <ui:FASymbolIcon Symbol="Setting" />
+                                </Viewbox>
+                                <ui:FAInfoBadge IsVisible="{Binding UpdateAvailable}" Classes="Caution Icon" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-2,-5,0" />
+                            </Panel>
+                        </Button>
+                        <TextBlock Text="{Binding Version, StringFormat={}v{0}, Mode=OneWay}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   FontSize="8"
+                                   IsVisible="{Binding !IsStandalone}"
+                                   IsHitTestVisible="False"
+                                   HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Border>
             </Panel>
         </Panel>
     </LayoutTransformControl>

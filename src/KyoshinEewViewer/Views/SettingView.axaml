@@ -84,18 +84,34 @@
             <x:Double x:Key="NavigationViewItemOnLeftIconBoxHeight">24</x:Double>
         </ResourceDictionary>
     </UserControl.Resources>
-    <ui:FANavigationView Name="SettingNavigationView"
-                       AlwaysShowHeader="False"
-					   IsSettingsVisible="False"
-                       PaneDisplayMode="Left"
-					   IsPaneOpen="True"
-                       IsPaneToggleButtonVisible="False"
-                       IsBackEnabled="False"
-					   IsBackButtonVisible="False"
-                       OpenPaneLength="200"
-                       MenuItemsSource="{Binding SettingPages}"
-                       SelectedItem="{Binding SelectedSettingPage}">
-        <ContentControl Background="{DynamicResource MainBackgroundColor}"
-                  Content="{Binding #SettingNavigationView.((series:ISettingPage)SelectedItem).DisplayControl}"/>
-    </ui:FANavigationView>
+    <Grid RowDefinitions="Auto,*">
+        <!-- 一覧を常時表示しない幅のときだけ表示する。広い画面では折りたたまれるため表示は変わらない -->
+        <Button Grid.Row="0"
+                Command="{Binding ToggleNavigationPane}"
+                IsVisible="{Binding IsNarrowLayout}"
+                Theme="{StaticResource TransparentButton}"
+                HorizontalAlignment="Left"
+                Margin="4"
+                Padding="10,7"
+                ToolTip.Tip="設定項目の一覧を開く">
+            <Viewbox Height="20">
+                <ui:FASymbolIcon Symbol="GlobalNavigationButton" />
+            </Viewbox>
+        </Button>
+        <ui:FANavigationView Grid.Row="1"
+                           Name="SettingNavigationView"
+                           AlwaysShowHeader="False"
+						   IsSettingsVisible="False"
+                           PaneDisplayMode="{Binding NavigationViewPaneDisplayMode}"
+						   IsPaneOpen="{Binding IsNavigationPaneOpen, Mode=TwoWay}"
+                           IsPaneToggleButtonVisible="False"
+                           IsBackEnabled="False"
+						   IsBackButtonVisible="False"
+                           OpenPaneLength="200"
+                           MenuItemsSource="{Binding SettingPages}"
+                           SelectedItem="{Binding SelectedSettingPage}">
+            <ContentControl Background="{DynamicResource MainBackgroundColor}"
+                      Content="{Binding #SettingNavigationView.((series:ISettingPage)SelectedItem).DisplayControl}"/>
+        </ui:FANavigationView>
+    </Grid>
 </UserControl>
