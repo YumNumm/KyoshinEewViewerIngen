@@ -9,7 +9,9 @@
         <ApplicationId>net.ingen084.kyoshineewviewer</ApplicationId>
         <ApplicationVersion>1</ApplicationVersion>
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
-        <AndroidPackageFormat>apk</AndroidPackageFormat>
+        <!-- AndroidPackageFormat (単数) を指定すると SDK の既定である
+             AndroidPackageFormats=aab;apk (Release) が上書きされ片方しか生成されなくなる。
+             Debug は SDK の既定で apk のみになる -->
         <RunAOTCompilation>false</RunAOTCompilation>
         <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
         <PublishReadyToRun>false</PublishReadyToRun>
