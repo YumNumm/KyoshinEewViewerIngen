@@ -61,13 +61,26 @@ public class App : Application
 		// "avares://KyoshinEewViewer.Core/Assets/Fonts/NotoSansJP-Bold.otf"
 		// "avares://KyoshinEewViewer.Core/Assets/Fonts/FontAwesome6Free-Solid-900.otf"
 		// "avares://FluentAvalonia/Fonts/FluentAvalonia.ttf"
-		// DMDATA の認可後にカスタム URL スキームで戻ってくる
-		if (ApplicationLifetime is IActivatableLifetime activatable)
+		// DMDATA の認可後にカスタム URL スキームで戻ってくる。
+		// iOS の SingleViewLifetime は IActivatableLifetime を実装しないため、
+		// ApplicationLifetime へのキャストでは取得できず機能ごと取得する
+		if (TryGetFeature(typeof(IActivatableLifetime)) is IActivatableLifetime activatable)
+		{
+			LogHost.Default.Info("IActivatableLifetime を取得しました");
 			activatable.Activated += (_, e) =>
 			{
-				if (e is ProtocolActivatedEventArgs protocolArgs)
-					_dmdataAuthenticator.HandleCallback(protocolArgs.Uri);
+				LogHost.Default.Info($"アクティベーションを受信しました: {e.GetType().Name} / Kind={e.Kind}");
+				if (e is not ProtocolActivatedEventArgs protocolArgs)
+					return;
+				LogHost.Default.Info($"URL アクティベーション: {protocolArgs.Uri}");
+				if (!_dmdataAuthenticator.HandleCallback(protocolArgs.Uri))
+					LogHost.Default.Warn("認可待ちではないため URL アクティベーションを破棄しました");
 			};
+		}
+		else
+		{
+			LogHost.Default.Warn("IActivatableLifetime を取得できませんでした。URL アクティベーションを受け取れません");
+		}
 
 		if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
 		{

@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using DmdataSharp.Authentication.OAuth;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
+using Splat;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -45,7 +46,11 @@ public class DmdataCustomSchemeAuthenticator : IDmdataAuthenticator
 	{
 		var callback = _callback;
 		if (callback is null)
+		{
+			LogHost.Default.Warn($"認可待ちではない状態でコールバックを受けました: {uri.Scheme}://{uri.Host}");
 			return false;
+		}
+		LogHost.Default.Info($"認可コールバックを受け取りました: {uri.Scheme}://{uri.Host}");
 		return callback.TrySetResult(uri);
 	}
 
