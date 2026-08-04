@@ -19,6 +19,9 @@ env:
     IMAGE_NAME: ${{ github.repository_owner }}/shake-detection-producer
     REPLAY_GENERATOR_IMAGE_NAME: ${{ github.repository_owner }}/replay-generator
 
+permissions:
+    contents: read
+
 jobs:
     build-shake-detection-producer:
         runs-on: ubuntu-24.04
@@ -31,6 +34,7 @@ jobs:
             - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
               with:
                   submodules: recursive
+                  persist-credentials: false
 
             # https://github.com/docker/setup-qemu-action
             - name: Set up QEMU
@@ -82,6 +86,7 @@ jobs:
             - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
               with:
                   submodules: recursive
+                  persist-credentials: false
 
             - name: Set up QEMU
               uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
@@ -129,6 +134,7 @@ jobs:
             - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
               with:
                   submodules: recursive
+                  persist-credentials: false
 
             - uses: FranzDiebold/github-env-vars-action@e8118971bd6b60524ae66a2d870bc83088e3a3c9 # v2.9.0
 
@@ -139,8 +145,10 @@ jobs:
 
             - name: Parse version from tag
               id: version
+              env:
+                  GITHUB_REF_NAME_RAW: ${{ github.ref }}
               run: |
-                  if [[ "${{ github.ref }}" =~ refs/tags/(.*) ]]; then
+                  if [[ "$GITHUB_REF_NAME_RAW" =~ refs/tags/(.*) ]]; then
                     TAG_NAME="${BASH_REMATCH[1]}"
 
                     if [[ "$TAG_NAME" == *"-"* ]]; then
@@ -151,12 +159,12 @@ jobs:
                       VERSION_SUFFIX=""
                     fi
 
-                    echo "APP_VERSION=$APP_VERSION" >> $GITHUB_OUTPUT
-                    echo "VERSION_SUFFIX=$VERSION_SUFFIX" >> $GITHUB_OUTPUT
+                    echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_OUTPUT"
+                    echo "VERSION_SUFFIX=$VERSION_SUFFIX" >> "$GITHUB_OUTPUT"
                     echo "Parsed version: $APP_VERSION, suffix: $VERSION_SUFFIX"
                   else
-                    echo "APP_VERSION=0.1.1" >> $GITHUB_OUTPUT
-                    echo "VERSION_SUFFIX=" >> $GITHUB_OUTPUT
+                    echo "APP_VERSION=0.1.1" >> "$GITHUB_OUTPUT"
+                    echo "VERSION_SUFFIX=" >> "$GITHUB_OUTPUT"
                   fi
               shell: bash
 

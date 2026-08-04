@@ -48,22 +48,26 @@ runs:
         APP_VERSION: ${{ inputs.app-version }}
         VERSION_SUFFIX: ${{ inputs.version-suffix }}
         BUILD_NUMBER: ${{ inputs.build-number }}
+        INPUT_OS: ${{ inputs.os }}
+        INPUT_ARCH: ${{ inputs.arch }}
+        INPUT_INTEGRATION_TEST_BUILD: ${{ inputs.integration-test-build }}
+        INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
       run: |
-        case "${{ inputs.os }}" in
-          windows) TFM=net10.0-windows10.0.19041.0; RID=win-${{ inputs.arch }} ;;
-          ubuntu)  TFM=net10.0; RID=linux-${{ inputs.arch }} ;;
-          macos)   TFM=net10.0; RID=osx-${{ inputs.arch }} ;;
-          *) echo "不明なOS指定です: ${{ inputs.os }}"; exit 1 ;;
+        case "$INPUT_OS" in
+          windows) TFM=net10.0-windows10.0.19041.0; RID="win-$INPUT_ARCH" ;;
+          ubuntu)  TFM=net10.0; RID="linux-$INPUT_ARCH" ;;
+          macos)   TFM=net10.0; RID="osx-$INPUT_ARCH" ;;
+          *) echo "不明なOS指定です: $INPUT_OS"; exit 1 ;;
         esac
         EXTRA=""
-        if [ "${{ inputs.integration-test-build }}" = "true" ]; then
+        if [ "$INPUT_INTEGRATION_TEST_BUILD" = "true" ]; then
           EXTRA="-p:IntegrationTestBuild=true"
         fi
         dotnet publish src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj \
           -c Release \
           -f "$TFM" \
           -r "$RID" \
-          -o "${{ inputs.output-dir }}/raw" \
+          -o "$INPUT_OUTPUT_DIR/raw" \
           -p:PublishSingleFile=true \
           --self-contained true \
           $EXTRA
@@ -71,9 +75,14 @@ runs:
     - name: Layout
       id: layout
       shell: bash
+      env:
+        INPUT_OS: ${{ inputs.os }}
+        INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+        INPUT_APP_VERSION: ${{ inputs.app-version }}
+        INPUT_BUNDLE_VERSION: ${{ inputs.bundle-version }}
       run: |
-        OUT="${{ inputs.output-dir }}"
-        case "${{ inputs.os }}" in
+        OUT="$INPUT_OUTPUT_DIR"
+        case "$INPUT_OS" in
           windows)
             mv "$OUT/raw" "$OUT/dist"
             mv "$OUT/dist/KyoshinEewViewer.Desktop.exe" "$OUT/dist/KyoshinEewViewer.exe"
@@ -88,9 +97,9 @@ runs:
             echo "executable=$OUT/dist/KyoshinEewViewer" >> "$GITHUB_OUTPUT"
             ;;
           macos)
-            BUNDLE_VERSION="${{ inputs.bundle-version }}"
+            BUNDLE_VERSION="$INPUT_BUNDLE_VERSION"
             if [ -z "$BUNDLE_VERSION" ]; then
-              BUNDLE_VERSION="${{ inputs.app-version }}"
+              BUNDLE_VERSION="$INPUT_APP_VERSION"
             fi
             mkdir -p "$OUT/dist"
             cp -r build-files/KyoshinEewViewer.Desktop.app "$OUT/dist/"
@@ -107,6 +116,8 @@ runs:
     - name: Code sign (ad-hoc)
       if: inputs.os == 'macos'
       shell: bash
+      env:
+        DIST_DIR: ${{ steps.layout.outputs.dist-dir }}
       run: |
-        codesign --force --deep --sign - "${{ steps.layout.outputs.dist-dir }}/KyoshinEewViewer.Desktop.app"
-        codesign --verify --deep --strict --verbose=2 "${{ steps.layout.outputs.dist-dir }}/KyoshinEewViewer.Desktop.app"
+        codesign --force --deep --sign - "$DIST_DIR/KyoshinEewViewer.Desktop.app"
+        codesign --verify --deep --strict --verbose=2 "$DIST_DIR/KyoshinEewViewer.Desktop.app"
