@@ -128,13 +128,13 @@ asc profiles create \
   --certificate "<MAC_APP_DISTRIBUTION の証明書 ID>"
 
 asc profiles download --id "<PROFILE_ID>" \
-  --output ~/.kevi-signing/KEVI_MacAppStore.provisionprofile
+  --output ~/.kevi-signing/KEVI_MacAppStore_KyoshinEewViewerIngen.provisionprofile
 ```
 
 内容の確認 (entitlements の突き合わせに使う):
 
 ```bash
-asc profiles inspect --path ~/.kevi-signing/KEVI_MacAppStore.provisionprofile --entitlements --output table
+asc profiles inspect --path ~/.kevi-signing/KEVI_MacAppStore_KyoshinEewViewerIngen.provisionprofile --entitlements --output table
 ```
 
 ## スクリプトの使い方
@@ -162,7 +162,7 @@ BUILD_NUMBER=3 ./scripts/publish-testflight-macos.sh
 | `RID` | `osx-arm64` | .NET RuntimeIdentifier |
 | `SIGNING_IDENTITY_APP` | `3rd Party Mac Developer Application: ...` | `.app` 署名 identity |
 | `SIGNING_IDENTITY_INSTALLER` | `3rd Party Mac Developer Installer: ...` | pkg 署名 identity |
-| `PROVISIONING_PROFILE` | `~/.kevi-signing/KEVI_MacAppStore.provisionprofile` | 埋め込むプロファイル |
+| `PROVISIONING_PROFILE` | `~/.kevi-signing/KEVI_MacAppStore_KyoshinEewViewerIngen.provisionprofile` | 埋め込むプロファイル |
 | `SIGNING_KEYCHAIN` | (空) | 明示したい場合のキーチェーン |
 | `OUTPUT_DIR` | `out/testflight-macos` | 成果物の出力先 (git-ignore 済み) |
 | `SKIP_UPLOAD` | `false` | `true` で pkg 作成まで |
@@ -659,7 +659,7 @@ x64 publish から取り出して `lipo -create` すればよい）。
 | `MAC_APP_DIST_P12_BASE64` | `.app` 署名証明書 | `base64 -i ~/.kevi-signing/mac_app_dist.p12` |
 | `MAC_INSTALLER_DIST_P12_BASE64` | pkg 署名証明書 | `base64 -i ~/.kevi-signing/mac_installer_dist.p12` |
 | `MAC_P12_PASSWORD` | 上記 2 つの `.p12` のパスワード | `~/.kevi-signing/p12-password.txt` |
-| `MAC_PROVISIONING_PROFILE_BASE64` | プロビジョニングプロファイル | `base64 -i ~/.kevi-signing/KEVI_MacAppStore.provisionprofile` |
+| `MAC_PROVISIONING_PROFILE_BASE64` | プロビジョニングプロファイル | `base64 -i ~/.kevi-signing/KEVI_MacAppStore_KyoshinEewViewerIngen.provisionprofile` |
 | `ASC_KEY_ID` | ASC API キー ID (`JD4HMGS6HZ`) | `asc auth status` |
 | `ASC_ISSUER_ID` | ASC の issuer ID (UUID) | **`asc auth issuer-id`** |
 | `ASC_PRIVATE_KEY_B64` | `AuthKey_XXXX.p8` を base64 化 | `base64 -i ~/.asc/AuthKey_JD4HMGS6HZ.p8` |
