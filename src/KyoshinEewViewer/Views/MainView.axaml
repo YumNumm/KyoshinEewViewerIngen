@@ -9,6 +9,7 @@
 			 xmlns:series="clr-namespace:KyoshinEewViewer.Series;assembly=KyoshinEewViewer"
 			 xmlns:vm="using:KyoshinEewViewer.ViewModels"
 			 xmlns:views="using:KyoshinEewViewer.Views"
+			 xmlns:controls="using:KyoshinEewViewer.Controls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
 			 x:DataType="vm:MainViewModel" x:CompileBindings="True"
              x:Class="KyoshinEewViewer.Views.MainView"
@@ -152,6 +153,8 @@
 									Layers="{Binding MapLayers}"
                                     IsMetricsEnabled="{Binding IsMetricsEnabled, Mode=OneWay}"
 									LatestMetrics="{Binding LatestMetrics, Mode=OneWayToSource}"
+									IsFrameStatisticsEnabled="{Binding Config.Debug.ShowPerformanceHud, Mode=OneWay}"
+									FrameStatistics="{Binding FrameStatistics, Mode=OneWayToSource}"
 									IsInertiaEnabled="{Binding Config.Map.IsInertiaEnabled}">
                         <cc:MapControl.Padding>
                             <MultiBinding Converter="{StaticResource ThicknessScaleConverter}">
@@ -228,6 +231,14 @@
                                     HorizontalAlignment="Left" />
                         </Grid>
                     </Border>
+                    <!-- ミニマップ(左上)と左下のボタン群を避けて右上に置く。ステータスバーに重ならないよう SafeAreaPadding の分だけ内側へ寄せる -->
+                    <Panel Margin="{Binding $parent[views:MainView].SafeAreaPadding}" IsHitTestVisible="False">
+                        <controls:PerformanceHudControl IsVisible="{Binding Config.Debug.ShowPerformanceHud}"
+                                                        Statistics="{Binding FrameStatistics}"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Top"
+                                                        Margin="8" />
+                    </Panel>
                 </Panel>
             </ui:FANavigationView>
 

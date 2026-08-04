@@ -90,6 +90,19 @@
                     </Style>
                 </Button.Styles>
             </Button>
+
+            <HeaderedContentControl>
+                <HeaderedContentControl.Header>
+                    <TextBlock Text="パフォーマンス HUD" FontSize="24" FontFamily="{DynamicResource MainMediumFont}" />
+                </HeaderedContentControl.Header>
+                <StackPanel Margin="2" Spacing="4" HorizontalAlignment="Stretch">
+                    <CheckBox Content="メイン画面に地図の描画性能を重ねて表示する"
+                              IsChecked="{Binding Config.Debug.ShowPerformanceHud}" />
+                    <TextBlock TextWrapping="Wrap" FontSize="12"
+                               Foreground="{DynamicResource SubForegroundColor}"
+                               Text="FPS・描画時間・フレーム間隔・メモリ使用量を右上に表示します。無効の間は計測自体を行いません。" />
+                </StackPanel>
+            </HeaderedContentControl>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

@@ -112,6 +112,152 @@ public partial class MapControl : Avalonia.Controls.Control, ICustomHitTest
 	private DateTime _lastMetricsRecordTime = DateTime.MinValue;
 	private static readonly TimeSpan MetricsRecordInterval = TimeSpan.FromSeconds(0.5);
 
+	#region フレーム統計
+	private static readonly TimeSpan FrameStatisticsInterval = TimeSpan.FromMilliseconds(500);
+	private const int FrameTimeHistoryLength = 120;
+
+	private bool _isFrameStatisticsEnabled;
+	public static readonly DirectProperty<MapControl, bool> IsFrameStatisticsEnabledProperty =
+		AvaloniaProperty.RegisterDirect<MapControl, bool>(
+			nameof(IsFrameStatisticsEnabled),
+			o => o.IsFrameStatisticsEnabled,
+			(o, v) => o.IsFrameStatisticsEnabled = v
+		);
+	/// <summary>
+	/// フレーム統計の収集を有効にするかどうか
+	/// </summary>
+	public bool IsFrameStatisticsEnabled
+	{
+		get => _isFrameStatisticsEnabled;
+		set => SetAndRaise(IsFrameStatisticsEnabledProperty, ref _isFrameStatisticsEnabled, value);
+	}
+
+	private FrameStatistics? _frameStatistics;
+	public static readonly DirectProperty<MapControl, FrameStatistics?> FrameStatisticsProperty =
+		AvaloniaProperty.RegisterDirect<MapControl, FrameStatistics?>(
+			nameof(FrameStatistics),
+			o => o.FrameStatistics);
+	/// <summary>
+	/// 直近の集計期間のフレーム統計
+	/// </summary>
+	public FrameStatistics? FrameStatistics
+	{
+		get => _frameStatistics;
+		private set => SetAndRaise(FrameStatisticsProperty, ref _frameStatistics, value);
+	}
+
+	// 描画スレッドが積算し、UI スレッドのタイマーが読み出してリセットする
+	private readonly Lock _frameStatsLock = new();
+	private readonly float[] _frameTimeHistory = new float[FrameTimeHistoryLength];
+	private int _frameTimeHistoryIndex;
+	private int _frameTimeHistoryCount;
+	private int _frameCount;
+	private double _renderTimeSumMs;
+	private double _renderTimeMaxMs;
+	private double _intervalSumMs;
+	private int _intervalCount;
+	private long _lastFrameStartTimestamp;
+
+	private DispatcherTimer? _frameStatisticsTimer;
+	private long _frameStatisticsWindowStart;
+
+	private static double ToMilliseconds(long timestampDelta) => timestampDelta * 1000.0 / Stopwatch.Frequency;
+
+	/// <summary>
+	/// 描画スレッドから1フレーム分の計測値を積算する
+	/// </summary>
+	private void AccumulateFrameStatistics(long startTimestamp, long endTimestamp)
+	{
+		var renderMs = ToMilliseconds(endTimestamp - startTimestamp);
+		lock (_frameStatsLock)
+		{
+			_frameTimeHistory[_frameTimeHistoryIndex] = (float)renderMs;
+			_frameTimeHistoryIndex = (_frameTimeHistoryIndex + 1) % FrameTimeHistoryLength;
+			if (_frameTimeHistoryCount < FrameTimeHistoryLength)
+				_frameTimeHistoryCount++;
+
+			_frameCount++;
+			_renderTimeSumMs += renderMs;
+			if (renderMs > _renderTimeMaxMs)
+				_renderTimeMaxMs = renderMs;
+
+			if (_lastFrameStartTimestamp != 0)
+			{
+				_intervalSumMs += ToMilliseconds(startTimestamp - _lastFrameStartTimestamp);
+				_intervalCount++;
+			}
+			_lastFrameStartTimestamp = startTimestamp;
+		}
+	}
+
+	/// <summary>
+	/// 積算した計測値を集計してプロパティへ反映する
+	/// </summary>
+	private void PublishFrameStatistics()
+	{
+		var now = Stopwatch.GetTimestamp();
+		var elapsedMs = ToMilliseconds(now - _frameStatisticsWindowStart);
+		_frameStatisticsWindowStart = now;
+
+		float[] history;
+		int frameCount, intervalCount;
+		double renderTimeSum, renderTimeMax, intervalSum;
+		lock (_frameStatsLock)
+		{
+			history = new float[_frameTimeHistoryCount];
+			// リングバッファを古い順に並べ直す
+			for (var i = 0; i < _frameTimeHistoryCount; i++)
+				history[i] = _frameTimeHistory[(_frameTimeHistoryIndex - _frameTimeHistoryCount + i + FrameTimeHistoryLength) % FrameTimeHistoryLength];
+
+			frameCount = _frameCount;
+			renderTimeSum = _renderTimeSumMs;
+			renderTimeMax = _renderTimeMaxMs;
+			intervalSum = _intervalSumMs;
+			intervalCount = _intervalCount;
+
+			_frameCount = 0;
+			_renderTimeSumMs = 0;
+			_renderTimeMaxMs = 0;
+			_intervalSumMs = 0;
+			_intervalCount = 0;
+			// 描画が完全に止まっていた区間をまたいだ間隔は平均を大きく歪めるため、次の再開時は間隔を計上しない
+			if (frameCount == 0)
+				_lastFrameStartTimestamp = 0;
+		}
+
+		var scaling = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
+		FrameStatistics = new FrameStatistics
+		{
+			Fps = elapsedMs > 0 ? frameCount * 1000.0 / elapsedMs : 0,
+			AverageRenderTimeMs = frameCount > 0 ? renderTimeSum / frameCount : 0,
+			MaxRenderTimeMs = renderTimeMax,
+			AverageIntervalMs = intervalCount > 0 ? intervalSum / intervalCount : 0,
+			LayerCount = Layers?.Length ?? 0,
+			Zoom = Zoom,
+			RenderWidth = (int)Math.Round(Bounds.Width * scaling),
+			RenderHeight = (int)Math.Round(Bounds.Height * scaling),
+			RenderScaling = scaling,
+			IsContinuousRendering = Volatile.Read(ref _needsContinuousFrame) != 0,
+			RenderTimeHistoryMs = history,
+		};
+	}
+
+	private void UpdateFrameStatisticsTimer()
+	{
+		if (IsFrameStatisticsEnabled && _customVisual is not null)
+		{
+			if (_frameStatisticsTimer is not null)
+				return;
+			_frameStatisticsWindowStart = Stopwatch.GetTimestamp();
+			_frameStatisticsTimer = new DispatcherTimer(FrameStatisticsInterval, DispatcherPriority.Background, (_, _) => PublishFrameStatistics());
+			_frameStatisticsTimer.Start();
+			return;
+		}
+		_frameStatisticsTimer?.Stop();
+		_frameStatisticsTimer = null;
+	}
+	#endregion フレーム統計
+
 	public static readonly DirectProperty<MapControl, MapLayer[]?> LayersProperty =
 		AvaloniaProperty.RegisterDirect<MapControl, MapLayer[]?>(
 			nameof(Layers),
@@ -374,6 +520,8 @@ public partial class MapControl : Avalonia.Controls.Control, ICustomHitTest
 		_customVisual.Size = new Vector2((float)Bounds.Width, (float)Bounds.Height);
 		ElementComposition.SetElementChildVisual(this, _customVisual);
 
+		UpdateFrameStatisticsTimer();
+
 		ApplySize();
 		RequestRedraw();
 	}
@@ -390,6 +538,8 @@ public partial class MapControl : Avalonia.Controls.Control, ICustomHitTest
 		_customVisual = null;
 		_handler = null;
 
+		UpdateFrameStatisticsTimer();
+
 		base.OnDetachedFromVisualTree(e);
 	}
 
@@ -405,6 +555,10 @@ public partial class MapControl : Avalonia.Controls.Control, ICustomHitTest
 				_customVisual.Size = new Vector2((float)Bounds.Width, (float)Bounds.Height);
 				RequestRedraw();
 			}
+		}
+		else if (change.Property == IsFrameStatisticsEnabledProperty)
+		{
+			UpdateFrameStatisticsTimer();
 		}
 	}
 
@@ -524,6 +678,9 @@ public partial class MapControl : Avalonia.Controls.Control, ICustomHitTest
 			var shouldRecordMetrics = _owner.IsMetricsEnabled && DateTime.Now - _owner._lastMetricsRecordTime >= MetricsRecordInterval;
 			var frameStopwatch = shouldRecordMetrics ? Stopwatch.StartNew() : null;
 
+			var collectFrameStatistics = _owner.IsFrameStatisticsEnabled;
+			var frameStartTimestamp = collectFrameStatistics ? Stopwatch.GetTimestamp() : 0L;
+
 			bool needUpdate;
 			canvas.Save();
 			try
@@ -566,6 +723,9 @@ public partial class MapControl : Avalonia.Controls.Control, ICustomHitTest
 			{
 				canvas.Restore();
 			}
+
+			if (collectFrameStatistics)
+				_owner.AccumulateFrameStatistics(frameStartTimestamp, Stopwatch.GetTimestamp());
 
 			Volatile.Write(ref _owner._needsContinuousFrame, needUpdate ? 1 : 0);
 			if (needUpdate && !_owner.IsHeadlessMode)
