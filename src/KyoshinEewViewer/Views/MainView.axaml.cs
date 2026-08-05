@@ -7,6 +7,7 @@ using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Core.Models.Events;
 using KyoshinEewViewer.Map;
+using KyoshinEewViewer.Services;
 using KyoshinEewViewer.ViewModels;
 using ReactiveUI;
 using SkiaSharp;
@@ -104,11 +105,17 @@ public partial class MainView : UserControl
 		{
 			if (TopLevel.GetTopLevel(this) is { } topLevel && topLevel.InsetsManager is { } insetsManager)
 			{
-				insetsManager.IsSystemBarVisible = false;
+				// ステータスバーやホームバーは隠さず、その裏まで描画する (edge-to-edge)
+				insetsManager.IsSystemBarVisible = true;
 				insetsManager.DisplayEdgeToEdgePreference = true;
-				// 地図とサイドバーの背景は画面全体に描画し、操作対象のみ SafeAreaPadding で内側に寄せる
-				SafeAreaPadding = insetsManager.SafeAreaPadding;
-				insetsManager.SafeAreaChanged += (_, a) => SafeAreaPadding = a.SafeAreaPadding;
+				// 地図とサイドバーの背景は画面全体に描画し、操作対象のみ SafeAreaPadding で内側に寄せる。
+				// SafeAreaPadding は物理ピクセルを RenderScaling で割った値だが、Android では
+				// RenderScaling が 1 のまま SafeAreaChanged が先に飛んでくる。その値をそのまま使うと
+				// 物理ピクセル相当の過大な余白になるため、スケール確定時にも取り直す
+				void UpdateSafeAreaPadding() => SafeAreaPadding = insetsManager.SafeAreaPadding;
+				UpdateSafeAreaPadding();
+				insetsManager.SafeAreaChanged += (_, _) => UpdateSafeAreaPadding();
+				topLevel.ScalingChanged += (_, _) => UpdateSafeAreaPadding();
 			}
 		};
 	}
