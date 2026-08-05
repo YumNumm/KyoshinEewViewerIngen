@@ -4,5 +4,11 @@
 	package="net.yumnumm.KyoshinEewViewer">
 	<uses-permission android:name="android.permission.INTERNET" />
 	<application android:label="KEVi" android:icon="@drawable/icon" android:usesCleartextTraffic="true" />
-	<uses-sdk />
+	<!-- targetSdkVersion は SDK の既定に任せず明示的に固定する。
+	     未指定でも 28 相当になるが、SDK の更新で既定が動くと Scoped Storage の適用有無など
+	     ストレージ周りの挙動が変わってしまうため。
+	     minSdkVersion は csproj の SupportedOSPlatformVersion から生成されるのでここには書かない。
+	     ビルド時の XA1006 (TargetFrameworkVersion より小さい) は承知の上。
+	     Google Play へ配信する際は Play が要求する水準まで上げる必要がある -->
+	<uses-sdk android:targetSdkVersion="28" />
 </manifest>
