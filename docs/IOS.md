@@ -131,7 +131,7 @@ DMDATA 側には専用クライアントが必要で、リダイレクト URI �
 `-allowProvisioningUpdates` と ASC API キーを渡し、Apple 側に証明書とプロファイルを
 自動発行させている (Cloud-managed certificates)。
 
-`develop` への push で `.github/workflows/deploy-app.yaml` が iOS / macOS を
+`develop` への push で `.github/workflows/cd.yaml` が iOS / macOS を
 ビルドしてアップロードする。TestFlight のベータグループへの配布は
 `testflight_group` を指定したときだけなので、push 由来のビルドは内部に留まる。
 

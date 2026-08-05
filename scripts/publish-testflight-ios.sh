@@ -5,7 +5,7 @@
 #
 # ローカルでも GitHub Actions でも同じ手順で動くよう、入力は全て環境変数で受け取る。
 # ASC 周りの前提 (アプリレコード / API キー / asc CLI の罠) は macOS 版と共通なので
-# docs/TESTFLIGHT_MACOS.md を参照。CI から呼ぶ場合は .github/workflows/deploy-app.yaml を参照。
+# docs/TESTFLIGHT_MACOS.md を参照。CI から呼ぶ場合は .github/workflows/cd.yaml を参照。
 #
 # 使い方:
 #   APP_ID=1234567890 ./scripts/publish-testflight-ios.sh

@@ -1,16 +1,14 @@
-name: deploy-app
+name: CD
 
-# iOS / macOS のストア配信 (App Store Connect / TestFlight) をまとめたワークフロー。
+# 配信系をまとめた単一のワークフロー。旧 deploy.yaml / deploy-app.yaml / build-android.yaml を統合した。
+# 各配信先はビルド段階では互いに依存しないため、以下の job が並列で走る。
+#   containers     : ShakeDetectionProducer / ReplayGenerator のコンテナイメージを ghcr.io へ push
+#   desktop-macos  : Desktop 版を self-contained で publish し、タグ時は GitHub Releases 用に固める
+#   android        : debug 署名済みの AAB / APK を artifact として出す
+#   build-ios      : App Store Connect 向けの ipa を作る (クラウド署名)
+#   build-macos    : Mac App Store 向けの pkg を作る (Secrets の .p12 で署名)
+# アップロード系 (deploy-ios / deploy-macos / create-release) だけは対応するビルドに needs で続く。
 #
-# 既存の deploy.yaml とは役割が違うため別ファイルにしている。
-#   - deploy.yaml       : コンテナイメージと ad-hoc 配布 (GitHub Releases)。無署名 + ad-hoc 署名
-#   - deploy-app.yaml   : ストア配信。正式な署名とビルド番号の管理が必要
-#   - build-android.yaml: Android の debug 署名済み AAB / APK を artifact として出すだけ。
-#                         Google Play 配信を始める際はこちらへ組み込む
-#
-# develop への push で iOS / macOS を自動でビルドしてアップロードする。
-# TestFlight のベータグループへの配布は testflight_group を指定したときだけ行うため、
-# push 由来のビルドは内部にアップロードされるだけで外部配信はされない。
 # environment は 2 つ使う。
 #   - testflight-build : ビルド用。Secrets の参照範囲を絞るためだけのもので承認は不要
 #   - testflight       : アップロード用。外部への配信になるため必要に応じて承認者を設定する
@@ -28,21 +26,41 @@ name: deploy-app
 #
 # iOS は Cloud-managed certificates を使うため証明書もキーチェーンも不要。
 # macOS (Mac App Store) はクラウド署名に対応していないため .p12 が必要。
+#
+# ストア配信 (build-ios / build-macos) は develop への push のときだけ自動で走る。
+# タグ push は GitHub Releases 用の成果物づくりが目的なので、ストアへは上げない。
+# TestFlight のベータグループへの配布は testflight_group を指定したときだけ行うため、
+# push 由来のビルドは内部にアップロードされるだけで外部配信はされない。
 
 on:
   push:
     branches:
       - develop
+    tags:
+      - "*.*.*"
+  pull_request:
+    paths:
+      - "src/KyoshinEewViewer.Android/**"
+      - ".github/workflows/cd.yaml"
   workflow_dispatch:
     inputs:
       platform:
-        description: "配信対象のプラットフォーム"
+        description: "実行対象"
         type: choice
         options:
+          - all
+          - containers
+          - desktop
+          - android
+          - store
           - ios
           - macos
-          - all
-        default: ios
+        default: all
+      tag:
+        description: "コンテナイメージのタグ（ShakeDetectionProducer / ReplayGenerator 共通。既定:
+          latest）"
+        required: false
+        default: "latest"
       app_version:
         description: "アプリのバージョン (CFBundleShortVersionString)"
         type: string
@@ -64,28 +82,320 @@ permissions:
   contents: read
 
 concurrency:
-  # ビルド番号を App Store Connect から取る以上、並走すると同じ番号を取り合うため直列化する
-  group: deploy-app-${{ github.ref }}
+  # ビルド番号を App Store Connect から取る job がある以上、並走すると同じ番号を取り合うため直列化する。
+  # 配信途中のアップロードを切らないよう cancel-in-progress は false 固定
+  # (統合前の build-android は true だったので、Android のビルドも中断されなくなった)
+  group: cd-${{ github.ref }}
   cancel-in-progress: false
 
 env:
+  REGISTRY: ghcr.io
   # .NET SDK のバージョンは mise.toml / mise.lock 側で管理する
   XCODE_VERSION: "26.6"
-  # asc CLI を非対話環境向けに設定する (docs/TESTFLIGHT_MACOS.md「遭遇したエラー 2」)
-  # キーチェーン方式は GUI の許可ダイアログ待ちでハングし得るため CI では必ず環境変数認証にする
   # mise が asdf の dotnet プラグインを入れる際に同意を求めて失敗するため非対話で許可する
   MISE_YES: "1"
+  # asc CLI を非対話環境向けに設定する (docs/TESTFLIGHT_MACOS.md「遭遇したエラー 2」)
+  # キーチェーン方式は GUI の許可ダイアログ待ちでハングし得るため CI では必ず環境変数認証にする
   ASC_BYPASS_KEYCHAIN: "1"
   # スピナーの制御文字でログが汚れるのを防ぐ
   ASC_SPINNER_DISABLED: "1"
 
 jobs:
   # ---------------------------------------------------------------------------
-  # iOS
+  # コンテナイメージ
+  # ---------------------------------------------------------------------------
+  containers:
+    name: コンテナイメージ (${{ matrix.image }})
+    if: >-
+      github.event_name == 'push'
+      || (github.event_name == 'workflow_dispatch'
+      && (inputs.platform == 'all' || inputs.platform == 'containers'))
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      # 片方のイメージの失敗でもう片方を落とさない
+      fail-fast: false
+      matrix:
+        include:
+          - image: shake-detection-producer
+            dockerfile: src/Sandboxes/ShakeDetectionProducer/Dockerfile
+          - image: replay-generator
+            dockerfile: src/Sandboxes/ReplayGenerator/Dockerfile
+    steps:
+      # https://github.com/actions/checkout
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      # https://github.com/docker/setup-qemu-action
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+
+      # https://github.com/docker/setup-buildx-action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      # https://github.com/docker/login-action
+      - name: Log in to Container Registry
+        uses: docker/login-action@371161bbe7024a29a25c5e19bfcbc0804fe9ad2c # v4.5.2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # https://github.com/docker/metadata-action
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}
+          tags: |
+            type=raw,value=${{ inputs.tag || 'latest' }}
+            type=sha,prefix=
+            type=ref,event=branch
+
+      # https://github.com/docker/build-push-action
+      - name: Build and push Docker image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # イメージごとにスコープを分けないとキャッシュを取り合う
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  # ---------------------------------------------------------------------------
+  # Desktop (macOS)
+  # ---------------------------------------------------------------------------
+  desktop-macos:
+    name: Desktop (macOS ${{ matrix.arch }}) ビルド
+    if: >-
+      github.event_name == 'push'
+      || (github.event_name == 'workflow_dispatch'
+      && (inputs.platform == 'all' || inputs.platform == 'desktop'))
+    runs-on: macos-26
+    strategy:
+      matrix:
+        arch: [ arm64 ]
+    env:
+      RELEASE_PREFIX: KyoshinEewViewer
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: FranzDiebold/github-env-vars-action@e8118971bd6b60524ae66a2d870bc83088e3a3c9 # v2.9.0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Parse version from tag
+        id: version
+        env:
+          GITHUB_REF_NAME_RAW: ${{ github.ref }}
+        run: |
+          if [[ "$GITHUB_REF_NAME_RAW" =~ refs/tags/(.*) ]]; then
+            TAG_NAME="${BASH_REMATCH[1]}"
+
+            if [[ "$TAG_NAME" == *"-"* ]]; then
+              APP_VERSION=$(echo "$TAG_NAME" | cut -d'-' -f1)
+              VERSION_SUFFIX=$(echo "$TAG_NAME" | cut -d'-' -f2-)
+            else
+              APP_VERSION="$TAG_NAME"
+              VERSION_SUFFIX=""
+            fi
+
+            echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_OUTPUT"
+            echo "VERSION_SUFFIX=$VERSION_SUFFIX" >> "$GITHUB_OUTPUT"
+            echo "Parsed version: $APP_VERSION, suffix: $VERSION_SUFFIX"
+          else
+            echo "APP_VERSION=0.1.1" >> "$GITHUB_OUTPUT"
+            echo "VERSION_SUFFIX=" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+
+      - name: Restore workload
+        run: sudo dotnet workload restore
+
+      - name: Build
+        run: |
+          dotnet publish src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj \
+          -c Release \
+          -r osx-${{ matrix.arch }} \
+          -o tmp \
+          -p:PublishSingleFile=true \
+          --self-contained true
+        env:
+          APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
+          VERSION_SUFFIX: ${{ steps.version.outputs.VERSION_SUFFIX }}
+          BUILD_NUMBER: ${{ env.GITHUB_RUN_NUMBER }}
+
+      - name: Packaging
+        run: |
+          mkdir tmp2
+          cp -r build-files/KyoshinEewViewer.Desktop.app tmp2/
+          sed -i -e "s/KEVI_VERSION/$APP_VERSION/" tmp2/KyoshinEewViewer.Desktop.app/Contents/Info.plist
+          mkdir tmp2/KyoshinEewViewer.Desktop.app/Contents/MacOS
+          mv tmp/* tmp2/KyoshinEewViewer.Desktop.app/Contents/MacOS/
+        env:
+          APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-kyoshin-eew-viewer-desktop-macos-${{ matrix.arch }}
+          path: tmp2/*
+
+      - name: Archive
+        uses: TheDoctor0/zip-release@b57d897cb5d60cb78b51a507f63fa184cfe35554 # 0.7.6
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          type: "zip"
+          directory: tmp2
+          path: "*"
+          filename: ../${{ env.RELEASE_PREFIX }}-macos-${{ matrix.arch }}.zip
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: release-macos-${{ matrix.arch }}
+          path: ${{ env.RELEASE_PREFIX }}-macos-${{ matrix.arch }}.zip
+
+  create-release:
+    name: GitHub Release を作成
+    needs:
+      - desktop-macos
+    runs-on: ubuntu-24.04-arm
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - uses: FranzDiebold/github-env-vars-action@e8118971bd6b60524ae66a2d870bc83088e3a3c9 # v2.9.0
+
+      - name: Download all release assets
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        with:
+          files: release-assets/*
+          name: KyoshinEewViewer.Desktop v${{ env.CI_ACTION_REF_NAME }}
+          draft: true
+          prerelease: false
+
+  # ---------------------------------------------------------------------------
+  # Android
+  # ---------------------------------------------------------------------------
+  # ここで出すのは動作確認用の debug 署名済みパッケージで、鍵もビルド番号も要らない。
+  # Google Play への配信を始める段階で ASC 相当の署名とビルド番号の管理を足す
+  android:
+    name: Android AAB / APK ビルド
+    if: >-
+      github.event_name == 'push'
+      || github.event_name == 'pull_request'
+      || (github.event_name == 'workflow_dispatch'
+      && (inputs.platform == 'all' || inputs.platform == 'android'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # CSV ソースジェネレータが jma-code-dictionary/csv に依存する
+          submodules: recursive
+          persist-credentials: false
+
+      # .NET Android の SDK は JDK 21 以外を XA0030 で弾く。
+      # ランナー既定の JAVA_HOME は 17 を指しているため明示的に切り替える
+      - name: Setup JDK 21
+        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # .NET SDK は mise.toml / mise.lock 側で管理しているため setup-dotnet は使わない。
+      # mise 本体だけ入れ、ツールの導入は次のステップで行う。
+      # mise.lock が dotnet を asdf バックエンドで固定しており、プラグイン未導入の
+      # 環境では同意を求めて失敗する。mise-action は --yes を渡さないため自分で渡す
+      # (プラグイン名 dotnet は core プラグインと衝突するので明示的な導入はできない)
+      - name: Setup mise (.NET SDK)
+        uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
+        with:
+          install: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install tools via mise
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          mise install --yes
+          mise ls --current
+
+      # android ワークロードが無いと net10.0-android をビルドできない。
+      # mise の dotnet はユーザー領域に入るため sudo は不要
+      - name: Restore workload
+        shell: bash
+        run: dotnet workload restore src/KyoshinEewViewer.Android/KyoshinEewViewer.Android.csproj
+
+      # ランナー同梱の Android SDK に API 36 のプラットフォームや build-tools が
+      # 入っていない場合、ビルド時に XA5207 で落ちる。不足分を先に入れておく
+      - name: Android SDK の不足分を導入
+        shell: bash
+        run: |
+          dotnet build src/KyoshinEewViewer.Android/KyoshinEewViewer.Android.csproj \
+            -t:InstallAndroidDependencies \
+            -p:AndroidSdkDirectory="$ANDROID_HOME" \
+            -p:AcceptAndroidSDKLicenses=true
+
+      # Release では SDK の既定 (AndroidPackageFormats=aab;apk) で AAB と APK の両方が出る。
+      # 署名鍵を渡していないため、どちらも SDK が自動生成する debug キーで署名される
+      - name: AAB / APK を作成
+        shell: bash
+        run: dotnet publish src/KyoshinEewViewer.Android/KyoshinEewViewer.Android.csproj -c Release -o out/android
+
+      - name: AAB を artifact へアップロード
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: android-aab
+          path: out/android/*.aab
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: APK を artifact へアップロード
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: android-apk
+          path: out/android/*.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # iOS (App Store Connect / TestFlight)
   # ---------------------------------------------------------------------------
   build-ios:
     name: iOS ビルド
-    if: github.event_name == 'push' || inputs.platform == 'ios' || inputs.platform == 'all'
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/develop')
+      || (github.event_name == 'workflow_dispatch'
+      && (inputs.platform == 'all' || inputs.platform == 'store' || inputs.platform == 'ios'))
     runs-on: macos-26
     timeout-minutes: 120
     # 承認ゲートは deploy 側に置く。ここで environment を指定しているのは
@@ -113,10 +423,6 @@ jobs:
       # ワークロードの入った SDK と別の SDK を引きかねない。
       # asc は github: バックエンドから取得するため、GITHUB_TOKEN が無いと
       # GitHub API のレート制限に当たる (docs/TESTFLIGHT_MACOS.md 参照)
-      # mise 本体だけ入れ、ツールの導入は次のステップで行う。
-      # mise.lock が dotnet を asdf バックエンドで固定しており、プラグイン未導入の
-      # 環境では同意を求めて失敗する。mise-action は --yes を渡さないため自分で渡す
-      # (プラグイン名 dotnet は core プラグインと衝突するので明示的な導入はできない)
       - name: Setup mise (.NET SDK / asc CLI)
         uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
         with:
@@ -269,14 +575,17 @@ jobs:
             --fail-on-invalid
 
   # ---------------------------------------------------------------------------
-  # macOS
+  # macOS (Mac App Store)
   # ---------------------------------------------------------------------------
   # Mac App Store 版はクラウド署名に対応していないため、Secrets の .p12 を
   # 一時キーチェーンへ取り込んで署名する。手順は docs/TESTFLIGHT_MACOS.md と同じで、
   # 実処理は既存の scripts/publish-testflight-macos.sh に任せる。
   build-macos:
     name: macOS ビルド
-    if: github.event_name == 'push' || inputs.platform == 'macos' || inputs.platform == 'all'
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/develop')
+      || (github.event_name == 'workflow_dispatch'
+      && (inputs.platform == 'all' || inputs.platform == 'store' || inputs.platform == 'macos'))
     runs-on: macos-26
     timeout-minutes: 90
     # build-ios と同じ理由で environment を指定する (承認ゲートは deploy 側)
