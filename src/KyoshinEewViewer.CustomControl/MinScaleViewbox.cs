@@ -74,9 +74,12 @@ public class MinScaleViewbox : Decorator
 		var effectiveMinW = MinViewWidth * userScale;
 		var effectiveMinH = MinViewHeight * userScale;
 
-		var autoScaleX = effectiveMinW > 0 && availableSize.Width < effectiveMinW
+		// 表示領域が 0 のとき (Android の初回レイアウトでは 1x0 等が渡る) に縮小率まで 0 にすると、
+		// 呼び出し側の「表示領域 ÷ スケール」が 0/0 = NaN になり Measure/Arrange が例外を投げる。
+		// 描画するものが無い状態なので縮小しない扱いにしてスケールを正のままに保つ
+		var autoScaleX = effectiveMinW > 0 && availableSize.Width > 0 && availableSize.Width < effectiveMinW
 			? availableSize.Width / effectiveMinW : 1.0;
-		var autoScaleY = effectiveMinH > 0 && availableSize.Height < effectiveMinH
+		var autoScaleY = effectiveMinH > 0 && availableSize.Height > 0 && availableSize.Height < effectiveMinH
 			? availableSize.Height / effectiveMinH : 1.0;
 
 		return userScale * Math.Min(autoScaleX, autoScaleY);
