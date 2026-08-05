@@ -21,13 +21,13 @@
     <UserControl.Styles>
         <Style Selector="ui|FANavigationView">
             <Setter Property="IsPaneToggleButtonVisible" Value="False" />
-            <Setter Property="OpenPaneLength" Value="64" />
+            <Setter Property="OpenPaneLength" Value="{Binding $parent[views:MainView].NavigationPaneLength}" />
         </Style>
         <Style Selector="ui|FANavigationView SplitView /template/ ContentPresenter#PART_PanePresenter">
             <!--[IsBackButtonVisible=False]-->
             <Setter Property="Margin" Value="0 0 0 100" />
             <!-- ペインの背景は画面全体に伸ばしたまま、項目だけをセーフエリア内に収める -->
-            <Setter Property="Padding" Value="{Binding $parent[views:MainView].SafeAreaPadding}" />
+            <Setter Property="Padding" Value="{Binding $parent[views:MainView].NavigationPanePadding}" />
         </Style>
 
         <Style Selector="ui|FANavigationViewItem uip|FANavigationViewItemPresenter">
@@ -163,32 +163,35 @@
                             </MultiBinding>
                         </cc:MapControl.Padding>
                     </cc:MapControl>
-                    <Grid Name="MiniMapContainer" Margin="{Binding MapPadding}" ColumnDefinitions="5*,6*" RowDefinitions="5*,6*">
-                        <Panel Name="MiniMapPanel" Margin="5" MaxWidth="400" MaxHeight="300">
-                            <!-- 背景 -->
-                            <Border Name="MiniMapBackgroundBorder" Background="{DynamicResource MainBackgroundColor}">
-                                <Border.Clip>
-                                    <MultiBinding Converter="{StaticResource MiniMapPathConverter}">
-                                        <Binding Path="Bounds.Width" ElementName="MiniMapBackgroundBorder" />
-                                        <Binding Path="Bounds.Height" ElementName="MiniMapBackgroundBorder" />
-                                    </MultiBinding>
-                                </Border.Clip>
-                                <cc:MapControl Name="MiniMap"
-                                               MinZoom="1"
-                                               Layers="{Binding MapLayers}"
-                                               IsDisableManualControl="True" />
-                            </Border>
-                            <!-- 擬似的なボーダー -->
-                            <Path Stroke="{DynamicResource SubForegroundColor}" StrokeThickness="1" Fill="Transparent">
-                                <Path.Data>
-                                    <MultiBinding Converter="{StaticResource MiniMapPathConverter}">
-                                        <Binding Path="Bounds.Width" ElementName="MiniMapPanel" />
-                                        <Binding Path="Bounds.Height" ElementName="MiniMapPanel" />
-                                    </MultiBinding>
-                                </Path.Data>
-                            </Path>
-                        </Panel>
-                    </Grid>
+                    <!-- ミニマップはユーザーに見せる情報であるため、地図の余白に加えてセーフエリアの分も内側に寄せる -->
+                    <Panel Margin="{Binding $parent[views:MainView].SafeAreaPadding}">
+                        <Grid Name="MiniMapContainer" Margin="{Binding MapPadding}" ColumnDefinitions="5*,6*" RowDefinitions="5*,6*">
+                            <Panel Name="MiniMapPanel" Margin="5" MaxWidth="400" MaxHeight="300">
+                                <!-- 背景 -->
+                                <Border Name="MiniMapBackgroundBorder" Background="{DynamicResource MainBackgroundColor}">
+                                    <Border.Clip>
+                                        <MultiBinding Converter="{StaticResource MiniMapPathConverter}">
+                                            <Binding Path="Bounds.Width" ElementName="MiniMapBackgroundBorder" />
+                                            <Binding Path="Bounds.Height" ElementName="MiniMapBackgroundBorder" />
+                                        </MultiBinding>
+                                    </Border.Clip>
+                                    <cc:MapControl Name="MiniMap"
+                                                   MinZoom="1"
+                                                   Layers="{Binding MapLayers}"
+                                                   IsDisableManualControl="True" />
+                                </Border>
+                                <!-- 擬似的なボーダー -->
+                                <Path Stroke="{DynamicResource SubForegroundColor}" StrokeThickness="1" Fill="Transparent">
+                                    <Path.Data>
+                                        <MultiBinding Converter="{StaticResource MiniMapPathConverter}">
+                                            <Binding Path="Bounds.Width" ElementName="MiniMapPanel" />
+                                            <Binding Path="Bounds.Height" ElementName="MiniMapPanel" />
+                                        </MultiBinding>
+                                    </Path.Data>
+                                </Path>
+                            </Panel>
+                        </Grid>
+                    </Panel>
                     <cc:MinScaleViewbox Name="SeriesScaleBox"
                                         Margin="{Binding $parent[views:MainView].SafeAreaPadding}"
                                         MinViewWidth="{Binding SelectedSeries.MinViewSize.Width}"

@@ -32,6 +32,36 @@ public partial class MainView : UserControl
 		set => SetValue(SafeAreaPaddingProperty, value);
 	}
 
+	/// <summary>
+	/// ナビゲーションペインの項目 1 つ分の幅
+	/// </summary>
+	private const double NavigationPaneItemWidth = 64;
+
+	/// <summary>
+	/// ナビゲーションペインの項目に適用する余白。
+	/// ペインは常に画面左端にあるため、右側のセーフエリアは項目の配置に影響しない
+	/// </summary>
+	public static readonly StyledProperty<Thickness> NavigationPanePaddingProperty
+		= AvaloniaProperty.Register<MainView, Thickness>(nameof(NavigationPanePadding));
+
+	public Thickness NavigationPanePadding
+	{
+		get => GetValue(NavigationPanePaddingProperty);
+		set => SetValue(NavigationPanePaddingProperty, value);
+	}
+
+	/// <summary>
+	/// ナビゲーションペインの幅。項目の幅を確保したまま左側のセーフエリアの分だけ広げる
+	/// </summary>
+	public static readonly StyledProperty<double> NavigationPaneLengthProperty
+		= AvaloniaProperty.Register<MainView, double>(nameof(NavigationPaneLength), NavigationPaneItemWidth);
+
+	public double NavigationPaneLength
+	{
+		get => GetValue(NavigationPaneLengthProperty);
+		set => SetValue(NavigationPaneLengthProperty, value);
+	}
+
 	public MainView()
 	{
 		InitializeComponent();
@@ -112,7 +142,15 @@ public partial class MainView : UserControl
 				// SafeAreaPadding は物理ピクセルを RenderScaling で割った値だが、Android では
 				// RenderScaling が 1 のまま SafeAreaChanged が先に飛んでくる。その値をそのまま使うと
 				// 物理ピクセル相当の過大な余白になるため、スケール確定時にも取り直す
-				void UpdateSafeAreaPadding() => SafeAreaPadding = insetsManager.SafeAreaPadding;
+				void UpdateSafeAreaPadding()
+				{
+					var padding = insetsManager.SafeAreaPadding;
+					SafeAreaPadding = padding;
+					// 横向きではカットアウトによって左右どちらかに大きな余白が入る。
+					// ペインの幅は項目 1 つ分しかないため、余白をそのまま引くと項目が収まらず切れてしまう
+					NavigationPanePadding = new Thickness(padding.Left, padding.Top, 0, padding.Bottom);
+					NavigationPaneLength = NavigationPaneItemWidth + padding.Left;
+				}
 				UpdateSafeAreaPadding();
 				insetsManager.SafeAreaChanged += (_, _) => UpdateSafeAreaPadding();
 				topLevel.ScalingChanged += (_, _) => UpdateSafeAreaPadding();
