@@ -76,9 +76,13 @@ Splat に実装が登録されていなければ従来どおり BASS を使う�
 
 ## SafeArea
 
-`MainView` は `IsSystemBarVisible=false` で全画面描画を要求するが、iPad はマルチタスクを
-有効にしているとステータスバーを隠せない。そのため地図とサイドバーの背景は画面全体に描画したまま、
+`MainView` はステータスバーを隠さず (`IsSystemBarVisible=true`)、その裏まで描画する
+edge-to-edge を要求する。そのため地図とサイドバーの背景は画面全体に描画したまま、
 シリーズ表示・サイドバーの項目・左下のボタン群だけを `SafeAreaPadding` の分だけ内側に寄せている。
+
+`SafeAreaPadding` は物理ピクセルを `RenderScaling` で割った値だが、Android では
+`RenderScaling` が 1 のまま `SafeAreaChanged` が先に飛んでくる。その値をそのまま使うと
+物理ピクセル相当の過大な余白になるため、`TopLevel.ScalingChanged` でも取り直している。
 
 ## サブウィンドウ
 
@@ -131,7 +135,7 @@ DMDATA 側には専用クライアントが必要で、リダイレクト URI �
 `-allowProvisioningUpdates` と ASC API キーを渡し、Apple 側に証明書とプロファイルを
 自動発行させている (Cloud-managed certificates)。
 
-`develop` への push で `.github/workflows/cd.yaml` が iOS / macOS を
+`develop` への push で `.github/workflows/deploy-app.yaml` が iOS / macOS を
 ビルドしてアップロードする。TestFlight のベータグループへの配布は
 `testflight_group` を指定したときだけなので、push 由来のビルドは内部に留まる。
 
