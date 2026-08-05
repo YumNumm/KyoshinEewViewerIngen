@@ -5,10 +5,11 @@
 	<uses-permission android:name="android.permission.INTERNET" />
 	<application android:label="KEVi" android:icon="@drawable/icon" android:usesCleartextTraffic="true" />
 	<!-- targetSdkVersion は SDK の既定に任せず明示的に固定する。
-	     未指定でも 28 相当になるが、SDK の更新で既定が動くと Scoped Storage の適用有無など
+	     未指定だと 28 相当に落ち、SDK の更新で既定が動くと Scoped Storage の適用有無など
 	     ストレージ周りの挙動が変わってしまうため。
-	     minSdkVersion は csproj の SupportedOSPlatformVersion から生成されるのでここには書かない。
-	     ビルド時の XA1006 (TargetFrameworkVersion より小さい) は承知の上。
-	     Google Play へ配信する際は Play が要求する水準まで上げる必要がある -->
-	<uses-sdk android:targetSdkVersion="28" />
+	     値はコンパイル対象 (csproj の TargetFramework = net10.0-android、Android API 36) と揃える。
+	     これより大きい値は指定できないため、API を上げるときは TargetFramework と一緒に上げること。
+	     なお API 35 以降を対象にするとシステムバーの裏まで描画する edge-to-edge が強制される。
+	     minSdkVersion は csproj の SupportedOSPlatformVersion から生成されるのでここには書かない -->
+	<uses-sdk android:targetSdkVersion="36" />
 </manifest>

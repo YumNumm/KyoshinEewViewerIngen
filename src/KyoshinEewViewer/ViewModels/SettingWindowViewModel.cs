@@ -124,22 +124,8 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 		RegisteredSounds = SoundPlayerService.RegisteredSounds.Select(s => new SoundConfigViewModel(s.Key, s.Value)).ToArray();
 		OpenSoundFile = ReactiveCommand.CreateFromTask<KyoshinEewViewerConfiguration.SoundConfig>(async config =>
 		{
-			if (KyoshinEewViewerApp.TopLevelControl == null)
-				return;
-			var files = await KyoshinEewViewerApp.TopLevelControl.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions()
-			{
-				Title = "音声ファイルを開く",
-				FileTypeFilter = new List<FilePickerFileType>()
-				{
-					FilePickerFileTypes.All,
-				},
-				AllowMultiple = false,
-			});
-			if (files is not { Count: > 0 } || files[0].TryGetLocalPath() is not { } localPath)
-				return;
-
-			config.FilePath = await LocalizeSoundFileAsync(files[0], localPath);
-			return;
+			if (await PickSoundFileAsync() is { } path)
+				config.FilePath = path;
 		});
 
 		ResetMapPosition = ReactiveCommand.Create(() =>
@@ -284,13 +270,48 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 		set => this.RaiseAndSetIfChanged(ref _selectedWorkflow, value);
 	}
 
-	/// <remarks>
-	/// iOS のファイルピッカーが返すパスは他アプリのコンテナを指しており、選択直後しか開けない。
-	/// 設定として保存して後から再生するには自身のコンテナへ複製しておく必要がある
-	/// </remarks>
-	private static async Task<string> LocalizeSoundFileAsync(IStorageFile file, string localPath)
+	/// <summary>
+	/// ファイルピッカーが返したファイルを、自身のコンテナへ複製しないと設定として保存できない
+	/// プラットフォームかどうか
+	/// </summary>
+	private static bool NeedsSoundFileLocalization => OperatingSystem.IsIOS() || OperatingSystem.IsAndroid();
+
+	/// <summary>
+	/// 音声ファイルを選択させ、設定に保存できるパスを返す
+	/// </summary>
+	/// <returns>設定に保存するパス。選択されなかった場合や保存できるパスが得られなかった場合は null</returns>
+	private static async Task<string?> PickSoundFileAsync()
 	{
-		if (!OperatingSystem.IsIOS())
+		if (KyoshinEewViewerApp.TopLevelControl == null)
+			return null;
+		var files = await KyoshinEewViewerApp.TopLevelControl.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions()
+		{
+			Title = "音声ファイルを開く",
+			FileTypeFilter = [FilePickerFileTypes.All],
+			AllowMultiple = false,
+		});
+		if (files is not { Count: > 0 })
+			return null;
+
+		// Android のピッカーは content:// の URI しか返さないため、ローカルパスは常に取得できない。
+		// 複製で解決できるプラットフォームではパスが無くても続行する
+		var localPath = files[0].TryGetLocalPath();
+		if (localPath is null && !NeedsSoundFileLocalization)
+			return null;
+
+		return await LocalizeSoundFileAsync(files[0], localPath);
+	}
+
+	/// <remarks>
+	/// ファイルピッカーが返すファイルは、設定として保存して後から再生することができない。
+	/// iOS は返されるパスが他アプリのコンテナを指しており、選択直後しか開けない。
+	/// Android は content:// の URI しか返されず、そもそもローカルパスを取得できない。
+	/// いずれも自身のコンテナへ複製しておく必要がある
+	/// </remarks>
+	/// <returns>設定に保存するパス。複製に失敗し、代わりに保存できるパスも無い場合は null</returns>
+	private static async Task<string?> LocalizeSoundFileAsync(IStorageFile file, string? localPath)
+	{
+		if (!NeedsSoundFileLocalization)
 			return localPath;
 
 		try
@@ -307,6 +328,8 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 		catch (Exception ex)
 		{
 			LogHost.Default.Warn(ex, "音声ファイルの複製に失敗しました");
+			// 複製できなくても、選択直後しか開けないとはいえパスが得られている iOS では従来どおりそれを使う。
+			// Android は null のままなので、壊れたパスを設定に保存せず呼び出し側で中断させる
 			return localPath;
 		}
 	}
@@ -359,18 +382,8 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 	{
 		if (parameter is not PlaySoundAction action)
 			return;
-		if (KyoshinEewViewerApp.TopLevelControl == null)
-			return;
-		var files = await KyoshinEewViewerApp.TopLevelControl.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions()
-		{
-			Title = "音声ファイルを開く",
-			FileTypeFilter = [FilePickerFileTypes.All],
-			AllowMultiple = false,
-		});
-		if (files is not { Count: > 0 } || files[0].TryGetLocalPath() is not { } localPath)
-			return;
-
-		action.FilePath = localPath;
+		if (await PickSoundFileAsync() is { } path)
+			action.FilePath = path;
 	}
 	public void OpenWorkflowPage()
 		=> UrlOpener.OpenUrl("https://github.com/ingen084/KyoshinEewViewerIngen/blob/develop/workflow-guide.md");
