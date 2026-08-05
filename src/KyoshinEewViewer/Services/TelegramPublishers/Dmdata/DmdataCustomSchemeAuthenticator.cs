@@ -1,7 +1,5 @@
-using Avalonia.Controls;
 using DmdataSharp.Authentication.OAuth;
 using KyoshinEewViewer.Core;
-using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
 using Splat;
 using System;
 using System.Collections.Generic;
@@ -13,12 +11,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 
-namespace KyoshinEewViewer.iOS;
+namespace KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
 
 /// <summary>
 /// カスタム URL スキームでコールバックを受ける DMDATA の認可フロー。
-/// iOS ではループバック HTTP サーバーを立てられないため、認可ページを外部ブラウザで開き
-/// <see cref="RedirectUri"/> でアプリに戻ってきたところを拾う。
+/// モバイル (iOS / Android) ではループバック HTTP サーバーを立てられないため、認可ページを
+/// 外部ブラウザで開き <see cref="RedirectUri"/> でアプリに戻ってきたところを拾う。
 /// </summary>
 public class DmdataCustomSchemeAuthenticator : IDmdataAuthenticator
 {
@@ -30,7 +28,8 @@ public class DmdataCustomSchemeAuthenticator : IDmdataAuthenticator
 
 	/// <summary>
 	/// DMDATA 側のクライアント設定にも同じ値を登録しておく必要がある。
-	/// Info.plist の CFBundleURLSchemes にもスキーム部分を登録すること
+	/// スキーム部分は iOS なら Info.plist の CFBundleURLSchemes、
+	/// Android なら MainActivity の IntentFilter にも登録すること
 	/// </summary>
 	public const string RedirectUri = "net.yumnumm.kyoshineewviewer://login-callback";
 
@@ -83,12 +82,9 @@ public class DmdataCustomSchemeAuthenticator : IDmdataAuthenticator
 		{
 			using var registration = cancellationToken.Register(() => _callback?.TrySetCanceled(cancellationToken));
 
-			// TopLevelControl は MainView の接続完了時に設定されるが、取り違えを避けるため
-			// 表示中のビューからも引けるようにしておく
+			// TopLevelControl は MainView が視覚ツリーへ接続された時点で各ヘッドが設定する
 			var launcher = KyoshinEewViewerApp.TopLevelControl?.Launcher
-				?? TopLevel.GetTopLevel(App.MainView)?.Launcher;
-			if (launcher is null)
-				throw new InvalidOperationException("ブラウザを開けませんでした");
+				?? throw new InvalidOperationException("ブラウザを開けませんでした");
 			if (!await launcher.LaunchUriAsync(authorizeUri))
 				throw new InvalidOperationException("認可ページを開けませんでした");
 

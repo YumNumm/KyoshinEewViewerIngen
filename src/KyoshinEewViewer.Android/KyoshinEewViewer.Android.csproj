@@ -6,7 +6,10 @@
         <TargetFramework>net10.0-android</TargetFramework>
         <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
         <Nullable>enable</Nullable>
-        <ApplicationId>net.ingen084.kyoshineewviewer</ApplicationId>
+        <RootNamespace>KyoshinEewViewer.Android</RootNamespace>
+        <!-- iOS ヘッドと同一の識別子を使う。OAuth のカスタムスキームも
+             両ヘッドで共通の DmdataCustomSchemeAuthenticator.RedirectUri を使うため揃えておく -->
+        <ApplicationId>net.yumnumm.KyoshinEewViewer</ApplicationId>
         <ApplicationVersion>1</ApplicationVersion>
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
         <!-- パッケージ形式は SDK の既定に任せる (Release は aab と apk の両方、Debug は apk のみ)。
