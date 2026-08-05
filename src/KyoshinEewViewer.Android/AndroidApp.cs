@@ -20,6 +20,6 @@ public class AndroidApp : AvaloniaAndroidApplication<App>
 	{
 		return base.CustomizeAppBuilder(builder)
 			.UseKeviFonts()
-			.UseReactiveUI();
+			.UseReactiveUI(_ => { });
 	}
 }

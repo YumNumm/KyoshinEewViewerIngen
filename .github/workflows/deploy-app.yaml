@@ -1,10 +1,12 @@
 name: deploy-app
 
-# Android / iOS / macOS のストア配信 (App Store Connect / TestFlight) をまとめたワークフロー。
+# iOS / macOS のストア配信 (App Store Connect / TestFlight) をまとめたワークフロー。
 #
 # 既存の deploy.yaml とは役割が違うため別ファイルにしている。
-#   - deploy.yaml     : コンテナイメージと ad-hoc 配布 (GitHub Releases)。無署名 + ad-hoc 署名
-#   - deploy-app.yaml : ストア配信。正式な署名とビルド番号の管理が必要
+#   - deploy.yaml       : コンテナイメージと ad-hoc 配布 (GitHub Releases)。無署名 + ad-hoc 署名
+#   - deploy-app.yaml   : ストア配信。正式な署名とビルド番号の管理が必要
+#   - build-android.yaml: Android の debug 署名済み AAB / APK を artifact として出すだけ。
+#                         Google Play 配信を始める際はこちらへ組み込む
 #
 # develop への push で iOS / macOS を自動でビルドしてアップロードする。
 # TestFlight のベータグループへの配布は testflight_group を指定したときだけ行うため、
@@ -78,31 +80,6 @@ env:
   ASC_SPINNER_DISABLED: "1"
 
 jobs:
-  # ---------------------------------------------------------------------------
-  # Android
-  # ---------------------------------------------------------------------------
-  # 現状ビルドできないため無効化している。有効化するには以下の 2 点が必要:
-  #   1. src/KyoshinEewViewer.Android の Avalonia 12 対応。AndroidApp.cs が旧シグネチャの
-  #      .UseReactiveUI() を呼んでおり、Avalonia 12 / ReactiveUI.Avalonia では引数付きの
-  #      .UseReactiveUI(Action<...>) が必要なためコンパイルが通らない
-  #      (iOS ヘッドは AppDelegate.cs で .UseReactiveUI(_ => { }) に修正済み)
-  #   2. Google Play 用の署名鍵とサービスアカウントの整備 (未着手)
-  # 枠だけ残しておく。platform の選択肢に android は無いため、この if は常に false になる
-  # (actionlint が if: false を定数条件として弾くため、この形で無効化している)。
-  # 上記が済んだら platform の options へ android を追加して steps を実装する。
-  build-android:
-    name: Android ビルド (無効)
-    if: inputs.platform == 'android'
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-    steps:
-      - name: 未実装
-        shell: bash
-        run: |
-          echo "Android ヘッドは Avalonia 12 へ未追従のためビルドできません。" >&2
-          exit 1
-
   # ---------------------------------------------------------------------------
   # iOS
   # ---------------------------------------------------------------------------

@@ -9,7 +9,9 @@
         <ApplicationId>net.ingen084.kyoshineewviewer</ApplicationId>
         <ApplicationVersion>1</ApplicationVersion>
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
-        <AndroidPackageFormat>apk</AndroidPackageFormat>
+        <!-- パッケージ形式は SDK の既定に任せる (Release は aab と apk の両方、Debug は apk のみ)。
+             AndroidPackageFormat (単数) を指定すると AndroidPackageFormats が無視され
+             片方しか生成されなくなるため足さないこと -->
         <RunAOTCompilation>false</RunAOTCompilation>
         <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
         <PublishReadyToRun>false</PublishReadyToRun>
@@ -28,6 +30,11 @@
 
     <!-- プロジェクト参照 -->
     <ItemGroup>
-        <ProjectReference Include="..\KyoshinEewViewer\KyoshinEewViewer.csproj" />
+        <!-- Android ヘッドは自己完結ビルドのため、既定では ABI ごとの RuntimeIdentifier が
+             参照プロジェクトへも伝播する。本体はマネージドライブラリなので RID 別にビルドする
+             必要が無いうえ、RID 別ビルドでは Avalonia の XAML コンパイラが中間アセンブリを
+             見つけられず AVLN9999 で失敗する。RID を落として RID 非依存でビルドさせる -->
+        <ProjectReference Include="..\KyoshinEewViewer\KyoshinEewViewer.csproj"
+            GlobalPropertiesToRemove="RuntimeIdentifier;SelfContained" />
     </ItemGroup>
 </Project>
