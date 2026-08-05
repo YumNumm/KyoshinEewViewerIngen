@@ -9,6 +9,7 @@ using KyoshinEewViewer.Core.Models.Events;
 using KyoshinEewViewer.CustomControl;
 using KyoshinEewViewer.Series;
 using KyoshinEewViewer.Services;
+using KyoshinEewViewer.Services.Audio;
 using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
 using KyoshinEewViewer.ViewModels;
 using KyoshinEewViewer.Views;
@@ -113,6 +114,8 @@ public class App : Application
 		Locator.CurrentMutable.RegisterLazySingleton(() => new SeriesController(), typeof(SeriesController));
 		Locator.CurrentMutable.RegisterConstant(_subWindowsService, typeof(ISubWindowsService));
 		Locator.CurrentMutable.RegisterConstant(_dmdataAuthenticator, typeof(IDmdataAuthenticator));
+		// BASS のネイティブが存在しないため MediaPlayer の実装へ差し替える
+		Locator.CurrentMutable.RegisterLazySingleton(() => (IAudioBackend)new Audio.AndroidAudioBackend(), typeof(IAudioBackend));
 		var config = Locator.Current.RequireService<KyoshinEewViewerConfiguration>();
 		LoggingAdapter.Setup(config);
 

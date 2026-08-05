@@ -4,7 +4,9 @@
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <TargetFramework>net10.0-android</TargetFramework>
-        <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+        <!-- 音声再生 (AndroidAudioBackend) が音声フォーカスの要求に AudioFocusRequest を使うため、
+             API 26 未満は対象外とする。下げる場合は音声フォーカスの実装も見直しが必要 -->
+        <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
         <Nullable>enable</Nullable>
         <RootNamespace>KyoshinEewViewer.Android</RootNamespace>
         <!-- iOS ヘッドと同一の識別子を使う。OAuth のカスタムスキームも
