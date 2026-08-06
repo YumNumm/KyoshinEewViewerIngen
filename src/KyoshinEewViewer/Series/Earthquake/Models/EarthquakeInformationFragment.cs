@@ -285,9 +285,11 @@ public abstract partial class EarthquakeInformationFragment : ReactiveObject
 	public required DateTime ArrivedTime { get; init; }
 
 	/// <summary>
-	/// ベースとなった電文
+	/// ベースとなった電文<br/>
+	/// EQMonitor API のように電文本文を伴わない受信元では null になる。
+	/// この場合は観測点ごとの詳細な震度を読み出せない
 	/// </summary>
-	public required Telegram BasedTelegram { get; init; }
+	public required Telegram? BasedTelegram { get; init; }
 
 	/// <summary>
 	/// 電文名

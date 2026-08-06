@@ -2,6 +2,7 @@ using KyoshinEewViewer.Series.KyoshinMonitor.Services.Eew;
 using KyoshinEewViewer.Series.KyoshinMonitor.Services;
 using KyoshinEewViewer.Series.KyoshinMonitor.Models;
 using KyoshinEewViewer.Services;
+using KyoshinEewViewer.Services.EqMonitor;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,6 +31,7 @@ public class RealtimeEarthquakeInformationHost : EarthquakeInformationHost
 	public KyoshinMonitorWatchService KyoshinMonitorWatcher { get; }
 	private SignalNowFileWatcher SignalNowEewReceiver { get; }
 	public EewTelegramSubscriber EewTelegramSubscriber { get; }
+	private EqMonitorEewSubscriber EqMonitorEewSubscriber { get; }
 	public AxisInformationProvider AxisInformationProvider { get; }
 	private TimerService TimerService { get; }
 
@@ -45,7 +47,8 @@ public class RealtimeEarthquakeInformationHost : EarthquakeInformationHost
 		TimerService timerService,
 		TelegramProvideService telegramProvider,
 		AxisInformationProvider axisInformationProvider,
-		ObservationPointsUpdateService observationPointsUpdateService
+		ObservationPointsUpdateService observationPointsUpdateService,
+		EqMonitorApiProvider eqMonitorApiProvider
 	) : base(false, config)
 	{
 		ReplayDescription = "リアルタイム";
@@ -65,6 +68,7 @@ public class RealtimeEarthquakeInformationHost : EarthquakeInformationHost
 		};
 		SignalNowEewReceiver = new SignalNowFileWatcher(logManager, config, EewController, TimerService);
 		EewTelegramSubscriber = new EewTelegramSubscriber(logManager, EewController, telegramProvider, TimerService);
+		EqMonitorEewSubscriber = new EqMonitorEewSubscriber(logManager, config, eqMonitorApiProvider, EewController, TimerService);
 
 		EewTelegramSubscriber.WhenAnyValue(x => x.Enabled).Subscribe(x => DmdataReceiving = x);
 		EewTelegramSubscriber.WhenAnyValue(x => x.WarningOnlyEnabled).Subscribe(x => DmdataWarningOnlyReceiving = x);

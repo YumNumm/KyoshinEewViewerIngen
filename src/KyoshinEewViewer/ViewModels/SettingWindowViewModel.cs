@@ -8,6 +8,7 @@ using KyoshinEewViewer.DCReportParser;
 using KyoshinEewViewer.Series;
 using KyoshinEewViewer.Series.Qzss.Events;
 using KyoshinEewViewer.Services;
+using KyoshinEewViewer.Services.EqMonitor;
 using KyoshinEewViewer.Services.ExtarnalPublishers.Axis;
 using KyoshinEewViewer.Services.Feedback;
 using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
@@ -103,6 +104,7 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 		ILogManager logManager,
 		DmdataSettingPage dmdataPage,
 		AxisSettingPage axisPage,
+		EqMonitorSettingPage eqMonitorPage,
 		FeedbackSettingPage feedbackPage,
 		ISubWindowsService? subWindowService)
 	{
@@ -177,6 +179,7 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 			new BasicSettingPage("\xf48b", "配信サービス", [
 				dmdataPage,
 				axisPage,
+				eqMonitorPage,
 			]),
 			new BasicSettingPage<MapPage>("\xf5a0", "地図", []),
 			feedbackPage,
