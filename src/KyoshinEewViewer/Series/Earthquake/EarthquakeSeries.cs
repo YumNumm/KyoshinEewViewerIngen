@@ -27,6 +27,7 @@ using SkiaSharp;
 using Splat;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -65,12 +66,86 @@ public class EarthquakeSeries : SeriesBase
 	public EqMonitorEarthquakeService EqMonitorService { get; }
 
 	/// <summary>
+	/// EQMonitor API での地震履歴の検索を担う
+	/// </summary>
+	public EqMonitorEarthquakeSearchService SearchService { get; }
+
+	private ObservableCollection<EarthquakeEvent> _displayedEarthquakes = [];
+	/// <summary>
+	/// 一覧に表示する地震情報<br/>
+	/// 通常は受信したものを、検索中は検索結果を指す
+	/// </summary>
+	public ObservableCollection<EarthquakeEvent> DisplayedEarthquakes
+	{
+		get => _displayedEarthquakes;
+		private set => this.RaiseAndSetIfChanged(ref _displayedEarthquakes, value);
+	}
+
+	private bool _isSearching;
+	/// <summary>
+	/// 検索結果を表示しているか
+	/// </summary>
+	public bool IsSearching
+	{
+		get => _isSearching;
+		private set => this.RaiseAndSetIfChanged(ref _isSearching, value);
+	}
+
+	/// <summary>
+	/// 地震履歴を検索できる状態か
+	/// </summary>
+	public bool CanSearch => Config.EqMonitor is { Enable: true, EnableEarthquake: true }
+		&& !string.IsNullOrWhiteSpace(Config.EqMonitor.BaseUrl);
+
+	/// <summary>
+	/// 条件を指定して地震履歴を検索する
+	/// </summary>
+	/// <returns>検索できなかった場合はその理由。成功した場合は null</returns>
+	public async Task<string?> SearchAsync(EqMonitorSearchCondition condition)
+	{
+		if (await SearchService.SearchAsync(condition) is { } error)
+			return error;
+
+		DisplayedEarthquakes = SearchService.Results;
+		IsSearching = true;
+		CurrentEvent = null;
+		ResetView();
+
+		if (DisplayedEarthquakes.Count > 0)
+			await ProcessEarthquakeEvent(DisplayedEarthquakes[0]);
+		return null;
+	}
+
+	/// <summary>
+	/// 検索を解除して通常の一覧へ戻す
+	/// </summary>
+	public void ClearSearch()
+	{
+		if (!IsSearching)
+			return;
+
+		IsSearching = false;
+		DisplayedEarthquakes = Service.Earthquakes;
+		SearchService.Clear();
+		CurrentEvent = null;
+		ResetView();
+
+		if (DisplayedEarthquakes.Count > 0)
+			ProcessEarthquakeEvent(DisplayedEarthquakes[0]).ConfigureAwait(false);
+	}
+
+	/// <summary>
 	/// 一覧の末尾までスクロールされた際に、さらに過去の地震情報を読み込む
 	/// </summary>
 	public async Task LoadMoreHistoryAsync()
 	{
 		try
 		{
+			if (IsSearching)
+			{
+				await SearchService.LoadMoreAsync();
+				return;
+			}
 			await EqMonitorService.LoadMoreAsync();
 		}
 		catch (Exception ex)
@@ -78,6 +153,126 @@ public class EarthquakeSeries : SeriesBase
 			Logger.LogError(ex, "過去の地震情報の読み込み中に例外が発生しました");
 		}
 	}
+
+	/// <summary>
+	/// 一覧の末尾でさらに読み込めるか
+	/// </summary>
+	public bool CanLoadMoreHistory => IsSearching ? SearchService.CanLoadMore : EqMonitorService.CanLoadMore;
+
+	/// <summary>
+	/// 検索条件の入力内容<br/>
+	/// ダイアログを開き直しても保つ
+	/// </summary>
+	public EarthquakeSearchModel SearchModel { get; } = new();
+
+	private EpicenterRectSelectLayer EpicenterRectSelectLayer { get; } = new();
+
+	private bool _isSelectingEpicenterRect;
+	/// <summary>
+	/// 地図で震央の範囲を選択している最中か
+	/// </summary>
+	public bool IsSelectingEpicenterRect
+	{
+		get => _isSelectingEpicenterRect;
+		private set => this.RaiseAndSetIfChanged(ref _isSelectingEpicenterRect, value);
+	}
+
+	/// <summary>
+	/// 検索の画面を開く
+	/// </summary>
+	public async Task OpenSearchAsync()
+	{
+		if (!CanSearch)
+			return;
+
+		SearchModel.Error = null;
+		while (true)
+		{
+			var view = new EarthquakeSearchView { DataContext = SearchModel };
+			var requestedMapSelection = false;
+			view.MapSelectionRequested += () => requestedMapSelection = true;
+
+			var dialog = new FAContentDialog
+			{
+				Title = "地震履歴の検索",
+				Content = view,
+				PrimaryButtonText = "検索",
+				SecondaryButtonText = "条件をクリア",
+				CloseButtonText = "閉じる",
+				DefaultButton = FAContentDialogButton.Primary,
+			};
+			// 「地図で範囲を選択」はダイアログを閉じてから地図の操作へ移る
+			view.MapSelectionRequested += () => dialog.Hide();
+
+			var result = await dialog.ShowAsync();
+
+			if (requestedMapSelection)
+			{
+				await SelectEpicenterRectAsync();
+				continue;
+			}
+			if (result == FAContentDialogResult.Secondary)
+			{
+				SearchModel.Reset();
+				continue;
+			}
+			if (result != FAContentDialogResult.Primary)
+				return;
+
+			SearchModel.IsSearching = true;
+			try
+			{
+				SearchModel.Error = await SearchAsync(SearchModel.ToCondition());
+			}
+			finally
+			{
+				SearchModel.IsSearching = false;
+			}
+			// 失敗した場合は条件を直せるよう開き直す
+			if (SearchModel.Error == null)
+				return;
+		}
+	}
+
+	/// <summary>
+	/// 地図で震央の範囲を選択させ、条件へ反映する
+	/// </summary>
+	private async Task SelectEpicenterRectAsync()
+	{
+		var completion = new TaskCompletionSource();
+		void OnSelected(Location first, Location second)
+		{
+			SearchModel.ApplyEpicenterRect(first.Latitude, first.Longitude, second.Latitude, second.Longitude);
+			completion.TrySetResult();
+		}
+
+		EpicenterRectSelectLayer.Reset();
+		EpicenterRectSelectLayer.Selected += OnSelected;
+		MapDisplayParameter = MapDisplayParameter with { OverlayLayers = [EarthquakeLayer, EpicenterRectSelectLayer] };
+		IsSelectingEpicenterRect = true;
+		_epicenterSelectionCancel = completion;
+
+		try
+		{
+			await completion.Task;
+		}
+		finally
+		{
+			_epicenterSelectionCancel = null;
+			IsSelectingEpicenterRect = false;
+			EpicenterRectSelectLayer.Selected -= OnSelected;
+			EpicenterRectSelectLayer.Reset();
+			MapDisplayParameter = MapDisplayParameter with { OverlayLayers = [EarthquakeLayer] };
+		}
+	}
+
+	private TaskCompletionSource? _epicenterSelectionCancel;
+
+	/// <summary>
+	/// 震央の範囲の選択を中止する
+	/// </summary>
+	public void CancelEpicenterRectSelection()
+		=> _epicenterSelectionCancel?.TrySetResult();
 
 	private EarthquakeLayer EarthquakeLayer { get; } = new();
 	private MapData? MapData { get; set; }
@@ -90,7 +285,8 @@ public class EarthquakeSeries : SeriesBase
 		SoundPlayerService soundPlayer,
 		TelegramProvideService telegramProvider,
 		NotificationService notifyService,
-		EqMonitorEarthquakeService eqMonitorService) : base(MetaData)
+		EqMonitorEarthquakeService eqMonitorService,
+		EqMonitorEarthquakeSearchService searchService) : base(MetaData)
 	{
 		SplatRegistrations.RegisterLazySingleton<EarthquakeSeries>();
 
@@ -125,6 +321,18 @@ public class EarthquakeSeries : SeriesBase
 		//});
 
 		Service = watchService;
+		SearchService = searchService;
+		DisplayedEarthquakes = watchService.Earthquakes;
+
+		// EQMonitor API を使えなくなったら検索を続けられないため解除する
+		Config.EqMonitor.WhenAnyValue(x => x.Enable, x => x.EnableEarthquake, x => x.BaseUrl)
+			.ObserveOn(RxSchedulers.MainThreadScheduler)
+			.Subscribe(_ =>
+			{
+				this.RaisePropertyChanged(nameof(CanSearch));
+				if (!CanSearch)
+					ClearSearch();
+			});
 
 		MapDisplayParameter = new() {
 			OverlayLayers = [EarthquakeLayer],
@@ -147,12 +355,15 @@ public class EarthquakeSeries : SeriesBase
 				if (Config.Notification.SwitchEqSource)
 					NotificationService?.Notify("地震情報", s + "で地震情報を受信しています。", Notification.NotificationUrgency.Low);
 				IsLoading = false;
-				if (Service.Earthquakes.Count <= 0)
+				// 検索結果を表示している間は一覧を差し替えない
+				if (IsSearching)
+					return;
+				if (DisplayedEarthquakes.Count <= 0)
 				{
 					CurrentEvent = null;
 					return;
 				}
-				await ProcessEarthquakeEvent(Service.Earthquakes[0]);
+				await ProcessEarthquakeEvent(DisplayedEarthquakes[0]);
 			}))
 			.Concat()
 			.Subscribe(_ => { }, ex => Logger.LogError(ex, "受信元切替後の処理中に例外が発生しました"));
@@ -162,6 +373,9 @@ public class EarthquakeSeries : SeriesBase
 			.ObserveOn(RxSchedulers.MainThreadScheduler)
 			.Select(u => Observable.FromAsync(async () =>
 			{
+				// 新しい地震を受信したら、見逃さないよう検索を解除して通常の一覧へ戻す
+				ClearSearch();
+
 				var eq = u.Earthquake;
 				var fragment = u.Fragment;
 				var prevInt = u.PreviousMaxIntensity;
@@ -299,7 +513,7 @@ public class EarthquakeSeries : SeriesBase
 	{
 		if (_control == null || Service == null)
 			return;
-		foreach (var e in Service.Earthquakes.ToArray())
+		foreach (var e in DisplayedEarthquakes.ToArray())
 			if (e != null)
 				e.IsSelecting = e == eq;
 		CurrentEvent = eq;

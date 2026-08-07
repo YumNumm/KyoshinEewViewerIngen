@@ -65,7 +65,7 @@ internal static class HistoryScrollLoader
 		for (var i = 0; i < MaxRefillCount; i++)
 		{
 			await series.LoadMoreHistoryAsync();
-			if (!series.EqMonitorService.CanLoadMore)
+			if (!series.CanLoadMoreHistory)
 				return;
 
 			// 追加した分がレイアウトへ反映されてから判定し直す
