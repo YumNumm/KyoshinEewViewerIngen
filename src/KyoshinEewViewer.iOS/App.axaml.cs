@@ -140,7 +140,12 @@ public class App : Application
 				Dispatcher.UIThread.Post(() => FixedObjectRenderer.UpdateIntensityPaintCache(this));
 			});
 		KyoshinEewViewerApp.Selector.WhenAnyValue(x => x.SelectedWindowTheme)
-			.Subscribe(_ => Dispatcher.UIThread.Post(() => ApplyHostBackground(host)));
+			.Subscribe(x =>
+			{
+				if (x == null) return;
+				config.Theme.WindowTheme = x.Meta;
+				Dispatcher.UIThread.Post(() => ApplyHostBackground(host));
+			});
 
 		if (config.ShowWizard)
 			Dispatcher.UIThread.Post(async () =>
