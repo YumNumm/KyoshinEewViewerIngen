@@ -1,5 +1,6 @@
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
+using KyoshinEewViewer.Services.NetworkDebug;
 using Splat;
 using System;
 using System.Collections.Concurrent;
@@ -21,13 +22,10 @@ public class JmaXmlTelegramPublisher : TelegramPublisher
 	private TimerService Timer { get; }
 	private InformationCacheService CacheService { get; }
 	private KyoshinEewViewerConfiguration Config { get; }
-	private HttpClient Client { get; } = new(new HttpClientHandler()
+	private HttpClient Client { get; } = NetworkDebugHttpClient.Create(new HttpClientHandler()
 	{
 		AutomaticDecompression = DecompressionMethods.All
-	})
-	{
-		Timeout = TimeSpan.FromSeconds(10),
-	};
+	}, TimeSpan.FromSeconds(10));
 
 	// InformationCategoryに対応するJmaXmlTypeのマップ
 	private Dictionary<InformationCategory, JmaXmlType> CategoryMap { get; } = new()

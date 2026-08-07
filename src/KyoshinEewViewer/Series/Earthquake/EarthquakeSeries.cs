@@ -16,6 +16,7 @@ using KyoshinEewViewer.Series.Earthquake.Services;
 using KyoshinEewViewer.Series.Earthquake.SettingPages;
 using KyoshinEewViewer.Series.Earthquake.Templates;
 using KyoshinEewViewer.Series.Earthquake.Workflow;
+using KyoshinEewViewer.Services.NetworkDebug;
 using KyoshinEewViewer.Services;
 using KyoshinEewViewer.Services.EqMonitor;
 using KyoshinEewViewer.Services.TelegramPublishers;
@@ -834,7 +835,7 @@ public class EarthquakeSeries : SeriesBase
 	{
 		try
 		{
-			using var client = new HttpClient(new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All });
+			using var client = NetworkDebugHttpClient.Create(new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All });
 			using var response = await client.PostAsync("https://www.data.jma.go.jp/svd/eqdb/data/shindo/api/api.php", new FormUrlEncodedContent(new Dictionary<string, string>
 			{
 				{"mode", "event"},

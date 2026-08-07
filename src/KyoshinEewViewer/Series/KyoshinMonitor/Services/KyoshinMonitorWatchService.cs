@@ -4,6 +4,7 @@ using KyoshinEewViewer.Core.Models.KyoshinMonitorObservationPoint;
 using KyoshinEewViewer.Core.ShakeDetection;
 using KyoshinEewViewer.Series.KyoshinMonitor.Models;
 using KyoshinEewViewer.Series.KyoshinMonitor.Services.Eew;
+using KyoshinEewViewer.Services.NetworkDebug;
 using KyoshinMonitorLib;
 using KyoshinMonitorLib.UrlGenerator;
 using Sentry;
@@ -55,7 +56,7 @@ public class KyoshinMonitorWatchService
 			};
 
 			// タイムアウトはリクエスト毎に FetchTimeout で制御する
-			_httpClient = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+			_httpClient = NetworkDebugHttpClient.Create(handler, Timeout.InfiniteTimeSpan);
 		}
 	}
 

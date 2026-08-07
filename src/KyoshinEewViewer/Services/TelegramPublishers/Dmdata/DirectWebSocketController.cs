@@ -1,5 +1,6 @@
 using DmdataSharp.WebSocketMessages.V2;
 using KyoshinEewViewer.Core;
+using KyoshinEewViewer.Services.NetworkDebug;
 using Splat;
 using System;
 using System.Diagnostics;
@@ -77,6 +78,7 @@ public class DirectWebSocketController : IDisposable
 		Logger.LogInfo($"直接WebSocket接続を開始します: {url}");
 		await _webSocket.ConnectAsync(new Uri(url), _cts.Token);
 		Logger.LogInfo("直接WebSocket接続が確立されました（start メッセージを待機中）");
+		NetworkDebugRecorder.RecordWebSocket(url, WebSocketDirection.Connect);
 
 		// バックグラウンドで受信ループ開始
 		_ = Task.Run(() => ReceiveLoopAsync(_cts.Token));
@@ -101,6 +103,7 @@ public class DirectWebSocketController : IDisposable
 					if (result.MessageType == WebSocketMessageType.Close)
 					{
 						Logger.LogInfo("WebSocketサーバーから切断要求を受信しました");
+						NetworkDebugRecorder.RecordWebSocket(EndpointUrl ?? "", WebSocketDirection.Disconnect, result.CloseStatusDescription);
 						try
 						{
 							await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
@@ -115,6 +118,7 @@ public class DirectWebSocketController : IDisposable
 				} while (!result.EndOfMessage);
 
 				var json = Encoding.UTF8.GetString(messageBuffer.GetBuffer(), 0, (int)messageBuffer.Length);
+				NetworkDebugRecorder.RecordWebSocket(EndpointUrl ?? "", WebSocketDirection.Receive, json, messageBuffer.Length);
 				await ProcessMessageAsync(json, ct);
 			}
 		}
@@ -167,6 +171,8 @@ public class DirectWebSocketController : IDisposable
 					}
 					sw.Stop();
 					LastPongSendMilliseconds = sw.ElapsedMilliseconds;
+					// 計測値へ影響させないため、記録は Pong 送信の計測を終えてから行う
+					NetworkDebugRecorder.RecordWebSocket(EndpointUrl ?? "", WebSocketDirection.Send, pong, Encoding.UTF8.GetByteCount(pong));
 					PingLatencyUpdated?.Invoke(this, EventArgs.Empty);
 					break;
 				}
@@ -210,6 +216,7 @@ public class DirectWebSocketController : IDisposable
 			catch { }
 		}
 		_isConnected = false;
+		NetworkDebugRecorder.RecordWebSocket(EndpointUrl ?? "", WebSocketDirection.Disconnect);
 		_webSocket?.Dispose();
 		_webSocket = null;
 		LastPongSendMilliseconds = null;

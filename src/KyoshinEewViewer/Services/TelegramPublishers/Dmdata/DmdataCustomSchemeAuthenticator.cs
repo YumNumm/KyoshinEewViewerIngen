@@ -1,5 +1,6 @@
 using DmdataSharp.Authentication.OAuth;
 using KyoshinEewViewer.Core;
+using KyoshinEewViewer.Services.NetworkDebug;
 using Splat;
 using System;
 using System.Collections.Generic;
@@ -33,7 +34,7 @@ public class DmdataCustomSchemeAuthenticator : IDmdataAuthenticator
 	/// </summary>
 	public const string RedirectUri = "net.yumnumm.kyoshineewviewer://login-callback";
 
-	private static readonly HttpClient HttpClient = new();
+	private static readonly HttpClient HttpClient = NetworkDebugHttpClient.Create();
 
 	private TaskCompletionSource<Uri>? _callback;
 	private string? _expectedState;

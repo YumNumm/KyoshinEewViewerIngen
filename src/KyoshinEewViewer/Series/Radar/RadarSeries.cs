@@ -7,6 +7,7 @@ using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Map;
 using KyoshinEewViewer.Map.Layers;
 using KyoshinEewViewer.Series.Radar.Models;
+using KyoshinEewViewer.Services.NetworkDebug;
 using KyoshinEewViewer.Services;
 using ReactiveUI;
 using Splat;
@@ -78,7 +79,7 @@ public class RadarSeries : SeriesBase
 		Config = config;
 		TimerService = timerService;
 		CacheService = cacheService;
-		Client = new HttpClient(new HttpClientHandler()
+		Client = NetworkDebugHttpClient.Create(new HttpClientHandler()
 		{
 			AutomaticDecompression = DecompressionMethods.All
 		});
