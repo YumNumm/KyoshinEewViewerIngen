@@ -21,10 +21,7 @@
     </UserControl.Styles>
     <ScrollViewer>
         <StackPanel>
-            <TextBlock Margin="10,10,10,5" FontSize="12" Foreground="{DynamicResource SubForegroundColor}"
-                       Text="EQMonitor API から地震情報と緊急地震速報を取得します。接続先は同梱していないため、利用するサーバの URL を入力してください。" />
-
-            <ui:FASettingsExpander Header="EQMonitor API を利用する" Description="接続先を入力していない場合は有効にできません。">
+            <ui:FASettingsExpander Header="EQMonitor API を利用する">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xf1e6;" FontFamily="{StaticResource IconFont}" />
                 </ui:FASettingsExpander.IconSource>
@@ -41,13 +38,11 @@
                     <TextBlock Text="ベース URL" Margin="0,0,10,5" />
                     <TextBox Text="{Binding Config.EqMonitor.BaseUrl}" IsEnabled="{Binding !Config.EqMonitor.Enable}"
                              PlaceholderText="https://example.com" Margin="10,0" TextWrapping="Wrap" />
-                    <TextBlock Margin="10,5,10,0" FontSize="12" Foreground="{DynamicResource SubForegroundColor}"
-                               Text="/v2/earthquake などのパスを除いた部分を入力してください。変更する際は一度無効にする必要があります。" />
                 </StackPanel>
             </ui:FASettingsExpander>
 
             <TextBlock Text="地震情報" FontWeight="Bold" Margin="10,20,10,5" />
-            <ui:FASettingsExpander Header="地震情報を取得する" Description="既存の受信元から取得済みの地震は上書きしません。">
+            <ui:FASettingsExpander Header="地震情報を取得する">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xf05a;" FontFamily="{StaticResource IconFont}" />
                 </ui:FASettingsExpander.IconSource>
