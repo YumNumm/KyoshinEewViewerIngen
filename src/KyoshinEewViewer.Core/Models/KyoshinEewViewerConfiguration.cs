@@ -1183,6 +1183,26 @@ public class KyoshinEewViewerConfiguration : ReactiveObject, IWindowPlacementCon
 		}
 	}
 
+	private JmaXmlConfig _jmaXml = new();
+	public JmaXmlConfig JmaXml
+	{
+		get => _jmaXml;
+		set => this.RaiseAndSetIfChanged(ref _jmaXml, value);
+	}
+	public class JmaXmlConfig : ReactiveObject
+	{
+		private bool _enable = true;
+		/// <summary>
+		/// 気象庁防災情報 XML からの受信を行うか<br/>
+		/// 無効にすると地震･津波･台風の電文を受信しなくなる
+		/// </summary>
+		public bool Enable
+		{
+			get => _enable;
+			set => this.RaiseAndSetIfChanged(ref _enable, value);
+		}
+	}
+
 	private EqMonitorConfig _eqMonitor = new();
 	public EqMonitorConfig EqMonitor
 	{

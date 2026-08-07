@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:vm="using:KyoshinEewViewer.Services.TelegramPublishers.JmaXml"
+			 xmlns:ui="using:FluentAvalonia.UI.Controls"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             x:DataType="vm:JmaXmlSettingPage" x:CompileBindings="True"
+             x:Class="KyoshinEewViewer.Services.TelegramPublishers.JmaXml.JmaXmlPage">
+    <UserControl.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="ui|FASettingsExpander">
+            <Setter Property="Margin" Value="10,3,10,0" />
+        </Style>
+    </UserControl.Styles>
+    <ScrollViewer>
+        <StackPanel>
+            <TextBlock Margin="10,10,10,5" FontSize="12" Foreground="{DynamicResource SubForegroundColor}"
+                       Text="気象庁が公開している防災情報 XML のフィードから、地震情報･津波情報･台風情報を受信します。DM-D.S.S を利用していない場合、これが唯一の受信元になります。" />
+
+            <ui:FASettingsExpander Header="気象庁防災情報XMLから受信する"
+                                   Description="無効にすると地震･津波･台風の電文を受信しなくなります。設定はすぐに反映されます。">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xf1c9;" FontFamily="{StaticResource IconFont}" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Config.JmaXml.Enable}" OnContent="する" OffContent="しない" />
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
+
+            <Border Background="{DynamicResource ExpanderHeaderBackground}"
+                    Padding="{DynamicResource SettingsExpanderItemPadding}"
+                    BorderThickness="1" BorderBrush="#19000000"
+                    CornerRadius="4" Margin="10,10,10,0"
+                    IsVisible="{Binding !Config.JmaXml.Enable}">
+                <Grid ColumnDefinitions="45,*" VerticalAlignment="Center">
+                    <ui:FAFontIcon Glyph="&#xf071;" FontFamily="{StaticResource IconFont}" FontSize="20" HorizontalAlignment="Left" />
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="受信を無効にしています" />
+                        <TextBlock FontSize="12" Foreground="{DynamicResource SubForegroundColor}"
+                                   Text="DM-D.S.S を利用していない場合、地震情報･津波情報･台風情報のいずれも受信できなくなり、各画面が受信エラーの表示になります。" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

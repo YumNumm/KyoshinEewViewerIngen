@@ -1,4 +1,5 @@
 using KyoshinEewViewer.Core;
+using KyoshinEewViewer.Core.Models;
 using Splat;
 using System;
 using System.Collections.Concurrent;
@@ -19,6 +20,7 @@ public class JmaXmlTelegramPublisher : TelegramPublisher
 	private ILogger Logger { get; }
 	private TimerService Timer { get; }
 	private InformationCacheService CacheService { get; }
+	private KyoshinEewViewerConfiguration Config { get; }
 	private HttpClient Client { get; } = new(new HttpClientHandler()
 	{
 		AutomaticDecompression = DecompressionMethods.All
@@ -74,17 +76,44 @@ public class JmaXmlTelegramPublisher : TelegramPublisher
 	private List<InformationCategory> SubscribingCategories { get; } = [];
 	private DateTime LastElapsedTime { get; set; } = DateTime.MinValue;
 
-	public JmaXmlTelegramPublisher(ILogManager logManager, TimerService timer, InformationCacheService cacheService)
+	public JmaXmlTelegramPublisher(ILogManager logManager, TimerService timer, InformationCacheService cacheService, KyoshinEewViewerConfiguration config)
 	{
 		SplatRegistrations.RegisterLazySingleton<JmaXmlTelegramPublisher>();
 
 		Logger = logManager.GetLogger<JmaXmlTelegramPublisher>();
 		Timer = timer;
 		CacheService = cacheService;
+		Config = config;
+
+		// 設定の切り替えを受信状態へ即時反映する
+		Config.JmaXml.PropertyChanged += (_, e) =>
+		{
+			if (e.PropertyName != nameof(KyoshinEewViewerConfiguration.JmaXmlConfig.Enable))
+				return;
+
+			// サポートカテゴリが変わるためキャッシュを捨てる
+			SupportedCategoryCache = null;
+			if (Config.JmaXml.Enable)
+			{
+				Logger.LogInfo("気象庁防災情報XMLの受信を有効にしました");
+				// 未割り当てのカテゴリを引き受け直してもらう
+				OnInformationCategoryUpdated();
+				return;
+			}
+
+			Logger.LogInfo("気象庁防災情報XMLの受信を無効にしました");
+			var stopped = SubscribingCategories.ToArray();
+			// 自身の取得を止めてから、割り当ての解除とフォールバックを依頼する
+			Stop(stopped);
+			if (stopped.Length != 0)
+				OnFailed(stopped, false);
+		};
 
 		Client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", $"KEVi_{Utils.Version};twitter@ingen084");
 		timer.TimerElapsed += async t =>
 		{
+			if (!Config.JmaXml.Enable)
+				return;
 			if (LastElapsedTime > t)
 				return;
 			var prev = LastElapsedTime;
@@ -169,6 +198,10 @@ public class JmaXmlTelegramPublisher : TelegramPublisher
 	private (DateTime time, InformationCategory[] result)? SupportedCategoryCache { get; set; } = null;
 	public async override Task<InformationCategory[]> GetSupportedCategoriesAsync()
 	{
+		// 無効化されている場合はフィードへの疎通確認も行わない
+		if (!Config.JmaXml.Enable)
+			return [];
+
 		// キャッシュの有効期限は10秒間
 		if (SupportedCategoryCache is (DateTime, not null) cache && cache.time > DateTime.Now.AddSeconds(-10))
 			return cache.result;
@@ -188,6 +221,9 @@ public class JmaXmlTelegramPublisher : TelegramPublisher
 
 	public async override void Start(InformationCategory[] categories)
 	{
+		if (!Config.JmaXml.Enable)
+			return;
+
 		// 新規追加するもののみ抽出
 		var added = categories.Where(c => !SubscribingCategories.Contains(c)).ToArray();
 		SubscribingCategories.AddRange(added);

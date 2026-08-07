@@ -12,6 +12,7 @@ using KyoshinEewViewer.Services.EqMonitor;
 using KyoshinEewViewer.Services.ExtarnalPublishers.Axis;
 using KyoshinEewViewer.Services.Feedback;
 using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
+using KyoshinEewViewer.Services.TelegramPublishers.JmaXml;
 using KyoshinEewViewer.Services.Voicevox;
 using KyoshinEewViewer.Services.Workflows;
 using KyoshinEewViewer.Services.Workflows.BuiltinActions;
@@ -104,6 +105,7 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 		ILogManager logManager,
 		DmdataSettingPage dmdataPage,
 		AxisSettingPage axisPage,
+		JmaXmlSettingPage jmaXmlPage,
 		EqMonitorSettingPage eqMonitorPage,
 		FeedbackSettingPage feedbackPage,
 		ISubWindowsService? subWindowService)
@@ -178,6 +180,7 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 			..SeriesController.EnabledSeries.SelectMany(s => s.SettingPages),
 			new BasicSettingPage("\xf48b", "配信サービス", [
 				dmdataPage,
+				jmaXmlPage,
 				axisPage,
 				eqMonitorPage,
 			]),
