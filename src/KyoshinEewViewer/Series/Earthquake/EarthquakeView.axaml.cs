@@ -11,6 +11,8 @@ public partial class EarthquakeView : UserControl
 	{
 		InitializeComponent();
 
+		HistoryScrollLoader.Attach(HistoryList);
+
 		// 別ウィンドウやオーバーレイの内側に置かれることがあるため、ウィンドウ幅ではなく自身の幅で判定する
 		this.WhenAnyValue(v => v.Bounds).Subscribe(_ => UpdateViewWidth());
 		DataContextChanged += (s, e) => UpdateViewWidth();
