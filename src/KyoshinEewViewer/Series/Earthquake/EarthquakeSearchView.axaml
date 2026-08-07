@@ -1,0 +1,140 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:models="clr-namespace:KyoshinEewViewer.Series.Earthquake.Models;assembly=KyoshinEewViewer"
+			 xmlns:ui="using:FluentAvalonia.UI.Controls"
+			 mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="640"
+			 x:Class="KyoshinEewViewer.Series.Earthquake.EarthquakeSearchView"
+			 x:DataType="models:EarthquakeSearchModel" x:CompileBindings="True"
+			 Foreground="{DynamicResource MainForegroundColor}"
+			 FontFamily="{StaticResource MainFont}">
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+        </Style>
+        <Style Selector="TextBlock.tilde">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="6,0" />
+            <Setter Property="Text" Value="〜" />
+        </Style>
+        <Style Selector="StackPanel.row">
+            <Setter Property="Orientation" Value="Horizontal" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+        <Style Selector="NumericUpDown">
+            <Setter Property="Width" Value="110" />
+            <Setter Property="ShowButtonSpinner" Value="False" />
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="MinWidth" Value="110" />
+        </Style>
+    </UserControl.Styles>
+    <ScrollViewer MaxHeight="560">
+        <StackPanel Margin="4">
+            <TextBlock Text="発生日時" Classes="label" FontWeight="Bold" Margin="0,0,0,4" />
+            <StackPanel Classes="row">
+                <DatePicker SelectedDate="{Binding OriginTimeFrom}" />
+                <TextBlock Classes="tilde" />
+                <DatePicker SelectedDate="{Binding OriginTimeTo}" />
+            </StackPanel>
+
+            <TextBlock Text="マグニチュード" FontWeight="Bold" Margin="0,0,0,4" />
+            <StackPanel Classes="row">
+                <NumericUpDown Value="{Binding MagnitudeFrom}" Minimum="0" Maximum="20" Increment="0.1" FormatString="0.0" />
+                <TextBlock Classes="tilde" />
+                <NumericUpDown Value="{Binding MagnitudeTo}" Minimum="0" Maximum="20" Increment="0.1" FormatString="0.0" />
+            </StackPanel>
+
+            <TextBlock Text="深さ (km)" FontWeight="Bold" Margin="0,0,0,4" />
+            <StackPanel Classes="row">
+                <NumericUpDown Value="{Binding DepthFrom}" Minimum="0" Maximum="2000" Increment="10" FormatString="0" />
+                <TextBlock Classes="tilde" />
+                <NumericUpDown Value="{Binding DepthTo}" Minimum="0" Maximum="2000" Increment="10" FormatString="0" />
+            </StackPanel>
+
+            <TextBlock Text="最大震度" FontWeight="Bold" Margin="0,0,0,4" />
+            <StackPanel Classes="row">
+                <ComboBox ItemsSource="{x:Static models:EarthquakeSearchModel.IntensityChoices}"
+                          SelectedItem="{Binding IntensityFrom}" DisplayMemberBinding="{Binding Name}" />
+                <TextBlock Classes="tilde" />
+                <ComboBox ItemsSource="{x:Static models:EarthquakeSearchModel.IntensityChoices}"
+                          SelectedItem="{Binding IntensityTo}" DisplayMemberBinding="{Binding Name}" />
+            </StackPanel>
+
+            <TextBlock Text="震央の範囲" FontWeight="Bold" Margin="0,0,0,4" />
+            <StackPanel Classes="row">
+                <TextBlock Text="緯度" Classes="label" />
+                <NumericUpDown Value="{Binding LatitudeFrom}" Minimum="-90" Maximum="90" Increment="0.1" FormatString="0.0##" />
+                <TextBlock Classes="tilde" />
+                <NumericUpDown Value="{Binding LatitudeTo}" Minimum="-90" Maximum="90" Increment="0.1" FormatString="0.0##" />
+            </StackPanel>
+            <StackPanel Classes="row">
+                <TextBlock Text="経度" Classes="label" />
+                <NumericUpDown Value="{Binding LongitudeFrom}" Minimum="-180" Maximum="180" Increment="0.1" FormatString="0.0##" />
+                <TextBlock Classes="tilde" />
+                <NumericUpDown Value="{Binding LongitudeTo}" Minimum="-180" Maximum="180" Increment="0.1" FormatString="0.0##" />
+            </StackPanel>
+            <Button Name="SelectOnMapButton" Content="地図で範囲を選択" Margin="0,0,0,12" HorizontalAlignment="Left" />
+
+            <TextBlock Text="並び順" FontWeight="Bold" Margin="0,0,0,4" />
+            <StackPanel Classes="row">
+                <ComboBox ItemsSource="{x:Static models:EarthquakeSearchModel.SortByChoices}"
+                          SelectedItem="{Binding SortBy}" DisplayMemberBinding="{Binding Name}" />
+                <TextBlock Text=" " Margin="4,0" />
+                <ComboBox ItemsSource="{x:Static models:EarthquakeSearchModel.SortOrderChoices}"
+                          SelectedItem="{Binding SortOrder}" DisplayMemberBinding="{Binding Name}" />
+            </StackPanel>
+            <TextBlock IsVisible="{Binding IsPagingUnavailable}" TextWrapping="Wrap"
+                       FontSize="12" Foreground="{DynamicResource SubForegroundColor}" Margin="0,0,0,12"
+                       Text="発生時刻以外で並べ替えると、続きの読み込みができません。取得件数までの表示になります。" />
+
+            <Expander Header="詳細条件" Margin="0,0,0,8">
+                <StackPanel Margin="0,8,0,0">
+                    <TextBlock Text="最大長周期地震動階級" FontWeight="Bold" Margin="0,0,0,4" />
+                    <StackPanel Classes="row">
+                        <ComboBox ItemsSource="{x:Static models:EarthquakeSearchModel.LpgmIntensityChoices}"
+                                  SelectedItem="{Binding LpgmIntensityFrom}" DisplayMemberBinding="{Binding Name}" />
+                        <TextBlock Classes="tilde" />
+                        <ComboBox ItemsSource="{x:Static models:EarthquakeSearchModel.LpgmIntensityChoices}"
+                                  SelectedItem="{Binding LpgmIntensityTo}" DisplayMemberBinding="{Binding Name}" />
+                    </StackPanel>
+
+                    <TextBlock Text="地震の種別" FontWeight="Bold" Margin="0,0,0,4" />
+                    <ComboBox ItemsSource="{x:Static models:EarthquakeSearchModel.EarthquakeTypeChoices}"
+                              SelectedItem="{Binding EarthquakeType}" DisplayMemberBinding="{Binding Name}"
+                              HorizontalAlignment="Left" Margin="0,0,0,8" />
+
+                    <TextBlock Text="電文の状態" FontWeight="Bold" Margin="0,0,0,4" />
+                    <ComboBox ItemsSource="{x:Static models:EarthquakeSearchModel.StatusChoices}"
+                              SelectedItem="{Binding Status}" DisplayMemberBinding="{Binding Name}"
+                              HorizontalAlignment="Left" Margin="0,0,0,8" />
+
+                    <TextBlock Text="データソース" FontWeight="Bold" Margin="0,0,0,4" />
+                    <ComboBox ItemsSource="{x:Static models:EarthquakeSearchModel.DatasourceChoices}"
+                              SelectedItem="{Binding Datasource}" DisplayMemberBinding="{Binding Name}"
+                              HorizontalAlignment="Left" Margin="0,0,0,8" />
+
+                    <TextBlock Text="電文種別" FontWeight="Bold" Margin="0,0,0,4" />
+                    <ComboBox ItemsSource="{x:Static models:EarthquakeSearchModel.TelegramTypeChoices}"
+                              SelectedItem="{Binding TelegramType}" DisplayMemberBinding="{Binding Name}"
+                              HorizontalAlignment="Left" />
+                </StackPanel>
+            </Expander>
+
+            <Border IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                    Background="{DynamicResource WarningBackgroundColor}" CornerRadius="4" Padding="8" Margin="0,4,0,0">
+                <TextBlock Text="{Binding Error}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource WarningForegroundColor}" />
+            </Border>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0"
+                        IsVisible="{Binding IsSearching}">
+                <ui:FAProgressRing IsIndeterminate="True" Width="18" Height="18" />
+                <TextBlock Text="検索しています…" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="12"
+                           Foreground="{DynamicResource SubForegroundColor}" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
