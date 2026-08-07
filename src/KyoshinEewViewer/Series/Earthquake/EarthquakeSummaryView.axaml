@@ -5,6 +5,7 @@
 			 xmlns:controls="clr-namespace:KyoshinEewViewer.CustomControl;assembly=KyoshinEewViewer.CustomControl"
 			 xmlns:conv="clr-namespace:KyoshinEewViewer.Series.Earthquake.Converters;assembly=KyoshinEewViewer"
 			 xmlns:local="clr-namespace:KyoshinEewViewer.Series.Earthquake;assembly=KyoshinEewViewer"
+			 xmlns:ui="using:FluentAvalonia.UI.Controls"
 			 mc:Ignorable="d" d:DesignWidth="240" d:DesignHeight="300"
 			 x:Class="KyoshinEewViewer.Series.Earthquake.EarthquakeSummaryView"
 			 x:DataType="local:EarthquakeSeries"
@@ -16,11 +17,17 @@
     </UserControl.Resources>
     <StackPanel>
         <Border Background="{DynamicResource DockTitleBackgroundColor}" CornerRadius="4,4,0,0">
-            <TextBlock
-				x:Name="InfoTitle"
-				Text="{Binding CurrentEvent.Title}" FontWeight="Regular" FontSize="19" Margin="10,0"
-				VerticalAlignment="Center" HorizontalAlignment="Center"
-				IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <Panel>
+                <TextBlock
+				    x:Name="InfoTitle"
+				    Text="{Binding CurrentEvent.Title}" FontWeight="Regular" FontSize="19" Margin="10,0"
+				    VerticalAlignment="Center" HorizontalAlignment="Center"
+				    IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <!-- 詳細の取得中であることを示す -->
+                <ui:FAProgressRing IsVisible="{Binding IsLoadingDetail}" IsIndeterminate="True"
+                                   Width="18" Height="18" Margin="0,0,6,0"
+                                   VerticalAlignment="Center" HorizontalAlignment="Right" />
+            </Panel>
         </Border>
         <Border IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNull}}"
 				Background="{DynamicResource DockTitleBackgroundColor}" CornerRadius="4">

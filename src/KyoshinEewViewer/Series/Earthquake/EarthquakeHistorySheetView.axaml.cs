@@ -5,5 +5,9 @@ namespace KyoshinEewViewer.Series.Earthquake;
 public partial class EarthquakeHistorySheetView : UserControl
 {
 	public EarthquakeHistorySheetView()
-		=> InitializeComponent();
+	{
+		InitializeComponent();
+
+		HistoryScrollLoader.Attach(HistoryList);
+	}
 }

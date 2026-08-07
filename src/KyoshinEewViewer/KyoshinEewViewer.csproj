@@ -63,6 +63,14 @@
 		<AdditionalFiles Include="..\..\jma-code-dictionary\csv\AreaInformationCity.csv"
 			Link="csv\AreaInformationCity.csv" KeyType="int" KeyFormat="{0}" ValueType="string"
 			ValueFormat="&quot;{15}&quot;" />
+		<!-- 震度観測点コードから細分区域･市町村･観測点名を引く。
+		     電文を伴わない受信元では観測点名が得られないため、コードから解決する -->
+		<AdditionalFiles
+			Include="..\..\jma-code-dictionary\csv\AreaForecastLocalE_AreaInformationCity_PointSeismicIntensity.csv"
+			Link="csv\AreaForecastLocalE_AreaInformationCity_PointSeismicIntensity.csv" KeyType="int"
+			KeyFormat="{6}"
+			ValueType="(int RegionCode, string RegionName, int CityCode, string CityName, string Name)"
+			ValueFormat="({0}, &quot;{1}&quot;, {3}, &quot;{4}&quot;, &quot;{7}&quot;)" />
 		<!--<AdditionalFiles
 		Include="..\..\jma-code-dictionary\csv\AreaEpicenterAbbreviation.csv"
 		Link="csv\AreaEpicenterAbbreviation.csv" KeyType="int" KeyFormat="{0}" ValueType="string"

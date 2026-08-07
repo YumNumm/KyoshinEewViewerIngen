@@ -60,10 +60,24 @@ public class EarthquakeSeries : SeriesBase
 	private WorkflowService WorkflowService { get; }
 	public EarthquakeWatchService Service { get; set; }
 	/// <summary>
-	/// EQMonitor API からの取り込みを担う<br/>
-	/// 生存させるために保持している
+	/// EQMonitor API からの取り込みを担う
 	/// </summary>
-	private EqMonitorEarthquakeService EqMonitorService { get; }
+	public EqMonitorEarthquakeService EqMonitorService { get; }
+
+	/// <summary>
+	/// 一覧の末尾までスクロールされた際に、さらに過去の地震情報を読み込む
+	/// </summary>
+	public async Task LoadMoreHistoryAsync()
+	{
+		try
+		{
+			await EqMonitorService.LoadMoreAsync();
+		}
+		catch (Exception ex)
+		{
+			Logger.LogError(ex, "過去の地震情報の読み込み中に例外が発生しました");
+		}
+	}
 
 	private EarthquakeLayer EarthquakeLayer { get; } = new();
 	private MapData? MapData { get; set; }
@@ -290,6 +304,7 @@ public class EarthquakeSeries : SeriesBase
 				e.IsSelecting = e == eq;
 		CurrentEvent = eq;
 
+		IsLoadingDetail = true;
 		try
 		{
 			ResetView();
@@ -314,17 +329,104 @@ public class EarthquakeSeries : SeriesBase
 			ResetView();
 			Logger.LogError(ex, "表示のための電文の読み込みに失敗しました");
 		}
+		finally
+		{
+			IsLoadingDetail = false;
+		}
 	}
 
 	private void ResetView()
 	{
 		EarthquakeLayer.ClearPoints();
 		MapDisplayParameter = MapDisplayParameter with { CustomColorMap = null };
-		MapNavigationRequest = null;
 		ObservationIntensityGroups = null;
+		// 地図の位置は読み込みが終わってから動かすため、ここでは触らない
 	}
 
 	//public ReactiveCommand<string, Unit> ProcessHistoryXml { get; }
+
+	/// <summary>
+	/// EQMonitor API の詳細から観測点ごとの震度と地図の塗り分けを組み立てる
+	/// </summary>
+	/// <remarks>
+	/// 詳細にはコードしか含まれないため、気象庁のコード表から名前を解決する
+	/// </remarks>
+	private void ProcessEqMonitorDetail(
+		EqMonitorApi.Generated.Intensity detailIntensity,
+		EarthquakeInformationFragment targetFragment,
+		Dictionary<JmaIntensity, List<(Location Location, string Name)>> areaItems,
+		List<Location> zoomPoints)
+	{
+		var pointGroups = new List<ObservationIntensityGroup>();
+		var mapSub = new Dictionary<int, SKColor>();
+		var mapMun = new Dictionary<int, SKColor>();
+
+		FeatureLayer? areaLayer = null;
+		MapData?.TryGetLayer(LandLayerType.EarthquakeInformationSubdivisionArea, out areaLayer);
+
+		// 細分区域名は観測点のコード表から引くため、先に対応表を作る
+		var regionNames = new Dictionary<int, string>();
+
+		foreach (var tree in detailIntensity.Intensity_tree)
+		{
+			var intensity = tree.Intensity.ToJmaIntensity();
+			var color = FixedObjectRenderer.IntensityPaintCache[intensity].Background.Color;
+
+			foreach (var rawCode in tree.Stations ?? [])
+			{
+				if (!int.TryParse(rawCode, NumberStyles.None, CultureInfo.InvariantCulture, out var stationCode))
+					continue;
+				if (!CsvDictionary.AreaForecastLocalE_AreaInformationCity_PointSeismicIntensity.TryGetValue(stationCode, out var station))
+					continue;
+
+				// 市町村コードの上位2桁が都道府県コードになっている
+				var prefCode = station.CityCode / 100000;
+				var prefName = CsvDictionary.AreaInformationPrefectureEarthquake.TryGetValue(prefCode, out var p) ? p : $"不明({prefCode})";
+				pointGroups.AddStation(intensity, prefName, prefCode, station.CityName, station.CityCode, station.Name, rawCode);
+
+				regionNames[station.RegionCode] = station.RegionName;
+				if (Config.Earthquake.FillDetail)
+					mapMun[station.CityCode] = color;
+			}
+
+			foreach (var rawCode in tree.Regions)
+			{
+				if (!int.TryParse(rawCode, NumberStyles.None, CultureInfo.InvariantCulture, out var areaCode))
+					continue;
+
+				// 震度速報相当(震源未確定)のときのみ細分区域を塗る
+				if (targetFragment is IntensityInformationFragment && Config.Earthquake.FillSokuhou)
+					mapSub[areaCode] = color;
+
+				if (RegionCenterLocations.Default.GetLocation(LandLayerType.EarthquakeInformationSubdivisionArea, areaCode) is { } areaLoc)
+				{
+					if (!areaItems.TryGetValue(intensity, out var areas))
+						areaItems[intensity] = areas = [];
+					areas.Add((areaLoc, regionNames.TryGetValue(areaCode, out var n) ? n : $"不明({areaCode})"));
+				}
+
+				if (areaLayer == null)
+					continue;
+				foreach (var polygon in areaLayer.FindPolygon(areaCode))
+				{
+					zoomPoints.Add(polygon.BoundingBox.TopLeft.CastLocation());
+					zoomPoints.Add(polygon.BoundingBox.BottomRight.CastLocation());
+				}
+			}
+		}
+
+		MapDisplayParameter = MapDisplayParameter with
+		{
+			CustomColorMap = new()
+			{
+				{ LandLayerType.EarthquakeInformationSubdivisionArea, mapSub },
+				{ LandLayerType.MunicipalityEarthquakeTsunamiArea, mapMun },
+			},
+		};
+		ObservationIntensityGroups = pointGroups
+			.OrderByDescending(g => g.Intensity switch { JmaIntensity.Unknown => (((int)JmaIntensity.Int5Lower) * 10) - 1, _ => ((int)g.Intensity) * 10 })
+			.ToArray();
+	}
 
 	// 仮 内部でbodyはdisposeします
 	private async Task ProcessInformationFragment(EarthquakeEvent evt, EarthquakeInformationFragment targetFragment)
@@ -478,6 +580,13 @@ public class EarthquakeSeries : SeriesBase
 
 			MapDisplayParameter = MapDisplayParameter with { CustomColorMap = colorMap };
 			ObservationIntensityGroups = pointGroups.OrderByDescending(g => g.Intensity switch { JmaIntensity.Unknown => (((int)JmaIntensity.Int5Lower) * 10) - 1, _ => ((int)g.Intensity) * 10 }).ToArray();
+		}
+		else if (targetFragment is IntensityInformationFragment or HypocenterAndIntensityInformationFragment)
+		{
+			// 電文を伴わない受信元では、観測点ごとの震度を EQMonitor API から個別に取得する
+			var detail = await EqMonitorService.GetDetailAsync(evt.EventId);
+			if (detail?.Intensity is { } detailIntensity)
+				ProcessEqMonitorDetail(detailIntensity, targetFragment, areaItems, zoomPoints);
 		}
 
 		// 震央座標を取得して描画優先度が震央に近い順になるようにソート
@@ -780,6 +889,16 @@ public class EarthquakeSeries : SeriesBase
 	{
 		get => _isFault;
 		set => this.RaiseAndSetIfChanged(ref _isFault, value);
+	}
+
+	private bool _isLoadingDetail;
+	/// <summary>
+	/// 選択された地震の詳細を取得中か
+	/// </summary>
+	public bool IsLoadingDetail
+	{
+		get => _isLoadingDetail;
+		set => this.RaiseAndSetIfChanged(ref _isLoadingDetail, value);
 	}
 
 	private string _sourceString = "不明";
