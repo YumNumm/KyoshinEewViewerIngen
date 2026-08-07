@@ -4,8 +4,10 @@ using KyoshinEewViewer.EqMonitorApi.Generated;
 using ReactiveUI;
 using Splat;
 using System;
+using System.Globalization;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 
 namespace KyoshinEewViewer.Services.EqMonitor;
 
@@ -18,6 +20,31 @@ namespace KyoshinEewViewer.Services.EqMonitor;
 /// </remarks>
 public class EqMonitorApiProvider : ReactiveObject, IDisposable
 {
+	/// <summary>
+	/// アセンブリバージョン<br/>
+	/// common.props により Major.Minor.Build がアプリのバージョン、Revision がビルド番号になる
+	/// </summary>
+	private static Version AssemblyVersion { get; } =
+		Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0, 0);
+
+	/// <summary>
+	/// EQMonitor 側で識別するためのプラットフォーム名
+	/// </summary>
+	private static string PlatformName =>
+		OperatingSystem.IsAndroid() ? "Android" :
+		OperatingSystem.IsIOS() ? "iOS" :
+		OperatingSystem.IsMacOS() ? "macOS" :
+		OperatingSystem.IsWindows() ? "Windows" :
+		OperatingSystem.IsBrowser() ? "Browser" :
+		OperatingSystem.IsLinux() ? "Linux" :
+		"Unknown";
+
+	public static string UserAgent { get; } =
+		$"KyoshinEewViewer-{PlatformName}-v{AssemblyVersion.Major}.{AssemblyVersion.Minor}.{AssemblyVersion.Build}";
+
+	public static string BuildNumber { get; } =
+		AssemblyVersion.Revision.ToString(CultureInfo.InvariantCulture);
+
 	private ILogger Logger { get; }
 	private KyoshinEewViewerConfiguration Config { get; }
 
@@ -71,7 +98,8 @@ public class EqMonitorApiProvider : ReactiveObject, IDisposable
 			BaseAddress = uri,
 			Timeout = TimeSpan.FromSeconds(10),
 		};
-		_httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", $"KEVi_{Utils.Version}");
+		_httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
+		_httpClient.DefaultRequestHeaders.TryAddWithoutValidation("x-eqmonitor-build", BuildNumber);
 
 		_appliedBaseUrl = baseUrl;
 		_client = new EqMonitorApiClient(_httpClient);
