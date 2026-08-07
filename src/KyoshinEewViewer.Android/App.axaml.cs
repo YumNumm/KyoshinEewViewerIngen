@@ -99,6 +99,12 @@ public class App : Application
 					// MainView は論理ツリー未接続の場合にテーマリソースを解決できないため Application から引く
 					Dispatcher.UIThread.Post(() => FixedObjectRenderer.UpdateIntensityPaintCache(this));
 				});
+			KyoshinEewViewerApp.Selector.WhenAnyValue(x => x.SelectedWindowTheme)
+				.Subscribe(x =>
+				{
+					if (x == null) return;
+					config.Theme.WindowTheme = x.Meta;
+				});
 		}
 
 		base.OnFrameworkInitializationCompleted();
