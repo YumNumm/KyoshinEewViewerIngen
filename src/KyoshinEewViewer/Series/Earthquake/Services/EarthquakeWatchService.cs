@@ -160,6 +160,39 @@ public class EarthquakeWatchService : ReactiveObject
 		);
 	}
 
+	/// <summary>
+	/// 電文を伴わない受信元(EQMonitor API など)から取得した地震情報を取り込む
+	/// </summary>
+	/// <remarks>
+	/// 同一イベントを電文から構築済みの場合、そちらは観測点ごとの詳細な震度を持つため上書きしない
+	/// </remarks>
+	/// <returns>取り込まなかった場合は null</returns>
+	public EarthquakeEvent? MergeExternalEarthquake(string eventId, EarthquakeInformationFragment fragment)
+	{
+		if (Earthquakes.FirstOrDefault(e => e.EventId == eventId) is { } existing)
+		{
+			// 電文由来の情報の方が詳細なため手を加えない
+			if (existing.Fragments.Any(f => f.BasedTelegram != null))
+				return null;
+
+			existing.ReplaceFragments(fragment);
+			_earthquakeUpdatedSubject.OnNext(new EarthquakeUpdate(existing, IsBulkInserting: true, IsDryRun: false, Fragment: fragment, PreviousMaxIntensity: null));
+			return existing;
+		}
+
+		var eq = new EarthquakeEvent(eventId);
+		eq.AddFragment(fragment);
+
+		// イベントIDは yyyyMMddHHmmss 形式のため、文字列比較で新しい順に並べられる
+		var index = 0;
+		while (index < Earthquakes.Count && string.CompareOrdinal(Earthquakes[index].EventId, eventId) > 0)
+			index++;
+		Earthquakes.Insert(index, eq);
+
+		_earthquakeUpdatedSubject.OnNext(new EarthquakeUpdate(eq, IsBulkInserting: true, IsDryRun: false, Fragment: fragment, PreviousMaxIntensity: null));
+		return eq;
+	}
+
 	public async Task ProcessTsunamiInformation(Telegram telegram, bool hideNotice = false)
 	{
 		await using var stream = await telegram.GetBodyAsync();

@@ -88,6 +88,7 @@ public enum EewSource
 	SignalNowProfessional,
 	Dmdata,
 	Axis,
+	EqMonitor,
 }
 
 public record EewWarningAreas

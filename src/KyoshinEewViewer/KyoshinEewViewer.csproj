@@ -16,6 +16,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\KyoshinEewViewer.Core\KyoshinEewViewer.Core.csproj" />
 		<ProjectReference Include="..\KyoshinEewViewer.DCReportParser\KyoshinEewViewer.DCReportParser.csproj" />
+		<ProjectReference Include="..\KyoshinEewViewer.EqMonitorApi\KyoshinEewViewer.EqMonitorApi.csproj" />
 		<ProjectReference Include="..\KyoshinEewViewer.JmaXmlParser\KyoshinEewViewer.JmaXmlParser.csproj" />
 		<ProjectReference Include="..\KyoshinEewViewer.Map\KyoshinEewViewer.Map.csproj" />
 		<ProjectReference Include="..\KyoshinEewViewer.TravelTimeTable\KyoshinEewViewer.TravelTimeTable.csproj" />

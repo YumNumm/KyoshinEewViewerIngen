@@ -310,6 +310,14 @@ public class EewController
 			(EewSource.SignalNowProfessional, EewSource.Dmdata) or (EewSource.Axis, EewSource.Dmdata)
 				=> (EewUpdateReason.MorePriority, MergeCancellation(current, received, received)),
 
+			// 強震モニタ･SNP･AXIS より電文由来の EQMonitor を優先させる
+			(EewSource.KyoshinMonitor, EewSource.EqMonitor) or (EewSource.SignalNowProfessional, EewSource.EqMonitor) or (EewSource.Axis, EewSource.EqMonitor)
+				=> (EewUpdateReason.MorePriority, MergeCancellation(current, received, received)),
+
+			// 同じ電文由来だが、ポーリングの EQMonitor より受信が早い dmdata を優先させる
+			(EewSource.EqMonitor, EewSource.Dmdata)
+				=> (EewUpdateReason.MorePriority, MergeCancellation(current, received, received)),
+
 			_ when ShouldClearCancel(current, received)
 				=> (EewUpdateReason.CancelCleared, MergeCancellation(current, received, received)),
 

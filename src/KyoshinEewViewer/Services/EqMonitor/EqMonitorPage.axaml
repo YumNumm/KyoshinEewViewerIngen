@@ -1,0 +1,94 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:vm="using:KyoshinEewViewer.Services.EqMonitor"
+			 xmlns:ui="using:FluentAvalonia.UI.Controls"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="800"
+             x:DataType="vm:EqMonitorSettingPage" x:CompileBindings="True"
+             x:Class="KyoshinEewViewer.Services.EqMonitor.EqMonitorPage">
+    <UserControl.Styles>
+        <Style Selector="Label">
+            <Setter Property="Foreground" Value="{DynamicResource MainForegroundColor}" />
+        </Style>
+        <Style Selector="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="ui|FASettingsExpander">
+            <Setter Property="Margin" Value="10,3,10,0" />
+        </Style>
+    </UserControl.Styles>
+    <ScrollViewer>
+        <StackPanel>
+            <TextBlock Margin="10,10,10,5" FontSize="12" Foreground="{DynamicResource SubForegroundColor}"
+                       Text="EQMonitor API から地震情報と緊急地震速報を取得します。接続先は同梱していないため、利用するサーバの URL を入力してください。" />
+
+            <ui:FASettingsExpander Header="EQMonitor API を利用する" Description="接続先を入力していない場合は有効にできません。">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xf1e6;" FontFamily="{StaticResource IconFont}" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Config.EqMonitor.Enable}" OnContent="する" OffContent="しない" />
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
+
+            <ui:FASettingsExpander Header="接続先" IsExpanded="True">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xf0c1;" FontFamily="{StaticResource IconFont}" />
+                </ui:FASettingsExpander.IconSource>
+                <StackPanel>
+                    <TextBlock Text="ベース URL" Margin="0,0,10,5" />
+                    <TextBox Text="{Binding Config.EqMonitor.BaseUrl}" IsEnabled="{Binding !Config.EqMonitor.Enable}"
+                             PlaceholderText="https://example.com" Margin="10,0" TextWrapping="Wrap" />
+                    <TextBlock Margin="10,5,10,0" FontSize="12" Foreground="{DynamicResource SubForegroundColor}"
+                               Text="/v2/earthquake などのパスを除いた部分を入力してください。変更する際は一度無効にする必要があります。" />
+                </StackPanel>
+            </ui:FASettingsExpander>
+
+            <TextBlock Text="地震情報" FontWeight="Bold" Margin="10,20,10,5" />
+            <ui:FASettingsExpander Header="地震情報を取得する" Description="既存の受信元から取得済みの地震は上書きしません。">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xf05a;" FontFamily="{StaticResource IconFont}" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Config.EqMonitor.EnableEarthquake}" OnContent="する" OffContent="しない" />
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
+            <ui:FASettingsExpander Header="取得間隔" Description="1000ms 未満を指定しても 1000ms 間隔になります。">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xf017;" FontFamily="{StaticResource IconFont}" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <NumericUpDown Value="{Binding Config.EqMonitor.EarthquakePollingIntervalMs}" Minimum="1000" Maximum="600000" Increment="1000" FormatString="0" Width="150" />
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
+            <ui:FASettingsExpander Header="取得件数" Description="一度に取得する地震情報の件数です。">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xf0cb;" FontFamily="{StaticResource IconFont}" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <NumericUpDown Value="{Binding Config.EqMonitor.EarthquakeFetchCount}" Minimum="1" Maximum="100" Increment="10" FormatString="0" Width="150" />
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
+
+            <TextBlock Text="緊急地震速報" FontWeight="Bold" Margin="10,20,10,5" />
+            <ui:FASettingsExpander Header="緊急地震速報を取得する" Description="ポーリングでの取得のため、他の受信元より遅れる場合があります。">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xf0f3;" FontFamily="{StaticResource IconFont}" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Config.EqMonitor.EnableEew}" OnContent="する" OffContent="しない" />
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
+            <ui:FASettingsExpander Header="取得間隔" Description="1000ms 未満を指定しても 1000ms 間隔になります。">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xf017;" FontFamily="{StaticResource IconFont}" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <NumericUpDown Value="{Binding Config.EqMonitor.EewPollingIntervalMs}" Minimum="1000" Maximum="60000" Increment="1000" FormatString="0" Width="150" />
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

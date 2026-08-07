@@ -1,0 +1,3886 @@
+{
+  "openapi": "3.1.0",
+  "components": {
+    "schemas": {
+      "InternalServerErrorResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": "INTERNAL_SERVER_ERROR"
+          },
+          "message": {
+            "const": "Internal Server Error"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "NotFoundResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": "NOT_FOUND"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "BadRequestResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": "BAD_REQUEST"
+          },
+          "message": {
+            "const": "Bad Request"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "JmaIntensity": {
+        "enum": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "!5-",
+          "5-",
+          "5+",
+          "!6-",
+          "6-",
+          "6+",
+          "7"
+        ],
+        "type": "string",
+        "description": "震度",
+        "x-enumNames": [
+          "_0",
+          "_1",
+          "_2",
+          "_3",
+          "_4",
+          "Over5Minus",
+          "_5Minus",
+          "_5Plus",
+          "Over6Minus",
+          "_6Minus",
+          "_6Plus",
+          "_7"
+        ]
+      },
+      "JmaLpgmIntensity": {
+        "enum": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "type": "string",
+        "description": "LPGM震度",
+        "x-enumNames": [
+          "_0",
+          "_1",
+          "_2",
+          "_3",
+          "_4"
+        ]
+      },
+      "TelegramStatus": {
+        "enum": [
+          "NORMAL",
+          "TRAINING",
+          "TEST"
+        ],
+        "type": "string",
+        "description": "情報の運用状態"
+      },
+      "EarthquakeType": {
+        "enum": [
+          "NORMAL",
+          "DISTANT",
+          "VOLCANO"
+        ],
+        "type": "string",
+        "description": "地震種別 (NORMAL: 通常, DISTANT: 遠地地震, VOLCANO: 火山噴火)"
+      },
+      "EarthquakeDatasource": {
+        "enum": [
+          "JMA_INTENSITY_DATABASE",
+          "JMA_DISASTER_INFORMATION_XML"
+        ],
+        "type": "string",
+        "description": "地震データのソース"
+      },
+      "EarthquakeTelegramType": {
+        "enum": [
+          "VXSE51",
+          "VXSE52",
+          "VXSE53",
+          "VXSE61",
+          "VXSE62",
+          "VXSE45_FORECAST",
+          "VXSE45_WARNING"
+        ],
+        "type": "string",
+        "description": "地震イベントに紐づく電文タイプ"
+      },
+      "EarthquakeSortBy": {
+        "enum": [
+          "event_id",
+          "magnitude",
+          "max_intensity",
+          "max_lpgm_intensity",
+          "depth",
+          "origin_time"
+        ],
+        "type": "string",
+        "description": "地震情報のソートキー"
+      },
+      "SortOrder": {
+        "enum": [
+          "ASC",
+          "DESC"
+        ],
+        "type": "string",
+        "description": "ソート順"
+      },
+      "OriginTimePrecision": {
+        "enum": [
+          "MILLISECOND",
+          "SECOND",
+          "MINUTE",
+          "HOUR",
+          "DAY",
+          "MONTH"
+        ],
+        "type": "string",
+        "description": "発生時刻の精度"
+      },
+      "CodeName": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^\\d+$",
+            "description": "コードは、気象庁防災情報XMLフォーマット コード表 地震火山関連コード表 による"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ],
+        "description": "コードと名前のペア"
+      },
+      "Coordinate": {
+        "type": "object",
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "description": "緯度"
+          },
+          "longitude": {
+            "type": "number",
+            "description": "経度"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "examples": [
+          {
+            "latitude": 35.681236,
+            "longitude": 139.767125
+          }
+        ],
+        "description": "震源座標"
+      },
+      "MagnitudeType": {
+        "enum": [
+          "NORMAL",
+          "UNKNOWN",
+          "OVER_M8"
+        ],
+        "type": "string"
+      },
+      "Magnitude": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/MagnitudeType"
+          },
+          "value": {
+            "type": "number",
+            "description": "typeがNORMALのときのみ出現する",
+            "nullable": true
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "description": "地震の規模を表すマグニチュード",
+        "examples": [
+          {
+            "type": "NORMAL",
+            "value": 6.5
+          },
+          {
+            "type": "UNKNOWN"
+          }
+        ]
+      },
+      "DepthType": {
+        "enum": [
+          "SHALLOW",
+          "NORMAL",
+          "OVER_700",
+          "UNKNOWN"
+        ],
+        "type": "string",
+        "description": "震源の深さの種別"
+      },
+      "Depth": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/DepthType"
+          },
+          "value": {
+            "type": "number",
+            "description": "typeがNORMALのときのみ出現する",
+            "nullable": true
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "description": "震源の深さ",
+        "examples": [
+          {
+            "type": "NORMAL",
+            "value": 120
+          }
+        ]
+      },
+      "HypocenterAuxiliary": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string"
+          },
+          "distance_km": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "direction",
+          "distance_km"
+        ],
+        "description": "震源の補助情報（方角・距離等、津波電文で使用）"
+      },
+      "Hypocenter": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^\\d+$",
+            "description": "コードは、気象庁防災情報XMLフォーマット コード表 地震火山関連コード表 による",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "detailed": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CodeName"
+              }
+            ]
+          },
+          "coordinates": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Coordinate"
+              }
+            ]
+          },
+          "magnitude": {
+            "$ref": "#/components/schemas/Magnitude"
+          },
+          "depth": {
+            "$ref": "#/components/schemas/Depth"
+          },
+          "auxiliary": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HypocenterAuxiliary"
+              }
+            ]
+          }
+        },
+        "required": [
+          "magnitude",
+          "depth"
+        ],
+        "description": "震源に関する情報"
+      },
+      "IntensityPartial": {
+        "type": "object",
+        "properties": {
+          "max_intensity": {
+            "$ref": "#/components/schemas/JmaIntensity"
+          },
+          "max_lpgm_intensity": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JmaLpgmIntensity"
+              }
+            ]
+          }
+        },
+        "required": [
+          "max_intensity"
+        ]
+      },
+      "EarthquakePartial": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "description": "yyyyMMddHHmmss形式のイベントID",
+            "examples": [
+              "20251212191438"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/TelegramStatus"
+          },
+          "earthquake_type": {
+            "$ref": "#/components/schemas/EarthquakeType"
+          },
+          "origin_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "origin_time_precision": {
+            "$ref": "#/components/schemas/OriginTimePrecision"
+          },
+          "arrival_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "hypocenter": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Hypocenter"
+              }
+            ]
+          },
+          "estimated_intensity_tile": {
+            "type": "string",
+            "format": "uri",
+            "description": "推計震度PMTilesのフルURL",
+            "examples": [
+              "https://tiles.eqmonitor.app/ixac41/20240101072008.pmtiles"
+            ],
+            "nullable": true
+          },
+          "datasources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EarthquakeDatasource"
+            },
+            "description": "地震データのソースの配列"
+          },
+          "intensity": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IntensityPartial"
+              }
+            ]
+          },
+          "telegram_types": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EarthquakeTelegramType"
+            },
+            "description": "この地震イベントに紐づく電文タイプの配列"
+          }
+        },
+        "required": [
+          "event_id",
+          "status",
+          "earthquake_type",
+          "origin_time_precision",
+          "datasources",
+          "telegram_types"
+        ]
+      },
+      "EarthquakeListResponse": {
+        "type": "object",
+        "properties": {
+          "next_token": {
+            "type": "string",
+            "description": "カーソル情報（base64エンコード）",
+            "nullable": true
+          },
+          "next_pooling": {
+            "type": "string",
+            "description": "カーソル情報（base64エンコード）",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EarthquakePartial"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "IntensityTreeRegionId": {
+        "type": "string",
+        "description": "RegionID"
+      },
+      "IntensityTreeStationId": {
+        "type": "string",
+        "description": "観測点ID"
+      },
+      "IntensityTree": {
+        "type": "object",
+        "properties": {
+          "intensity": {
+            "$ref": "#/components/schemas/JmaIntensity"
+          },
+          "regions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IntensityTreeRegionId"
+            }
+          },
+          "stations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IntensityTreeStationId"
+            },
+            "nullable": true
+          }
+        },
+        "required": [
+          "intensity",
+          "regions"
+        ]
+      },
+      "LpgmIntensityTreeRegionId": {
+        "type": "string",
+        "description": "RegionID"
+      },
+      "LpgmPrePeriod": {
+        "type": "object",
+        "properties": {
+          "band": {
+            "type": "number"
+          },
+          "lpgm_intensity": {
+            "$ref": "#/components/schemas/JmaLpgmIntensity"
+          },
+          "sva": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "band",
+          "lpgm_intensity",
+          "sva"
+        ]
+      },
+      "IntensityStationItem": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "観測点ID"
+          },
+          "sva": {
+            "type": "number",
+            "description": "絶対速度応答スペクトルの1.6秒～7.8秒周期帯における最大値",
+            "nullable": true
+          },
+          "pre_periods": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LpgmPrePeriod"
+            },
+            "description": "1秒～7秒の範囲で1秒毎の周期帯における長周期地震動階級と絶対応答スペクトル",
+            "nullable": true
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "LpgmIntensityTree": {
+        "type": "object",
+        "properties": {
+          "lpgm_intensity": {
+            "$ref": "#/components/schemas/JmaLpgmIntensity"
+          },
+          "regions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LpgmIntensityTreeRegionId"
+            }
+          },
+          "stations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IntensityStationItem"
+            }
+          }
+        },
+        "required": [
+          "lpgm_intensity",
+          "regions",
+          "stations"
+        ]
+      },
+      "Intensity": {
+        "type": "object",
+        "properties": {
+          "max_intensity": {
+            "$ref": "#/components/schemas/JmaIntensity"
+          },
+          "max_lpgm_intensity": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JmaLpgmIntensity"
+              }
+            ]
+          },
+          "intensity_tree": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IntensityTree"
+            }
+          },
+          "lpgm_intensity_tree": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LpgmIntensityTree"
+            },
+            "nullable": true
+          }
+        },
+        "required": [
+          "max_intensity",
+          "intensity_tree"
+        ],
+        "description": "震度に関する情報"
+      },
+      "CatalogHypocenterRecordType": {
+        "enum": [
+          "A",
+          "B",
+          "D"
+        ],
+        "type": "string",
+        "description": "震源レコード種別。A:震源レコード、B:群発地震時の震源レコード、D:震源が離れた地震の組の震源レコード"
+      },
+      "CatalogHypocenterDepth": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "number",
+            "description": "震源の深さ(km)"
+          },
+          "stderr": {
+            "type": "number",
+            "description": "震源の深さの標準誤差(km)",
+            "nullable": true
+          },
+          "is_free": {
+            "type": "boolean",
+            "description": "深さフリー条件（震源評価コード1）で計算された震源かどうか"
+          }
+        },
+        "required": [
+          "value",
+          "is_free"
+        ]
+      },
+      "CatalogMagnitudeType": {
+        "enum": [
+          "J",
+          "D",
+          "d",
+          "V",
+          "v",
+          "W",
+          "B",
+          "S"
+        ],
+        "type": "string",
+        "description": "マグニチュード種別。J:旧観測網による坪井変位マグニチュード、D:坪井変位マグニチュードに準拠した変位マグニチュード、d:Dに同じで観測点数が少ないもの、V:Dに準拠した速度マグニチュード、v:Vに同じで観測点数が少ないもの、W:気象庁CMTまたはUSGS等によるモーメントマグニチュード、B:USGS等による実体波マグニチュード、S:USGS等による表面波マグニチュード",
+        "x-enumNames": [
+          "J_Upper",
+          "D_Upper",
+          "d",
+          "V_Upper",
+          "v",
+          "W_Upper",
+          "B_Upper",
+          "S_Upper"
+        ]
+      },
+      "CatalogHypocenterMagnitude": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/CatalogMagnitudeType"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "value"
+        ]
+      },
+      "CatalogIntensityClass": {
+        "enum": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "9",
+          "A",
+          "B",
+          "C",
+          "D",
+          "L",
+          "S",
+          "M",
+          "R",
+          "F",
+          "X"
+        ],
+        "type": "string",
+        "description": "震度階級コード。1〜7:震度1〜7、9:有感であるが震度不明、A:震度5弱、B:震度5強、C:震度6弱、D:震度6強（1996年10月以降の細分化震度）。歴史的階級（それ以前の期間のみ出現）— L:局発地震(最大有感距離100km未満)、S:小局発地震(100km以上200km未満)、M:やや顕著地震(200km以上300km未満)、R:顕著地震(300km以上)、F:有感地震(1984年まで)、X:付近有感(1996年9月まで)",
+        "x-enumNames": [
+          "_1",
+          "_2",
+          "_3",
+          "_4",
+          "_5",
+          "_6",
+          "_7",
+          "_9",
+          "A",
+          "B",
+          "C",
+          "D",
+          "L",
+          "S",
+          "M",
+          "R",
+          "F",
+          "X"
+        ]
+      },
+      "CatalogDeterminationFlag": {
+        "enum": [
+          "K",
+          "S",
+          "k",
+          "s",
+          "A",
+          "a",
+          "N",
+          "U",
+          "I",
+          "H",
+          "D",
+          "M"
+        ],
+        "type": "string",
+        "description": "震源決定フラグ。K:気象庁震源、S:気象庁参考震源、k:簡易気象庁震源、s:簡易参考震源、A:自動気象庁震源、a:自動参考震源、N:震源固定・震源不定・未計算、U:USGS震源、I:ISC震源、H:震度観測時刻が時間単位までのデータ、D:日単位までのデータ、M:月単位までのデータ",
+        "x-enumNames": [
+          "K_Upper",
+          "S_Upper",
+          "k",
+          "s",
+          "A_Upper",
+          "a",
+          "N_Upper",
+          "U_Upper",
+          "I_Upper",
+          "H_Upper",
+          "D_Upper",
+          "M_Upper"
+        ]
+      },
+      "CatalogHypocenterEvaluation": {
+        "enum": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "7",
+          "8"
+        ],
+        "type": "string",
+        "description": "震源評価（震源決定時の初期条件）。1:深さフリー、2:深さ刻み条件で最適解を求めた、3:深さ固定等、人の判断による、4:Depth phaseを用いた、5:S-Pを用いた、7:参考、8:決定不能または不採用",
+        "x-enumNames": [
+          "_1",
+          "_2",
+          "_3",
+          "_4",
+          "_5",
+          "_7",
+          "_8"
+        ]
+      },
+      "CatalogHypocenterAuxiliaryInfo": {
+        "enum": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "type": "string",
+        "description": "震源補助情報（気象庁決定震源の情報）。1:通常地震、2:他機関依存、3:人工地震、4:噴火に伴う地震動等、5:低周波イベント",
+        "x-enumNames": [
+          "_1",
+          "_2",
+          "_3",
+          "_4",
+          "_5"
+        ]
+      },
+      "CatalogTravelTimeTable": {
+        "enum": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7"
+        ],
+        "type": "string",
+        "description": "震源決定に使用した走時表。1:市川・望月(1971)または浜田(1984)など、2:市川(1978)（三陸沖等）、3:複合走時表（北海道東方沖等）、4:複合走時表（千島列島付近等）、5:上野・他(2002)（JMA2001）、6:JMA2001とLL複合（千島列島付近等）、7:JMA2001A/2020A/2020B/2020Cいずれか",
+        "x-enumNames": [
+          "_1",
+          "_2",
+          "_3",
+          "_4",
+          "_5",
+          "_6",
+          "_7"
+        ]
+      },
+      "CatalogHypocenter": {
+        "type": "object",
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "description": "0が代表震源"
+          },
+          "record_type": {
+            "$ref": "#/components/schemas/CatalogHypocenterRecordType"
+          },
+          "origin_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "origin_time_stderr_seconds": {
+            "type": "number",
+            "nullable": true
+          },
+          "coordinates": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Coordinate"
+              }
+            ]
+          },
+          "depth": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogHypocenterDepth"
+              }
+            ]
+          },
+          "magnitudes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogHypocenterMagnitude"
+            },
+            "description": "気象庁または他機関が計算したマグニチュード（0〜2件、magnitude1/magnitude2に対応）"
+          },
+          "max_intensity": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogIntensityClass"
+              }
+            ]
+          },
+          "epicenter_name": {
+            "type": "string"
+          },
+          "large_area_code": {
+            "type": "integer",
+            "nullable": true
+          },
+          "small_area_code": {
+            "type": "integer",
+            "nullable": true
+          },
+          "determination_flag": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogDeterminationFlag"
+              }
+            ]
+          },
+          "evaluation": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogHypocenterEvaluation"
+              }
+            ]
+          },
+          "auxiliary_info": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogHypocenterAuxiliaryInfo"
+              }
+            ]
+          },
+          "travel_time_table": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogTravelTimeTable"
+              }
+            ]
+          },
+          "station_count": {
+            "type": "integer",
+            "description": "震度1以上を観測した観測点の数"
+          }
+        },
+        "required": [
+          "seq",
+          "record_type",
+          "magnitudes",
+          "epicenter_name",
+          "station_count"
+        ]
+      },
+      "CatalogStationIntensity": {
+        "type": "object",
+        "properties": {
+          "class": {
+            "$ref": "#/components/schemas/CatalogIntensityClass"
+          },
+          "instrumental": {
+            "type": "number",
+            "description": "計測震度",
+            "nullable": true
+          }
+        },
+        "required": [
+          "class"
+        ]
+      },
+      "CatalogStationMaxAcceleration": {
+        "type": "object",
+        "properties": {
+          "synthesized_gal": {
+            "type": "number",
+            "nullable": true
+          },
+          "ns_gal": {
+            "type": "number",
+            "nullable": true
+          },
+          "ew_gal": {
+            "type": "number",
+            "nullable": true
+          },
+          "ud_gal": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [],
+        "description": "最大加速度（gal）。いずれかの成分が存在する場合のみ出現する"
+      },
+      "CatalogPeriodKind": {
+        "enum": [
+          "FREQUENCY",
+          "PERIOD"
+        ],
+        "type": "string",
+        "description": "周期・周波数の記録形式。FREQUENCY:周波数(Hz)で記録、PERIOD:周期(秒)で記録"
+      },
+      "CatalogPeriodValue": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/CatalogPeriodKind"
+          },
+          "value": {
+            "type": "number",
+            "description": "flagのみ記録され数値が欠測の行が実データに存在するため省略される場合がある",
+            "nullable": true
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "CatalogStationPeriodComponent": {
+        "type": "object",
+        "properties": {
+          "max_accel_period": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogPeriodValue"
+              }
+            ]
+          },
+          "predominant_period": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogPeriodValue"
+              }
+            ]
+          }
+        },
+        "required": []
+      },
+      "CatalogStationPeriods": {
+        "type": "object",
+        "properties": {
+          "ns": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogStationPeriodComponent"
+              }
+            ]
+          },
+          "ew": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogStationPeriodComponent"
+              }
+            ]
+          },
+          "ud": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogStationPeriodComponent"
+              }
+            ]
+          }
+        },
+        "required": [],
+        "description": "最大加速度発現時の周期・卓越周期（南北・東西・上下成分）。flagのみが記録され数値(value)が欠測の組み合わせが実データに存在するため、その場合はvalueを省略してflagのみ保持する"
+      },
+      "CatalogStationRecord": {
+        "type": "object",
+        "properties": {
+          "station_code": {
+            "type": "string"
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "intensity": {
+            "$ref": "#/components/schemas/CatalogStationIntensity"
+          },
+          "max_acceleration": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogStationMaxAcceleration"
+              }
+            ]
+          },
+          "max_accel_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "最大加速度（合成値）を観測した時刻",
+            "nullable": true
+          },
+          "periods": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogStationPeriods"
+              }
+            ]
+          },
+          "observation_count": {
+            "type": "integer",
+            "description": "観測回数。震源レコードのレコード種別フラグがM,H,Dの場合のみ記録される",
+            "nullable": true
+          }
+        },
+        "required": [
+          "station_code",
+          "intensity"
+        ]
+      },
+      "CatalogDamageScale": {
+        "enum": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "X",
+          "Y"
+        ],
+        "type": "string",
+        "description": "宇津(1999)の定義による被害規模。1:壁や地面に亀裂が生じる程度の微小被害、2:家屋の破損・道路の破損など小被害、3:複数の死者または複数の全壊家屋、4:死者20人以上または家屋全壊1千戸以上、5:死者200人以上または家屋全壊1万戸以上、6:死者2000人以上または家屋全壊10万戸以上、7:死者2万人以上または家屋全壊100万戸以上、X:被害があったが程度がわからないもの(1988年まで)、Y:直前・直後の地震の被害と一緒になったもの(1988年まで)",
+        "x-enumNames": [
+          "_1",
+          "_2",
+          "_3",
+          "_4",
+          "_5",
+          "_6",
+          "_7",
+          "X",
+          "Y"
+        ]
+      },
+      "CatalogTsunamiScale": {
+        "enum": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "T"
+        ],
+        "type": "string",
+        "description": "津波規模。年代により定義が異なる。1923〜1988年: 1:検潮器では観測されたが被害なし、T:津波あり。1989年以降（今村・飯田(1958)による波高）: 1:波高50cm以下、2:波高1m前後、3:波高2m前後、4:波高4〜6m程度、5:波高10〜20m程度、6:波高30m以上",
+        "x-enumNames": [
+          "_1",
+          "_2",
+          "_3",
+          "_4",
+          "_5",
+          "_6",
+          "T"
+        ]
+      },
+      "CatalogLinkMatchMethod": {
+        "enum": [
+          "auto",
+          "manual"
+        ],
+        "type": "string"
+      },
+      "CatalogLink": {
+        "type": "object",
+        "properties": {
+          "match_confidence": {
+            "type": "number"
+          },
+          "match_method": {
+            "$ref": "#/components/schemas/CatalogLinkMatchMethod"
+          },
+          "time_diff_seconds": {
+            "type": "number"
+          },
+          "distance_km": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "match_confidence",
+          "match_method",
+          "time_diff_seconds",
+          "distance_km"
+        ]
+      },
+      "Catalog": {
+        "type": "object",
+        "properties": {
+          "hypocenters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogHypocenter"
+            }
+          },
+          "station_records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogStationRecord"
+            }
+          },
+          "damage_scale": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogDamageScale"
+              }
+            ]
+          },
+          "tsunami_scale": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogTsunamiScale"
+              }
+            ]
+          },
+          "link": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogLink"
+              }
+            ]
+          }
+        },
+        "required": [
+          "hypocenters",
+          "station_records"
+        ],
+        "description": "震度データベースZIPカタログ由来の詳細情報（datasource=JMA_INTENSITY_DATABASEまたはXMLとの結合時のみ出現）"
+      },
+      "TelegramType": {
+        "enum": [
+          "VZSE40",
+          "VXSE42",
+          "VXSE43",
+          "VXSE44",
+          "VXSE45",
+          "VXSE47",
+          "VTSE41",
+          "VTSE51",
+          "VTSE52",
+          "VXSE51",
+          "VXSE52",
+          "VXSE53",
+          "VXSE56",
+          "VXSE60",
+          "VXSE61",
+          "VXSE62",
+          "NANKAI",
+          "VYSE60",
+          "SHINDO_DB"
+        ],
+        "type": "string",
+        "description": "情報名称(Control/Title部)"
+      },
+      "Telegram": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "event_id": {
+            "type": "string"
+          },
+          "serial_no": {
+            "type": "number",
+            "nullable": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/TelegramType"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TelegramStatus"
+          },
+          "info_type": {
+            "enum": [
+              "PUBLICATION",
+              "CORRECTION",
+              "DELAY",
+              "CANCELLATION"
+            ],
+            "type": "string"
+          },
+          "editorial_office": {
+            "type": "string"
+          },
+          "publishing_office": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "pressed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reported_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "targeted_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "revoked_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "headline": {
+            "type": "string",
+            "nullable": true
+          },
+          "info_kind": {
+            "type": "string"
+          },
+          "info_kind_version": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "body": {
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "event_id",
+          "type",
+          "title",
+          "status",
+          "info_type",
+          "editorial_office",
+          "publishing_office",
+          "pressed_at",
+          "reported_at",
+          "info_kind",
+          "info_kind_version",
+          "hash",
+          "created_at"
+        ]
+      },
+      "TelegramComments": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "free": {
+            "type": "string",
+            "nullable": true
+          },
+          "warning": {
+            "type": "string",
+            "nullable": true
+          },
+          "forecast": {
+            "type": "string",
+            "nullable": true
+          },
+          "additional": {
+            "type": "string",
+            "description": "固定付加文, var",
+            "nullable": true
+          },
+          "uri": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": []
+      },
+      "EarthquakeTelegram": {
+        "type": "object",
+        "properties": {
+          "telegram": {
+            "$ref": "#/components/schemas/Telegram"
+          },
+          "comments": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TelegramComments"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "telegram",
+          "comments"
+        ]
+      },
+      "Earthquake": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "description": "yyyyMMddHHmmss形式のイベントID",
+            "examples": [
+              "20251212191438"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/TelegramStatus"
+          },
+          "earthquake_type": {
+            "$ref": "#/components/schemas/EarthquakeType"
+          },
+          "origin_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "origin_time_precision": {
+            "$ref": "#/components/schemas/OriginTimePrecision"
+          },
+          "arrival_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "hypocenter": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Hypocenter"
+              }
+            ]
+          },
+          "intensity": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Intensity"
+              }
+            ]
+          },
+          "estimated_intensity_tile": {
+            "type": "string",
+            "format": "uri",
+            "description": "推計震度PMTilesのフルURL",
+            "examples": [
+              "https://tiles.eqmonitor.app/ixac41/20240101072008.pmtiles"
+            ],
+            "nullable": true
+          },
+          "datasources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EarthquakeDatasource"
+            },
+            "description": "地震データのソースの配列"
+          },
+          "catalog": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Catalog"
+              }
+            ]
+          },
+          "telegrams": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EarthquakeTelegram"
+            }
+          }
+        },
+        "required": [
+          "event_id",
+          "status",
+          "earthquake_type",
+          "origin_time_precision",
+          "datasources",
+          "telegrams"
+        ]
+      },
+      "EarthquakeDetailResponse": {
+        "type": "object",
+        "properties": {
+          "earthquake": {
+            "$ref": "#/components/schemas/Earthquake"
+          }
+        },
+        "required": [
+          "earthquake"
+        ]
+      },
+      "HighestIntensityItem": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "地域コード（気象庁防災情報XMLフォーマット コード表）"
+          },
+          "name": {
+            "type": "string",
+            "description": "地域名"
+          },
+          "intensity": {
+            "$ref": "#/components/schemas/JmaIntensity"
+          },
+          "count": {
+            "type": "integer",
+            "description": "同震度を観測した地震の件数"
+          },
+          "earthquake": {
+            "$ref": "#/components/schemas/EarthquakePartial"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "intensity",
+          "count",
+          "earthquake"
+        ]
+      },
+      "HighestIntensityResponse": {
+        "type": "object",
+        "properties": {
+          "aggregated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "このレスポンスで最高震度集計を生成した時刻"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HighestIntensityItem"
+            }
+          }
+        },
+        "required": [
+          "aggregated_at",
+          "items"
+        ]
+      },
+      "IntensityRegionSearchItem": {
+        "type": "object",
+        "properties": {
+          "intensity": {
+            "$ref": "#/components/schemas/JmaIntensity"
+          },
+          "earthquake": {
+            "$ref": "#/components/schemas/EarthquakePartial"
+          }
+        },
+        "required": [
+          "intensity",
+          "earthquake"
+        ]
+      },
+      "IntensityRegionSearchResponse": {
+        "type": "object",
+        "properties": {
+          "next_token": {
+            "type": "string",
+            "description": "カーソル情報（base64エンコード）",
+            "nullable": true
+          },
+          "next_pooling": {
+            "type": "string",
+            "description": "カーソル情報（base64エンコード）",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IntensityRegionSearchItem"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "IntensityPrefectureSearchItem": {
+        "type": "object",
+        "properties": {
+          "intensity": {
+            "$ref": "#/components/schemas/JmaIntensity"
+          },
+          "earthquake": {
+            "$ref": "#/components/schemas/EarthquakePartial"
+          }
+        },
+        "required": [
+          "intensity",
+          "earthquake"
+        ]
+      },
+      "IntensityPrefectureSearchResponse": {
+        "type": "object",
+        "properties": {
+          "next_token": {
+            "type": "string",
+            "description": "カーソル情報（base64エンコード）",
+            "nullable": true
+          },
+          "next_pooling": {
+            "type": "string",
+            "description": "カーソル情報（base64エンコード）",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IntensityPrefectureSearchItem"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "IntensityCitySearchItem": {
+        "type": "object",
+        "properties": {
+          "intensity": {
+            "$ref": "#/components/schemas/JmaIntensity"
+          },
+          "earthquake": {
+            "$ref": "#/components/schemas/EarthquakePartial"
+          }
+        },
+        "required": [
+          "intensity",
+          "earthquake"
+        ]
+      },
+      "IntensityCitySearchResponse": {
+        "type": "object",
+        "properties": {
+          "next_token": {
+            "type": "string",
+            "description": "カーソル情報（base64エンコード）",
+            "nullable": true
+          },
+          "next_pooling": {
+            "type": "string",
+            "description": "カーソル情報（base64エンコード）",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IntensityCitySearchItem"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "IntensityStationSearchItem": {
+        "type": "object",
+        "properties": {
+          "intensity": {
+            "$ref": "#/components/schemas/JmaIntensity"
+          },
+          "earthquake": {
+            "$ref": "#/components/schemas/EarthquakePartial"
+          }
+        },
+        "required": [
+          "intensity",
+          "earthquake"
+        ]
+      },
+      "IntensityStationSearchResponse": {
+        "type": "object",
+        "properties": {
+          "next_token": {
+            "type": "string",
+            "description": "カーソル情報（base64エンコード）",
+            "nullable": true
+          },
+          "next_pooling": {
+            "type": "string",
+            "description": "カーソル情報（base64エンコード）",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IntensityStationSearchItem"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "EewHypocenter": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^\\d+$",
+            "description": "コードは、気象庁防災情報XMLフォーマット コード表 地震火山関連コード表 による"
+          },
+          "name": {
+            "type": "string"
+          },
+          "detailed": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CodeName"
+              }
+            ]
+          },
+          "coordinates": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Coordinate"
+              }
+            ]
+          },
+          "magnitude": {
+            "type": "number",
+            "minimum": 0,
+            "nullable": true
+          },
+          "depth": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "震源の深さ `0`: `ごく浅い`, `700`: `700km以上`, `null`: `不明`",
+            "nullable": true
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "magnitude",
+          "depth"
+        ],
+        "description": "震源に関する情報"
+      },
+      "EewIntensityValue": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/JmaIntensity"
+          },
+          "is_over": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "value",
+          "is_over"
+        ],
+        "description": "予想震度の値"
+      },
+      "EewIntensityLpgmValue": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/JmaLpgmIntensity"
+          },
+          "is_over": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "value",
+          "is_over"
+        ],
+        "description": "予想長周期地震動階級の値"
+      },
+      "EewIntensityRegionArrivalTimeType": {
+        "enum": [
+          "TIME",
+          "ARRIVED"
+        ],
+        "type": "string"
+      },
+      "EewIntensityRegionArrivalTimeTime": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/EewIntensityRegionArrivalTimeType"
+          },
+          "value": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "EewIntensityItem": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^\\d+$",
+            "description": "コードは、気象庁防災情報XMLフォーマット コード表 地震火山関連コード表 による"
+          },
+          "name": {
+            "type": "string"
+          },
+          "is_plum": {
+            "type": "boolean"
+          },
+          "is_warning": {
+            "type": "boolean"
+          },
+          "intensity": {
+            "$ref": "#/components/schemas/EewIntensityValue"
+          },
+          "lpgm_intensity": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EewIntensityLpgmValue"
+              }
+            ]
+          },
+          "arrival_time": {
+            "$ref": "#/components/schemas/EewIntensityRegionArrivalTimeTime"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "is_plum",
+          "is_warning",
+          "intensity",
+          "arrival_time"
+        ]
+      },
+      "EewIntensity": {
+        "type": "object",
+        "properties": {
+          "max_intensity": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EewIntensityValue"
+              }
+            ]
+          },
+          "max_lpgm_intensity": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EewIntensityLpgmValue"
+              }
+            ]
+          },
+          "regions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EewIntensityItem"
+            }
+          }
+        },
+        "required": [
+          "regions"
+        ],
+        "description": "予想震度に関する情報"
+      },
+      "EewAccuracy": {
+        "type": "object",
+        "properties": {
+          "epicenter": {
+            "type": "number",
+            "description": "震央位置の精度値"
+          },
+          "hypocenter": {
+            "type": "number",
+            "description": "震源位置の精度値"
+          },
+          "depth": {
+            "type": "number",
+            "description": "深さの精度値"
+          },
+          "magnitude_calculation": {
+            "type": "number",
+            "description": "マグニチュードの精度値"
+          },
+          "number_of_magnitude_calculation": {
+            "type": "number",
+            "description": "マグニチュード計算使用観測点数"
+          }
+        },
+        "required": [
+          "epicenter",
+          "hypocenter",
+          "depth",
+          "magnitude_calculation",
+          "number_of_magnitude_calculation"
+        ]
+      },
+      "EewWarningZoneItem": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^\\d+$",
+            "description": "コードは、気象庁防災情報XMLフォーマット コード表 地震火山関連コード表 による"
+          },
+          "name": {
+            "type": "string"
+          },
+          "had_warning": {
+            "type": "boolean",
+            "description": "前回の情報において、警報だったかどうか"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "had_warning"
+        ]
+      },
+      "EewWarning": {
+        "type": "object",
+        "properties": {
+          "zones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EewWarningZoneItem"
+            }
+          },
+          "prefectures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EewWarningZoneItem"
+            }
+          },
+          "regions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EewWarningZoneItem"
+            }
+          }
+        },
+        "required": [
+          "zones",
+          "prefectures",
+          "regions"
+        ]
+      },
+      "EewItemWithRelations": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "description": "yyyyMMddHHmmss形式のイベントID"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TelegramType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TelegramStatus"
+          },
+          "info_type": {
+            "enum": [
+              "PUBLICATION",
+              "CORRECTION",
+              "DELAY",
+              "CANCELLATION"
+            ],
+            "type": "string"
+          },
+          "serial_no": {
+            "type": "number"
+          },
+          "headline": {
+            "type": "string",
+            "nullable": true
+          },
+          "is_canceled": {
+            "type": "boolean"
+          },
+          "is_warning": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "is_last_info": {
+            "type": "boolean"
+          },
+          "origin_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "arrival_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "hypocenter": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EewHypocenter"
+              }
+            ]
+          },
+          "forecast_intensity": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EewIntensity"
+              }
+            ]
+          },
+          "accuracy": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EewAccuracy"
+              }
+            ],
+            "nullable": true
+          },
+          "is_plum": {
+            "type": "boolean"
+          },
+          "editorial_office": {
+            "type": "string",
+            "nullable": true
+          },
+          "report_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "warning": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EewWarning"
+              }
+            ]
+          }
+        },
+        "required": [
+          "event_id",
+          "type",
+          "status",
+          "info_type",
+          "serial_no",
+          "headline",
+          "is_canceled",
+          "is_warning",
+          "is_last_info",
+          "origin_time",
+          "arrival_time",
+          "accuracy",
+          "is_plum",
+          "editorial_office",
+          "report_time"
+        ]
+      },
+      "EewListResponse": {
+        "type": "object",
+        "properties": {
+          "next_token": {
+            "type": "string",
+            "description": "カーソル情報（base64エンコード）",
+            "nullable": true
+          },
+          "next_pooling": {
+            "type": "string",
+            "description": "カーソル情報（base64エンコード）",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EewItemWithRelations"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "EewLatestResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EewItemWithRelations"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "EewArrayResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EewItemWithRelations"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      }
+    },
+    "parameters": {
+      "EarthquakeEventIdParam": {
+        "in": "path",
+        "name": "eventId",
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d{14}$"
+        },
+        "required": true
+      },
+      "HighestIntensityQueryParams": {
+        "in": "query",
+        "name": "statuses",
+        "schema": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/TelegramStatus"
+          },
+          "default": [
+            "NORMAL"
+          ]
+        }
+      },
+      "IntensityPrefectureCodeParam": {
+        "in": "path",
+        "name": "code",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required": true
+      },
+      "IntensityRegionCodeParam": {
+        "in": "path",
+        "name": "code",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required": true
+      },
+      "IntensityCityCodeParam": {
+        "in": "path",
+        "name": "code",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required": true
+      },
+      "IntensityStationCodeParam": {
+        "in": "path",
+        "name": "code",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required": true
+      },
+      "EewEventIdParam": {
+        "in": "path",
+        "name": "eventId",
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d{14}$"
+        },
+        "required": true
+      },
+      "EewEventIdSerialNoParam": {
+        "in": "path",
+        "name": "eventId",
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d{14}$"
+        },
+        "required": true
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Start",
+      "description": "アプリ起動情報"
+    },
+    {
+      "name": "Changelog",
+      "description": "バージョン履歴"
+    },
+    {
+      "name": "Earthquake",
+      "description": "地震情報"
+    },
+    {
+      "name": "EEW",
+      "description": "緊急地震速報"
+    },
+    {
+      "name": "Telegram",
+      "description": "気象庁電文"
+    },
+    {
+      "name": "User",
+      "description": "ユーザー"
+    },
+    {
+      "name": "Realtime",
+      "description": "リアルタイム（WebSocket）"
+    },
+    {
+      "name": "Device",
+      "description": "デバイス"
+    },
+    {
+      "name": "Seismicity",
+      "description": "地震活動可視化（震央分布manifest）"
+    }
+  ],
+  "info": {
+    "title": "EQMonitor Backend API",
+    "description": "EQMonitorのAPI仕様書",
+    "version": "2.0.0",
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "contact": {
+      "email": "admin@yumnumm.dev",
+      "name": "YumNumm",
+      "url": "https://github.com/YumNumm"
+    }
+  },
+  "paths": {
+    "/v2/earthquake": {
+      "get": {
+        "operationId": "getV2Earthquake",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "string"
+            },
+            "description": "1~100 の整数(string)"
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string",
+              "contentEncoding": "base64"
+            },
+            "description": "カーソル情報, {type}:{id} を base64 エンコードしたもの"
+          },
+          {
+            "in": "query",
+            "name": "magnitudeLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~20 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "magnitudeGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~20 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "depthLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~2000 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "depthGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~2000 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "intensityLte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "intensityGte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "maxLpgmIntensityLte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaLpgmIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "maxLpgmIntensityGte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaLpgmIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "originTimeGte",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "日付 (例: 2024-01-01)"
+          },
+          {
+            "in": "query",
+            "name": "originTimeLte",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "日付 (例: 2024-01-01)"
+          },
+          {
+            "in": "query",
+            "name": "statuses",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/TelegramStatus"
+              },
+              "default": [
+                "NORMAL"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "epicenterCodes",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "in": "query",
+            "name": "epicenterDetailCode",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "earthquakeType",
+            "schema": {
+              "$ref": "#/components/schemas/EarthquakeType"
+            }
+          },
+          {
+            "in": "query",
+            "name": "datasource",
+            "schema": {
+              "$ref": "#/components/schemas/EarthquakeDatasource"
+            }
+          },
+          {
+            "in": "query",
+            "name": "telegramTypes",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/EarthquakeTelegramType"
+              }
+            }
+          },
+          {
+            "in": "query",
+            "name": "latitudeGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "latitudeLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "longitudeGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "longitudeLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "$ref": "#/components/schemas/EarthquakeSortBy",
+              "default": "event_id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder",
+              "default": "DESC"
+            }
+          }
+        ],
+        "tags": [
+          "Earthquake"
+        ],
+        "description": "地震情報一覧。sortByでmagnitude/max_intensity/max_lpgm_intensity/depth/origin_timeを指定した場合、NULL値の並び順はPostgreSQLの既定に従います（ASC: 末尾、DESC: 先頭）。カーソルベースのページネーション(cursor)はevent_idに基づくため、sortByがevent_id以外の場合はcursorと併用できません（1ページ目の取得のみ対応）。",
+        "responses": {
+          "200": {
+            "description": "地震情報一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarthquakeListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部サーバエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/earthquake/{eventId}": {
+      "get": {
+        "operationId": "getV2EarthquakeByEventId",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EarthquakeEventIdParam"
+          }
+        ],
+        "tags": [
+          "Earthquake"
+        ],
+        "responses": {
+          "200": {
+            "description": "地震情報詳細",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarthquakeDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "地震情報が見つかりません",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部サーバエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/earthquake/intensity/prefecture/highest": {
+      "get": {
+        "operationId": "getV2EarthquakeIntensityPrefectureHighest",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/HighestIntensityQueryParams"
+          }
+        ],
+        "tags": [
+          "Earthquake"
+        ],
+        "description": "都道府県ごとの過去最高震度一覧",
+        "responses": {
+          "200": {
+            "description": "都道府県ごとの過去最高震度",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HighestIntensityResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部サーバエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/earthquake/intensity/prefecture/{code}/city/highest": {
+      "get": {
+        "operationId": "getV2EarthquakeIntensityPrefectureByCodeCityHighest",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IntensityPrefectureCodeParam"
+          },
+          {
+            "$ref": "#/components/parameters/HighestIntensityQueryParams"
+          }
+        ],
+        "tags": [
+          "Earthquake"
+        ],
+        "description": "指定都道府県内の市区町村ごとの過去最高震度一覧",
+        "responses": {
+          "200": {
+            "description": "市区町村ごとの過去最高震度",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HighestIntensityResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部サーバエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/earthquake/intensity/region/{code}": {
+      "get": {
+        "operationId": "getV2EarthquakeIntensityRegionByCode",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IntensityRegionCodeParam"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "string"
+            },
+            "description": "1~100 の整数(string)"
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string",
+              "contentEncoding": "base64"
+            },
+            "description": "カーソル情報, {type}:{id} を base64 エンコードしたもの"
+          },
+          {
+            "in": "query",
+            "name": "magnitudeLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~20 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "magnitudeGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~20 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "depthLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~2000 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "depthGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~2000 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "intensityLte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "intensityGte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "maxLpgmIntensityLte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaLpgmIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "maxLpgmIntensityGte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaLpgmIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "originTimeGte",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "日付 (例: 2024-01-01)"
+          },
+          {
+            "in": "query",
+            "name": "originTimeLte",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "日付 (例: 2024-01-01)"
+          },
+          {
+            "in": "query",
+            "name": "statuses",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/TelegramStatus"
+              },
+              "default": [
+                "NORMAL"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "epicenterCodes",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "in": "query",
+            "name": "epicenterDetailCode",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "earthquakeType",
+            "schema": {
+              "$ref": "#/components/schemas/EarthquakeType"
+            }
+          },
+          {
+            "in": "query",
+            "name": "datasource",
+            "schema": {
+              "$ref": "#/components/schemas/EarthquakeDatasource"
+            }
+          },
+          {
+            "in": "query",
+            "name": "telegramTypes",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/EarthquakeTelegramType"
+              }
+            }
+          },
+          {
+            "in": "query",
+            "name": "latitudeGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "latitudeLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "longitudeGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "longitudeLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "$ref": "#/components/schemas/EarthquakeSortBy",
+              "default": "event_id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder",
+              "default": "DESC"
+            }
+          }
+        ],
+        "tags": [
+          "Earthquake"
+        ],
+        "description": "震度細分区域コードから地震を検索。ソートはevent_idのみ対応。sortByパラメータは無視されます。",
+        "responses": {
+          "200": {
+            "description": "震度細分区域から地震検索",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntensityRegionSearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部サーバエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/earthquake/intensity/prefecture/{code}": {
+      "get": {
+        "operationId": "getV2EarthquakeIntensityPrefectureByCode",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IntensityPrefectureCodeParam"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "string"
+            },
+            "description": "1~100 の整数(string)"
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string",
+              "contentEncoding": "base64"
+            },
+            "description": "カーソル情報, {type}:{id} を base64 エンコードしたもの"
+          },
+          {
+            "in": "query",
+            "name": "magnitudeLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~20 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "magnitudeGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~20 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "depthLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~2000 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "depthGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~2000 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "intensityLte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "intensityGte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "maxLpgmIntensityLte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaLpgmIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "maxLpgmIntensityGte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaLpgmIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "originTimeGte",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "日付 (例: 2024-01-01)"
+          },
+          {
+            "in": "query",
+            "name": "originTimeLte",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "日付 (例: 2024-01-01)"
+          },
+          {
+            "in": "query",
+            "name": "statuses",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/TelegramStatus"
+              },
+              "default": [
+                "NORMAL"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "epicenterCodes",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "in": "query",
+            "name": "epicenterDetailCode",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "earthquakeType",
+            "schema": {
+              "$ref": "#/components/schemas/EarthquakeType"
+            }
+          },
+          {
+            "in": "query",
+            "name": "datasource",
+            "schema": {
+              "$ref": "#/components/schemas/EarthquakeDatasource"
+            }
+          },
+          {
+            "in": "query",
+            "name": "telegramTypes",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/EarthquakeTelegramType"
+              }
+            }
+          },
+          {
+            "in": "query",
+            "name": "latitudeGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "latitudeLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "longitudeGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "longitudeLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "$ref": "#/components/schemas/EarthquakeSortBy",
+              "default": "event_id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder",
+              "default": "DESC"
+            }
+          }
+        ],
+        "tags": [
+          "Earthquake"
+        ],
+        "description": "都道府県コードから地震を検索。ソートはevent_idのみ対応。sortByパラメータは無視されます。",
+        "responses": {
+          "200": {
+            "description": "都道府県から地震検索",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntensityPrefectureSearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部サーバエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/earthquake/intensity/city/{code}": {
+      "get": {
+        "operationId": "getV2EarthquakeIntensityCityByCode",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IntensityCityCodeParam"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "string"
+            },
+            "description": "1~100 の整数(string)"
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string",
+              "contentEncoding": "base64"
+            },
+            "description": "カーソル情報, {type}:{id} を base64 エンコードしたもの"
+          },
+          {
+            "in": "query",
+            "name": "magnitudeLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~20 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "magnitudeGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~20 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "depthLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~2000 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "depthGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~2000 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "intensityLte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "intensityGte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "maxLpgmIntensityLte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaLpgmIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "maxLpgmIntensityGte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaLpgmIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "originTimeGte",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "日付 (例: 2024-01-01)"
+          },
+          {
+            "in": "query",
+            "name": "originTimeLte",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "日付 (例: 2024-01-01)"
+          },
+          {
+            "in": "query",
+            "name": "statuses",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/TelegramStatus"
+              },
+              "default": [
+                "NORMAL"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "epicenterCodes",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "in": "query",
+            "name": "epicenterDetailCode",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "earthquakeType",
+            "schema": {
+              "$ref": "#/components/schemas/EarthquakeType"
+            }
+          },
+          {
+            "in": "query",
+            "name": "datasource",
+            "schema": {
+              "$ref": "#/components/schemas/EarthquakeDatasource"
+            }
+          },
+          {
+            "in": "query",
+            "name": "telegramTypes",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/EarthquakeTelegramType"
+              }
+            }
+          },
+          {
+            "in": "query",
+            "name": "latitudeGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "latitudeLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "longitudeGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "longitudeLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "$ref": "#/components/schemas/EarthquakeSortBy",
+              "default": "event_id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder",
+              "default": "DESC"
+            }
+          }
+        ],
+        "tags": [
+          "Earthquake"
+        ],
+        "description": "市区町村コードから地震を検索。ソートはevent_idのみ対応。sortByパラメータは無視されます。",
+        "responses": {
+          "200": {
+            "description": "市区町村から地震検索",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntensityCitySearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部サーバエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/earthquake/intensity/station/{code}": {
+      "get": {
+        "operationId": "getV2EarthquakeIntensityStationByCode",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IntensityStationCodeParam"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "string"
+            },
+            "description": "1~100 の整数(string)"
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string",
+              "contentEncoding": "base64"
+            },
+            "description": "カーソル情報, {type}:{id} を base64 エンコードしたもの"
+          },
+          {
+            "in": "query",
+            "name": "magnitudeLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~20 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "magnitudeGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~20 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "depthLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~2000 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "depthGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~2000 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "intensityLte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "intensityGte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "maxLpgmIntensityLte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaLpgmIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "maxLpgmIntensityGte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaLpgmIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "originTimeGte",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "日付 (例: 2024-01-01)"
+          },
+          {
+            "in": "query",
+            "name": "originTimeLte",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "日付 (例: 2024-01-01)"
+          },
+          {
+            "in": "query",
+            "name": "statuses",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/TelegramStatus"
+              },
+              "default": [
+                "NORMAL"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "epicenterCodes",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "in": "query",
+            "name": "epicenterDetailCode",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "earthquakeType",
+            "schema": {
+              "$ref": "#/components/schemas/EarthquakeType"
+            }
+          },
+          {
+            "in": "query",
+            "name": "datasource",
+            "schema": {
+              "$ref": "#/components/schemas/EarthquakeDatasource"
+            }
+          },
+          {
+            "in": "query",
+            "name": "telegramTypes",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/EarthquakeTelegramType"
+              }
+            }
+          },
+          {
+            "in": "query",
+            "name": "latitudeGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "latitudeLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "longitudeGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "longitudeLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "-180~180 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "$ref": "#/components/schemas/EarthquakeSortBy",
+              "default": "event_id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder",
+              "default": "DESC"
+            }
+          }
+        ],
+        "tags": [
+          "Earthquake"
+        ],
+        "description": "観測点コードから地震を検索。ソートはevent_idのみ対応。sortByパラメータは無視されます。",
+        "responses": {
+          "200": {
+            "description": "観測点から地震検索",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntensityStationSearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部サーバエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/eew": {
+      "get": {
+        "operationId": "getV2Eew",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "string"
+            },
+            "description": "1~100 の整数(string)"
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string",
+              "contentEncoding": "base64"
+            },
+            "description": "カーソル情報, {type}:{id} を base64 エンコードしたもの"
+          },
+          {
+            "in": "query",
+            "name": "magnitudeLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~20 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "magnitudeGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~20 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "depthLte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~2000 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "depthGte",
+            "schema": {
+              "type": "string"
+            },
+            "description": "0~2000 の実数(string)"
+          },
+          {
+            "in": "query",
+            "name": "intensityLte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "intensityGte",
+            "schema": {
+              "$ref": "#/components/schemas/JmaIntensity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "originTimeGte",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "日付 (例: 2024-01-01)"
+          },
+          {
+            "in": "query",
+            "name": "originTimeLte",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "日付 (例: 2024-01-01)"
+          },
+          {
+            "in": "query",
+            "name": "statuses",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/TelegramStatus"
+              },
+              "default": [
+                "NORMAL"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "isWarning",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "EEW"
+        ],
+        "description": "最終報の緊急地震速報一覧を取得",
+        "responses": {
+          "200": {
+            "description": "最終報の緊急地震速報一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EewListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部サーバエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/eew/latest": {
+      "get": {
+        "operationId": "getV2EewLatest",
+        "tags": [
+          "EEW"
+        ],
+        "responses": {
+          "200": {
+            "description": "発表から5分以内の最新緊急地震速報",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EewLatestResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部サーバエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/eew/{eventId}": {
+      "get": {
+        "operationId": "getV2EewByEventId",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EewEventIdParam"
+          }
+        ],
+        "tags": [
+          "EEW"
+        ],
+        "responses": {
+          "200": {
+            "description": "緊急地震速報配列",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EewArrayResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "緊急地震速報が見つかりません",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部サーバエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/eew/{eventId}/{serialNo}": {
+      "get": {
+        "operationId": "getV2EewByEventIdBySerialNo",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EewEventIdSerialNoParam"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "serialNo",
+            "required": true
+          }
+        ],
+        "tags": [
+          "EEW"
+        ],
+        "responses": {
+          "200": {
+            "description": "緊急地震速報",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EewItemWithRelations"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "緊急地震速報が見つかりません",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "内部サーバエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

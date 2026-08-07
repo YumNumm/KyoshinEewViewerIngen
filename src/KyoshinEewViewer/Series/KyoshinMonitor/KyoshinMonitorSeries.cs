@@ -9,6 +9,7 @@ using KyoshinEewViewer.Series.KyoshinMonitor.SettingPages;
 using KyoshinEewViewer.Series.KyoshinMonitor.Templates;
 using KyoshinEewViewer.Series.KyoshinMonitor.Workflow;
 using KyoshinEewViewer.Services;
+using KyoshinEewViewer.Services.EqMonitor;
 using WorkflowsNamespace = KyoshinEewViewer.Services.Workflows;
 using KyoshinEewViewer.Services.Workflows.BuiltinActions;
 using KyoshinMonitorLib;
@@ -165,7 +166,8 @@ public class KyoshinMonitorSeries : SeriesBase
 		TelegramProvideService telegramProvideService,
 		AxisInformationProvider axis,
 		ISubWindowsService? subWindowService,
-		Services.ObservationPointsUpdateService observationPointsUpdateService) : base(MetaData)
+		Services.ObservationPointsUpdateService observationPointsUpdateService,
+		EqMonitorApiProvider eqMonitorApiProvider) : base(MetaData)
 	{
 		SplatRegistrations.RegisterLazySingleton<KyoshinMonitorSeries>();
 
@@ -180,7 +182,7 @@ public class KyoshinMonitorSeries : SeriesBase
 		ReplaySettingPage = new KyoshinMonitorReplaySettingPage(Config, this, timerService, subWindowService);
 
 		var eewController = new Services.Eew.EewController(logManager, this, config, soundPlayer, workflowService);
-		CurrentInformationHost = RealtimeInformationHost = new(logManager, config, eewController, timerService, telegramProvideService, axis, observationPointsUpdateService);
+		CurrentInformationHost = RealtimeInformationHost = new(logManager, config, eewController, timerService, telegramProvideService, axis, observationPointsUpdateService, eqMonitorApiProvider);
 		RegisterSystemWorkflows();
 		RealtimeInformationHost.KyoshinEventUpdated += e =>
 		{

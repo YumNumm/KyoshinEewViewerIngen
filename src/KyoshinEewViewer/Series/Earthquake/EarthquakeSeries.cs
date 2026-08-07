@@ -17,6 +17,7 @@ using KyoshinEewViewer.Series.Earthquake.SettingPages;
 using KyoshinEewViewer.Series.Earthquake.Templates;
 using KyoshinEewViewer.Series.Earthquake.Workflow;
 using KyoshinEewViewer.Services;
+using KyoshinEewViewer.Services.EqMonitor;
 using KyoshinEewViewer.Services.TelegramPublishers;
 using KyoshinEewViewer.Services.Workflows.BuiltinActions;
 using WorkflowsNamespace = KyoshinEewViewer.Services.Workflows;
@@ -58,6 +59,11 @@ public class EarthquakeSeries : SeriesBase
 	private TelegramProvideService TelegramProvideService { get; }
 	private WorkflowService WorkflowService { get; }
 	public EarthquakeWatchService Service { get; set; }
+	/// <summary>
+	/// EQMonitor API からの取り込みを担う<br/>
+	/// 生存させるために保持している
+	/// </summary>
+	private EqMonitorEarthquakeService EqMonitorService { get; }
 
 	private EarthquakeLayer EarthquakeLayer { get; } = new();
 	private MapData? MapData { get; set; }
@@ -69,7 +75,8 @@ public class EarthquakeSeries : SeriesBase
 		WorkflowService workflowService,
 		SoundPlayerService soundPlayer,
 		TelegramProvideService telegramProvider,
-		NotificationService notifyService) : base(MetaData)
+		NotificationService notifyService,
+		EqMonitorEarthquakeService eqMonitorService) : base(MetaData)
 	{
 		SplatRegistrations.RegisterLazySingleton<EarthquakeSeries>();
 
@@ -78,6 +85,7 @@ public class EarthquakeSeries : SeriesBase
 		TelegramProvideService = telegramProvider;
 		NotificationService = notifyService;
 		WorkflowService = workflowService;
+		EqMonitorService = eqMonitorService;
 
 		UpdatedSound = soundPlayer.RegisterSound(SoundCategory, "Updated", "地震情報の更新", "{int}: 最大震度 [？,0,1,...,6-,6+,7]", new() { { "int", "4" }, });
 		IntensityUpdatedSound = soundPlayer.RegisterSound(SoundCategory, "IntensityUpdated", "震度の更新", "{int}: 最大震度 [？,0,1,...,6-,6+,7]", new() { { "int", "4" }, });
@@ -333,12 +341,14 @@ public class EarthquakeSeries : SeriesBase
 		}
 
 		// 観測情報が存在する情報の場合読み込む
-		if (targetFragment is IntensityInformationFragment or HypocenterAndIntensityInformationFragment)
+		// 電文本文を伴わない受信元では観測点ごとの震度を読み出せないため、震源のみの表示にとどめる
+		if (targetFragment is IntensityInformationFragment or HypocenterAndIntensityInformationFragment
+			&& targetFragment.BasedTelegram is { } basedTelegram)
 		{
 			var colorMap = new Dictionary<LandLayerType, Dictionary<int, SKColor>>();
 			var pointGroups = new List<ObservationIntensityGroup>();
 
-			await using var stream = await targetFragment.BasedTelegram.GetBodyAsync();
+			await using var stream = await basedTelegram.GetBodyAsync();
 			using var report = new JmaXmlDocument(stream);
 
 			// 観測点に関する情報を解析する

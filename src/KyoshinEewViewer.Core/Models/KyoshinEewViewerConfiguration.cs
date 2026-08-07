@@ -1183,6 +1183,86 @@ public class KyoshinEewViewerConfiguration : ReactiveObject, IWindowPlacementCon
 		}
 	}
 
+	private EqMonitorConfig _eqMonitor = new();
+	public EqMonitorConfig EqMonitor
+	{
+		get => _eqMonitor;
+		set => this.RaiseAndSetIfChanged(ref _eqMonitor, value);
+	}
+	public class EqMonitorConfig : ReactiveObject
+	{
+		private bool _enable;
+		/// <summary>
+		/// EQMonitor API からの受信を行うか
+		/// </summary>
+		public bool Enable
+		{
+			get => _enable;
+			set => this.RaiseAndSetIfChanged(ref _enable, value);
+		}
+
+		private string _baseUrl = "";
+		/// <summary>
+		/// API のベース URL<br/>
+		/// 配布物に接続先を持たせないため、既定値は設けず利用者に入力させる
+		/// </summary>
+		public string BaseUrl
+		{
+			get => _baseUrl;
+			set => this.RaiseAndSetIfChanged(ref _baseUrl, value);
+		}
+
+		private bool _enableEarthquake = true;
+		/// <summary>
+		/// 地震情報を取得するか
+		/// </summary>
+		public bool EnableEarthquake
+		{
+			get => _enableEarthquake;
+			set => this.RaiseAndSetIfChanged(ref _enableEarthquake, value);
+		}
+
+		private bool _enableEew;
+		/// <summary>
+		/// 緊急地震速報を取得するか
+		/// </summary>
+		public bool EnableEew
+		{
+			get => _enableEew;
+			set => this.RaiseAndSetIfChanged(ref _enableEew, value);
+		}
+
+		private int _eewPollingIntervalMs = 1000;
+		/// <summary>
+		/// 緊急地震速報のポーリング間隔(ミリ秒)
+		/// </summary>
+		public int EewPollingIntervalMs
+		{
+			get => _eewPollingIntervalMs;
+			set => this.RaiseAndSetIfChanged(ref _eewPollingIntervalMs, value);
+		}
+
+		private int _earthquakePollingIntervalMs = 5000;
+		/// <summary>
+		/// 地震情報のポーリング間隔(ミリ秒)
+		/// </summary>
+		public int EarthquakePollingIntervalMs
+		{
+			get => _earthquakePollingIntervalMs;
+			set => this.RaiseAndSetIfChanged(ref _earthquakePollingIntervalMs, value);
+		}
+
+		private int _earthquakeFetchCount = 50;
+		/// <summary>
+		/// 地震情報を一度に取得する件数
+		/// </summary>
+		public int EarthquakeFetchCount
+		{
+			get => _earthquakeFetchCount;
+			set => this.RaiseAndSetIfChanged(ref _earthquakeFetchCount, value);
+		}
+	}
+
 	private DebugConfig _debug = new();
 	public DebugConfig Debug
 	{

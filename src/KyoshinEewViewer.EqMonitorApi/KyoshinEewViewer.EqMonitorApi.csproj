@@ -14,10 +14,20 @@
     </PackageReference>
   </ItemGroup>
 
-  <!-- OpenAPI 仕様（リポジトリルートの openapi.json を参照。dotnet openapi add file 相当） -->
+  <!--
+    EQMonitor Backend の API クライアントを生成する。
+    openapi.json は scripts/update-eqmonitor-openapi.py が正規化して出力したものを使う。
+    正規化しないと enum 名が衝突してビルドが通らない (詳細はスクリプト冒頭のコメント参照)。
+
+    UseBaseUrl:false は必須。既定では servers の URL が BaseUrl の初期値としてソースへ
+    焼き込まれるが、KEVi はサーバの URL を保持せず利用者に入力させるため、
+    接続先は HttpClient.BaseAddress からのみ与える。
+  -->
   <ItemGroup>
-    <OpenApiReference Include="..\..\openapi.json" Link="openapi.json" CodeGenerator="NSwagCSharp"
-      Namespace="KyoshinEewViewer.EqMonitorApi.Generated" />
+    <OpenApiReference Include="openapi.json" CodeGenerator="NSwagCSharp"
+      Namespace="KyoshinEewViewer.EqMonitorApi.Generated"
+      ClassName="EqMonitorApiClient"
+      Options="/UseBaseUrl:false /GenerateOptionalParameters:true /GenerateNullableReferenceTypes:true /GenerateClientInterfaces:true /ArrayType:System.Collections.Generic.IReadOnlyList /ArrayInstanceType:System.Collections.Generic.List" />
   </ItemGroup>
 
 </Project>

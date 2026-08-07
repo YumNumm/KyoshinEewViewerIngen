@@ -111,6 +111,19 @@ public class EarthquakeEvent : ReactiveObject
 	}
 
 	/// <summary>
+	/// 電文を伴わない受信元からの情報で内容を置き換える
+	/// </summary>
+	/// <remarks>
+	/// 電文と違い差分ではなくイベント全体の最新状態が毎回届くため、追記ではなく置き換える
+	/// </remarks>
+	public void ReplaceFragments(EarthquakeInformationFragment fragment)
+	{
+		Fragments.Clear();
+		Fragments.Add(fragment);
+		SyncProperties();
+	}
+
+	/// <summary>
 	/// 震源・震度情報の同期
 	/// </summary>
 	private void SyncProperties()
