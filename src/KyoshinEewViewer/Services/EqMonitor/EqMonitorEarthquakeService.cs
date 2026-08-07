@@ -20,6 +20,11 @@ namespace KyoshinEewViewer.Services.EqMonitor;
 /// </summary>
 public class EqMonitorEarthquakeService : ReactiveObject
 {
+	/// <summary>
+	/// 受信元として表示する名前
+	/// </summary>
+	private const string SourceName = "EQMonitor";
+
 	private ILogger Logger { get; }
 	private KyoshinEewViewerConfiguration Config { get; }
 	private EqMonitorApiProvider ApiProvider { get; }
@@ -61,7 +66,10 @@ public class EqMonitorEarthquakeService : ReactiveObject
 		timerService.TimerElapsed += t =>
 		{
 			if (!Config.EqMonitor.Enable || !Config.EqMonitor.EnableEarthquake)
+			{
+				WatchService.SetExternalSource(null);
 				return;
+			}
 			// タイマは1秒間隔のため、これより短い設定でも1秒間隔になる
 			if (t - _lastFetchedAt < TimeSpan.FromMilliseconds(Math.Max(Config.EqMonitor.EarthquakePollingIntervalMs, 1000)))
 				return;
@@ -76,7 +84,10 @@ public class EqMonitorEarthquakeService : ReactiveObject
 	public async Task FetchAsync()
 	{
 		if (ApiProvider.GetClient() is not { } client)
+		{
+			WatchService.SetExternalSource(null);
 			return;
+		}
 
 		// 前回の取得が終わっていなければ見送る
 		if (!await _fetchLock.WaitAsync(0))
@@ -104,9 +115,12 @@ public class EqMonitorEarthquakeService : ReactiveObject
 			if (merged > 0)
 				Logger.LogInfo($"EQMonitor API から地震情報を {response.Items.Count} 件取得し {merged} 件を取り込みました");
 			_isFailing = false;
+			// 電文の受信元が失効していても、こちらが生きていれば受信エラーにしない
+			WatchService.SetExternalSource(SourceName);
 		}
 		catch (Exception ex)
 		{
+			WatchService.SetExternalSource(null);
 			// 数秒ごとに取得するため、復帰するまでは最初の1回だけ記録する
 			if (!_isFailing)
 			{

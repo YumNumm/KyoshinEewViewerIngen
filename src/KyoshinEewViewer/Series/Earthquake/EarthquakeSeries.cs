@@ -295,7 +295,12 @@ public class EarthquakeSeries : SeriesBase
 			ResetView();
 
 			// TODO 電文を選べるようにする
-			var lastFragment = eq.Fragments.LastOrDefault(f => f is IntensityInformationFragment or HypocenterAndIntensityInformationFragment and not LpgmIntensityInformationFragment)
+			static bool IsIntensityFragment(EarthquakeInformationFragment f)
+				=> f is IntensityInformationFragment or HypocenterAndIntensityInformationFragment and not LpgmIntensityInformationFragment;
+
+			// 電文を伴う情報からのみ観測点ごとの震度を読み出せるため、存在すればそちらを優先する
+			var lastFragment = eq.Fragments.LastOrDefault(f => IsIntensityFragment(f) && f.BasedTelegram != null)
+				?? eq.Fragments.LastOrDefault(IsIntensityFragment)
 				?? eq.Fragments.LastOrDefault();
 			if (lastFragment != null)
 			{

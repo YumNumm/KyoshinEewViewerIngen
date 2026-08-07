@@ -31,6 +31,16 @@ public class EarthquakeWatchService : ReactiveObject
 	public EarthquakeStationParameterResponse? Stations { get; private set; }
 	public ObservableCollection<EarthquakeEvent> Earthquakes { get; } = [];
 
+	/// <summary>
+	/// <see cref="Earthquakes"/> と各イベントの情報フラグメントを操作するためのロック
+	/// </summary>
+	/// <remarks>
+	/// 電文の受信と EQMonitor API の取得は別々のスレッドから同時に到達しうる。
+	/// 排他しないと同一イベントが二重に作られたり、電文由来のフラグメントが
+	/// 上書き判定をすり抜けて消えたりする
+	/// </remarks>
+	private object EarthquakesLock { get; } = new();
+
 	private readonly Subject<EarthquakeUpdate> _earthquakeUpdatedSubject = new();
 	private readonly Subject<Unit> _failedSubject = new();
 	private readonly Subject<Unit> _sourceSwitchingSubject = new();
@@ -56,6 +66,56 @@ public class EarthquakeWatchService : ReactiveObject
 	private ILogger Logger { get; }
 	private KyoshinEewViewerConfiguration Config { get; }
 
+	/// <summary>
+	/// 電文以外の受信元(EQMonitor API など)の名前<br/>
+	/// 提供されていない場合は null
+	/// </summary>
+	private string? ExternalSourceName { get; set; }
+
+	/// <summary>
+	/// 電文の受信元がすべて失効しているか
+	/// </summary>
+	private bool IsTelegramSourceFailed { get; set; }
+
+	/// <summary>
+	/// 電文以外の受信元の状態を設定する
+	/// </summary>
+	/// <remarks>
+	/// 電文の受信元がすべて失効していても、こちらが生きていれば地震情報は表示できるため受信エラーとしない
+	/// </remarks>
+	/// <param name="name">受信元名。利用できなくなった場合は null</param>
+	public void SetExternalSource(string? name)
+	{
+		if (ExternalSourceName == name)
+			return;
+		ExternalSourceName = name;
+
+		// 電文の受信元が生きている間は表示状態に影響しない
+		if (!IsTelegramSourceFailed)
+			return;
+
+		if (name == null)
+		{
+			_failedSubject.OnNext(Unit.Default);
+			return;
+		}
+
+		Logger.LogInfo($"電文の受信元が失効していますが、{name} から受信しているため表示を継続します");
+		NotifyExternalSourceActive(name);
+	}
+
+	/// <summary>
+	/// 電文以外の受信元へ切り替わったことを通知する
+	/// </summary>
+	/// <remarks>
+	/// 受信エラーの表示は切り替え開始の通知で解除されるため、通常の受信元切り替えと同じ順序で流す
+	/// </remarks>
+	private void NotifyExternalSourceActive(string name)
+	{
+		_sourceSwitchingSubject.OnNext(Unit.Default);
+		_sourceSwitchedSubject.OnNext(name);
+	}
+
 	public EarthquakeWatchService(
 		ILogManager logManager,
 		KyoshinEewViewerConfiguration config,
@@ -71,6 +131,8 @@ public class EarthquakeWatchService : ReactiveObject
 			InformationCategory.Earthquake,
 			async (s, t) =>
 			{
+				// 電文の受信元が使えるようになった
+				IsTelegramSourceFailed = false;
 				_sourceSwitchingSubject.OnNext(Unit.Default);
 
 				if (s.Contains("DM-D.S.S") && Stations == null)
@@ -84,7 +146,8 @@ public class EarthquakeWatchService : ReactiveObject
 						Logger.LogError(ex, "地震観測点情報取得中に問題が発生しました");
 					}
 
-				Earthquakes.Clear();
+				lock (EarthquakesLock)
+					Earthquakes.Clear();
 				foreach (var h in t.OrderBy(h => h.ArrivalTime).ToArray())
 				{
 					try
@@ -109,8 +172,9 @@ public class EarthquakeWatchService : ReactiveObject
 					}
 				}
 				// 電文データがない(震源情報しかないなどの)データを削除する
-				foreach (var eq in Earthquakes.Where(e => e.Fragments.All(f => f is not IntensityInformationFragment and not HypocenterAndIntensityInformationFragment)).ToArray())
-					Earthquakes.Remove(eq);
+				lock (EarthquakesLock)
+					foreach (var eq in Earthquakes.Where(e => e.Fragments.All(f => f is not IntensityInformationFragment and not HypocenterAndIntensityInformationFragment)).ToArray())
+						Earthquakes.Remove(eq);
 
 				foreach (var eq in Earthquakes)
 					_earthquakeUpdatedSubject.OnNext(new EarthquakeUpdate(eq, IsBulkInserting: true, IsDryRun: false, Fragment: null, PreviousMaxIntensity: null));
@@ -131,10 +195,21 @@ public class EarthquakeWatchService : ReactiveObject
 			},
 			s =>
 			{
-				if (s.isAllFailed)
-					_failedSubject.OnNext(Unit.Default);
-				else
+				if (!s.isAllFailed)
+				{
 					_sourceSwitchingSubject.OnNext(Unit.Default);
+					return;
+				}
+
+				IsTelegramSourceFailed = true;
+				// 電文以外の受信元が地震情報を提供していれば受信エラーとしない
+				if (ExternalSourceName is { } externalSource)
+				{
+					Logger.LogInfo($"電文の受信元が失効しましたが、{externalSource} から受信しているため表示を継続します");
+					NotifyExternalSourceActive(externalSource);
+					return;
+				}
+				_failedSubject.OnNext(Unit.Default);
 			});
 
 		telegramProvider.Subscribe(
@@ -169,28 +244,33 @@ public class EarthquakeWatchService : ReactiveObject
 	/// <returns>取り込まなかった場合は null</returns>
 	public EarthquakeEvent? MergeExternalEarthquake(string eventId, EarthquakeInformationFragment fragment)
 	{
-		if (Earthquakes.FirstOrDefault(e => e.EventId == eventId) is { } existing)
+		EarthquakeEvent target;
+		lock (EarthquakesLock)
 		{
-			// 電文由来の情報の方が詳細なため手を加えない
-			if (existing.Fragments.Any(f => f.BasedTelegram != null))
-				return null;
+			if (Earthquakes.FirstOrDefault(e => e.EventId == eventId) is { } existing)
+			{
+				// 電文由来の情報の方が詳細なため手を加えない
+				if (existing.Fragments.Any(f => f.BasedTelegram != null))
+					return null;
 
-			existing.ReplaceFragments(fragment);
-			_earthquakeUpdatedSubject.OnNext(new EarthquakeUpdate(existing, IsBulkInserting: true, IsDryRun: false, Fragment: fragment, PreviousMaxIntensity: null));
-			return existing;
+				existing.ReplaceFragments(fragment);
+				target = existing;
+			}
+			else
+			{
+				target = new EarthquakeEvent(eventId);
+				target.AddFragment(fragment);
+
+				// イベントIDは yyyyMMddHHmmss 形式のため、文字列比較で新しい順に並べられる
+				var index = 0;
+				while (index < Earthquakes.Count && string.CompareOrdinal(Earthquakes[index].EventId, eventId) > 0)
+					index++;
+				Earthquakes.Insert(index, target);
+			}
 		}
 
-		var eq = new EarthquakeEvent(eventId);
-		eq.AddFragment(fragment);
-
-		// イベントIDは yyyyMMddHHmmss 形式のため、文字列比較で新しい順に並べられる
-		var index = 0;
-		while (index < Earthquakes.Count && string.CompareOrdinal(Earthquakes[index].EventId, eventId) > 0)
-			index++;
-		Earthquakes.Insert(index, eq);
-
-		_earthquakeUpdatedSubject.OnNext(new EarthquakeUpdate(eq, IsBulkInserting: true, IsDryRun: false, Fragment: fragment, PreviousMaxIntensity: null));
-		return eq;
+		_earthquakeUpdatedSubject.OnNext(new EarthquakeUpdate(target, IsBulkInserting: true, IsDryRun: false, Fragment: fragment, PreviousMaxIntensity: null));
+		return target;
 	}
 
 	public async Task ProcessTsunamiInformation(Telegram telegram, bool hideNotice = false)
@@ -204,13 +284,17 @@ public class EarthquakeWatchService : ReactiveObject
 		foreach (var (eventId, fragment) in fragments)
 		{
 			// TODO 作成できるようにしておいた方がよさそう
-			var eq = Earthquakes.FirstOrDefault(e => e.EventId == eventId);
+			EarthquakeEvent? eq;
+			lock (EarthquakesLock)
+			{
+				eq = Earthquakes.FirstOrDefault(e => e.EventId == eventId);
+				eq?.AddFragment(fragment);
+			}
 			if (eq == null)
 			{
 				Logger.LogWarning($"イベントID {eventId} が見つからなかったため津波情報による震源情報の更新を行いませんでした。");
 				continue;
 			}
-			eq.AddFragment(fragment);
 			if (!hideNotice)
 				_earthquakeUpdatedSubject.OnNext(new EarthquakeUpdate(eq, IsBulkInserting: false, IsDryRun: false, Fragment: null, PreviousMaxIntensity: null));
 		}
@@ -226,22 +310,31 @@ public class EarthquakeWatchService : ReactiveObject
 			if (!_targetTitles.Contains(report.Control.Title))
 				return null;
 
-			var isCreated = false;
-			// 保存されている Earthquake インスタンスを抜き出してくる
-			var eq = Earthquakes.FirstOrDefault(e => e.EventId == report.Head.EventId);
-			if (eq == null || dryRun)
+			bool isCreated;
+			EarthquakeEvent eq;
+			JmaIntensity prevInt;
+			EarthquakeInformationFragment? fragment;
+			// EQMonitor API の取り込みと同時に到達しても壊れないよう、
+			// イベントの取得･作成からフラグメントの追加までを排他する
+			lock (EarthquakesLock)
 			{
-				eq = new EarthquakeEvent(report.Head.EventId);
-				if (!dryRun)
-					Earthquakes.Insert(0, eq);
-				isCreated = true;
+				isCreated = false;
+				// 保存されている Earthquake インスタンスを抜き出してくる
+				eq = Earthquakes.FirstOrDefault(e => e.EventId == report.Head.EventId)!;
+				if (eq == null || dryRun)
+				{
+					eq = new EarthquakeEvent(report.Head.EventId);
+					if (!dryRun)
+						Earthquakes.Insert(0, eq);
+					isCreated = true;
+				}
+
+				// 情報更新前の震度
+				prevInt = eq.Intensity;
+
+				// 情報を処理
+				fragment = eq.ProcessTelegram(telegram, report);
 			}
-
-			// 情報更新前の震度
-			var prevInt = eq.Intensity;
-
-			// 情報を処理
-			var fragment = eq.ProcessTelegram(telegram, report);
 			if (!hideNotice)
 				_earthquakeUpdatedSubject.OnNext(new EarthquakeUpdate(eq, IsBulkInserting: false, IsDryRun: dryRun, Fragment: fragment, PreviousMaxIntensity: isCreated ? null : prevInt));
 			return eq;
