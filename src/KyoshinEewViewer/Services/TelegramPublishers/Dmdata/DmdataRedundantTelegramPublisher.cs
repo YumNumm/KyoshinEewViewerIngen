@@ -7,6 +7,7 @@ using DmdataSharp.WebSocketMessages.V2;
 using DynamicData;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
+using KyoshinEewViewer.Services.NetworkDebug;
 using ReactiveUI;
 using Splat;
 using System;
@@ -71,7 +72,7 @@ public class DmdataRedundantTelegramPublisher : TelegramPublisher, IDisposable
 		{ "eew.warning", new[] { InformationCategory.EewWarning } },
 	};
 
-	private IDmdataApiClientBuilder ClientBuilder { get; } = DmdataApiClientBuilder.Default
+	private IDmdataApiClientBuilder ClientBuilder { get; } = DmdataApiClientBuilder.UseOwnHttpClient(NetworkDebugHttpClient.Create())
 			.Referrer(new Uri("https://www.ingen084.net/"))
 			.UserAgent($"KEVi_{Utils.Version};@ingen084");
 	private OAuthCredential? Credential { get; set; }

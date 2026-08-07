@@ -1,5 +1,6 @@
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
+using KyoshinEewViewer.Services.NetworkDebug;
 using KyoshinMonitorLib.Timers;
 using Splat;
 using System;
@@ -70,7 +71,7 @@ public partial class TimerService
 
 		Config = config;
 		Logger = logManager.GetLogger<TimerService>();
-		HttpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(1000) };
+		HttpClient = NetworkDebugHttpClient.Create(timeout: TimeSpan.FromMilliseconds(1000));
 		HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("UserAgent", "KEViFallback");
 
 		RegularlyTimer = new Timer(s =>

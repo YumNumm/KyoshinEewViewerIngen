@@ -4,11 +4,13 @@ using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Core.Models.Events;
 using KyoshinEewViewer.Core.Models.Metrics;
 using KyoshinEewViewer.Services;
+using KyoshinEewViewer.Services.NetworkDebug;
 using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
 using ReactiveUI;
 using Splat;
 using System;
 using System.ComponentModel;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive.Linq;
@@ -34,8 +36,15 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 
 	private IDisposable? _metricsSubscription;
 	private IDisposable? _logSubscription;
+	private IDisposable? _networkSubscription;
 	private bool _isActive;
 	private readonly InMemoryLoggerProvider? _loggerProvider;
+	private readonly NetworkDebugRecorder? _networkRecorder;
+
+	/// <summary>
+	/// 絞り込み前のすべての通信記録
+	/// </summary>
+	private readonly List<NetworkTransactionViewModel> _allNetworkTransactions = [];
 
 	private ObservableCollection<LayerMetricsViewModel> _layerMetrics = [];
 	public ObservableCollection<LayerMetricsViewModel> LayerMetrics
@@ -124,6 +133,50 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 		}
 	}
 
+	private ObservableCollection<NetworkTransactionViewModel> _networkTransactions = [];
+	/// <summary>
+	/// 絞り込み後の通信記録
+	/// </summary>
+	public ObservableCollection<NetworkTransactionViewModel> NetworkTransactions
+	{
+		get => _networkTransactions;
+		set => this.RaiseAndSetIfChanged(ref _networkTransactions, value);
+	}
+
+	private NetworkTransactionViewModel? _selectedNetworkTransaction;
+	public NetworkTransactionViewModel? SelectedNetworkTransaction
+	{
+		get => _selectedNetworkTransaction;
+		set => this.RaiseAndSetIfChanged(ref _selectedNetworkTransaction, value);
+	}
+
+	/// <summary>
+	/// 通信内容を記録するか
+	/// </summary>
+	public bool RecordNetworkTraffic
+	{
+		get => Config.Debug.RecordNetworkTraffic;
+		set
+		{
+			Config.Debug.RecordNetworkTraffic = value;
+			this.RaisePropertyChanged();
+		}
+	}
+
+	private string _networkHostFilter = "";
+	/// <summary>
+	/// 接続先ホストによる絞り込み
+	/// </summary>
+	public string NetworkHostFilter
+	{
+		get => _networkHostFilter;
+		set
+		{
+			this.RaiseAndSetIfChanged(ref _networkHostFilter, value);
+			ApplyNetworkFilter();
+		}
+	}
+
 	private bool _isDmdataReconnecting;
 	public bool IsDmdataReconnecting
 	{
@@ -144,6 +197,7 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 
 		Config = config;
 		_loggerProvider = loggerProvider ?? Locator.Current.GetService<InMemoryLoggerProvider>();
+		_networkRecorder = Locator.Current.GetService<NetworkDebugRecorder>();
 		DmdataPublisher = Locator.Current.GetService<DmdataRedundantTelegramPublisher>();
 		if (DmdataPublisher is INotifyPropertyChanged dmdataInpc)
 		{
@@ -169,8 +223,16 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 			.ObserveOn(RxSchedulers.MainThreadScheduler)
 			.Subscribe(msg => AddLogEntry(msg.Entry));
 
+		// 通信記録は強震モニタにより毎秒発生するため、まとめて追加して描画負荷を抑える
+		_networkSubscription = MessageBus.Current.Listen<NetworkTransactionAdded>()
+			.Buffer(TimeSpan.FromMilliseconds(250))
+			.Where(messages => messages.Count > 0)
+			.ObserveOn(RxSchedulers.MainThreadScheduler)
+			.Subscribe(AddNetworkTransactions);
+
 		// 初回ログ読み込み
 		LoadInitialLogs();
+		LoadInitialNetworkTransactions();
 
 		// ウィンドウがアクティブになったらメトリクス収集を有効化
 		Activate();
@@ -189,6 +251,57 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 		{
 			AddLogEntry(log);
 		}
+	}
+
+	/// <summary>
+	/// 通信タブを開く前に発生していた記録を読み込む
+	/// </summary>
+	private void LoadInitialNetworkTransactions()
+	{
+		if (_networkRecorder == null)
+			return;
+
+		foreach (var transaction in _networkRecorder.GetAll())
+			_allNetworkTransactions.Add(NetworkTransactionViewModel.From(transaction));
+		ApplyNetworkFilter();
+	}
+
+	private void AddNetworkTransactions(IList<NetworkTransactionAdded> messages)
+	{
+		foreach (var message in messages)
+		{
+			var viewModel = NetworkTransactionViewModel.From(message.Transaction);
+			_allNetworkTransactions.Add(viewModel);
+			if (IsMatchNetworkFilter(viewModel))
+				NetworkTransactions.Add(viewModel);
+		}
+
+		while (_allNetworkTransactions.Count > NetworkDebugRecorder.MaxEntryCount)
+			_allNetworkTransactions.RemoveAt(0);
+		while (NetworkTransactions.Count > NetworkDebugRecorder.MaxEntryCount)
+			NetworkTransactions.RemoveAt(0);
+	}
+
+	private bool IsMatchNetworkFilter(NetworkTransactionViewModel viewModel)
+		=> string.IsNullOrWhiteSpace(NetworkHostFilter) ||
+			viewModel.Host.Contains(NetworkHostFilter.Trim(), StringComparison.OrdinalIgnoreCase);
+
+	private void ApplyNetworkFilter()
+	{
+		NetworkTransactions.Clear();
+		foreach (var viewModel in _allNetworkTransactions.Where(IsMatchNetworkFilter))
+			NetworkTransactions.Add(viewModel);
+	}
+
+	/// <summary>
+	/// 通信記録をクリア
+	/// </summary>
+	public void ClearNetworkTransactions()
+	{
+		_networkRecorder?.Clear();
+		_allNetworkTransactions.Clear();
+		NetworkTransactions.Clear();
+		SelectedNetworkTransaction = null;
 	}
 
 	/// <summary>
@@ -283,6 +396,7 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 			dmdataInpc.PropertyChanged -= h;
 		_metricsSubscription?.Dispose();
 		_logSubscription?.Dispose();
+		_networkSubscription?.Dispose();
 		GC.SuppressFinalize(this);
 	}
 

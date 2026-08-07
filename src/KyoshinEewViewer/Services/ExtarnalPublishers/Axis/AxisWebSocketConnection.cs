@@ -1,4 +1,5 @@
 using KyoshinEewViewer.Services.ExtarnalPublishers.Axis.ApiModels;
+using KyoshinEewViewer.Services.NetworkDebug;
 using System;
 using System.Diagnostics;
 using System.Net.WebSockets;
@@ -44,6 +45,12 @@ public class AxisWebSocketConnection
 	public bool IsConnected => WebSocket?.State == WebSocketState.Open;
 
 	private AxisApiClient ApiClient { get; }
+
+	/// <summary>
+	/// 接続先。通信内容の記録に使用する
+	/// </summary>
+	private string _endpointUrl = "";
+
 	private ClientWebSocket? WebSocket { get; set; }
 	private CancellationTokenSource? TokenSource { get; set; }
 	private Task? WebSocketConnectionTask { get; set; }
@@ -67,6 +74,7 @@ public class AxisWebSocketConnection
 					WebSocketMessageType.Text,
 					true,
 					TokenSource?.Token ?? CancellationToken.None);
+				NetworkDebugRecorder.RecordWebSocket(_endpointUrl, WebSocketDirection.Send, "hb", 2);
 				Debug.WriteLine("ping send");
 			}
 			catch (Exception ex)
@@ -99,7 +107,9 @@ public class AxisWebSocketConnection
 		WebSocket = new();
 		WebSocket.Options.SetRequestHeader("Authorization", "Bearer " + ApiClient.Jwt);
 
-		await WebSocket.ConnectAsync(new Uri(servers[new Random().Next(servers.Length)] + "/socket"), TokenSource.Token);
+		_endpointUrl = servers[new Random().Next(servers.Length)] + "/socket";
+		await WebSocket.ConnectAsync(new Uri(_endpointUrl), TokenSource.Token);
+		NetworkDebugRecorder.RecordWebSocket(_endpointUrl, WebSocketDirection.Connect);
 		WebSocketConnectionTask = ReceiverWebSocket();
 	}
 
@@ -158,6 +168,7 @@ public class AxisWebSocketConnection
 				WatchDogTimer.Change(TimeSpan.FromMinutes(2), Timeout.InfiniteTimeSpan);
 
 				var messageString = Encoding.UTF8.GetString(buffer, 0, length);
+				NetworkDebugRecorder.RecordWebSocket(_endpointUrl, WebSocketDirection.Receive, messageString, length);
 				// Debug.WriteLine("resv: " + messageString);
 				if (messageString == "hb")
 				{
@@ -212,6 +223,7 @@ public class AxisWebSocketConnection
 	/// </summary>
 	private void OnDisconnected()
 	{
+		NetworkDebugRecorder.RecordWebSocket(_endpointUrl, WebSocketDirection.Disconnect);
 		PingTimer.Change(Timeout.Infinite, Timeout.Infinite);
 		WatchDogTimer.Change(Timeout.Infinite, Timeout.Infinite);
 		Disconnected?.Invoke();

@@ -1300,6 +1300,17 @@ public class KyoshinEewViewerConfiguration : ReactiveObject, IWindowPlacementCon
 			get => _showPerformanceHud;
 			set => this.RaiseAndSetIfChanged(ref _showPerformanceHud, value);
 		}
+
+		private bool _recordNetworkTraffic;
+		/// <summary>
+		/// 通信内容(リクエスト･レスポンス･ヘッダ･ボディ)を記録するかどうか<br/>
+		/// 記録は端末内のメモリ上にのみ保持され、既定では無効
+		/// </summary>
+		public bool RecordNetworkTraffic
+		{
+			get => _recordNetworkTraffic;
+			set => this.RaiseAndSetIfChanged(ref _recordNetworkTraffic, value);
+		}
 	}
 }
 

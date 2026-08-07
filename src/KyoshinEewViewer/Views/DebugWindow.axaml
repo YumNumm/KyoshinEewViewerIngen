@@ -120,6 +120,94 @@
 			</Grid>
 		</TabItem>
 
+		<!-- 通信タブ -->
+		<TabItem Header="通信">
+			<Grid RowDefinitions="Auto,10,2*,5,3*">
+				<!-- ツールバー -->
+				<StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="5">
+					<CheckBox Content="通信内容を記録する"
+					          IsChecked="{Binding RecordNetworkTraffic}"
+					          VerticalAlignment="Center" />
+					<Button Content="クリア" Command="{Binding ClearNetworkTransactions}" />
+					<TextBox Text="{Binding NetworkHostFilter}"
+					         PlaceholderText="ホストで絞り込み"
+					         Width="200"
+					         FontSize="12"
+					         VerticalAlignment="Center" />
+				</StackPanel>
+
+				<!-- 通信一覧 -->
+				<Border Grid.Row="2"
+				        Background="{DynamicResource CardBackgroundColor}"
+				        BorderBrush="{DynamicResource BorderColor}"
+				        BorderThickness="1"
+				        CornerRadius="4">
+					<DataGrid ItemsSource="{Binding NetworkTransactions}"
+					          SelectedItem="{Binding SelectedNetworkTransaction}"
+					          AutoGenerateColumns="False"
+					          IsReadOnly="True"
+					          GridLinesVisibility="All"
+					          BorderThickness="0"
+					          Background="Transparent"
+					          CanUserReorderColumns="False"
+					          CanUserResizeColumns="True"
+					          CanUserSortColumns="False">
+						<DataGrid.Columns>
+							<DataGridTextColumn Header="時刻" Binding="{Binding Time}" Width="Auto" MinWidth="90"/>
+							<DataGridTextColumn Header="種別" Binding="{Binding Kind}" Width="Auto" MinWidth="50"/>
+							<DataGridTextColumn Header="操作" Binding="{Binding Operation}" Width="Auto" MinWidth="60"/>
+							<DataGridTextColumn Header="ホスト" Binding="{Binding Host}" Width="Auto" MinWidth="150"/>
+							<DataGridTextColumn Header="パス" Binding="{Binding Path}" Width="*" MinWidth="200"/>
+							<DataGridTextColumn Header="ステータス" Binding="{Binding Status}" Width="Auto" MinWidth="80"/>
+							<DataGridTextColumn Header="時間" Binding="{Binding Duration}" Width="Auto" MinWidth="70"/>
+							<DataGridTextColumn Header="サイズ" Binding="{Binding Size}" Width="Auto" MinWidth="70"/>
+						</DataGrid.Columns>
+					</DataGrid>
+				</Border>
+
+				<GridSplitter Grid.Row="3"
+				              ResizeDirection="Rows"
+				              HorizontalAlignment="Stretch"
+				              Background="Transparent" />
+
+				<!-- 選択した通信の詳細 -->
+				<Border Grid.Row="4"
+				        Background="{DynamicResource CardBackgroundColor}"
+				        BorderBrush="{DynamicResource BorderColor}"
+				        BorderThickness="1"
+				        CornerRadius="4">
+					<Grid ColumnDefinitions="*,5,*">
+						<Grid Grid.Column="0" RowDefinitions="Auto,*">
+							<TextBlock Grid.Row="0"
+							           Text="リクエスト"
+							           FontWeight="Bold"
+							           Margin="10,10,10,5"/>
+							<ScrollViewer Grid.Row="1">
+								<SelectableTextBlock Text="{Binding SelectedNetworkTransaction.RequestDetail}"
+								                     FontFamily="Monospace"
+								                     FontSize="12"
+								                     TextWrapping="Wrap"
+								                     Margin="10,0,10,10"/>
+							</ScrollViewer>
+						</Grid>
+						<Grid Grid.Column="2" RowDefinitions="Auto,*">
+							<TextBlock Grid.Row="0"
+							           Text="レスポンス"
+							           FontWeight="Bold"
+							           Margin="10,10,10,5"/>
+							<ScrollViewer Grid.Row="1">
+								<SelectableTextBlock Text="{Binding SelectedNetworkTransaction.ResponseDetail}"
+								                     FontFamily="Monospace"
+								                     FontSize="12"
+								                     TextWrapping="Wrap"
+								                     Margin="10,0,10,10"/>
+							</ScrollViewer>
+						</Grid>
+					</Grid>
+				</Border>
+			</Grid>
+		</TabItem>
+
 		<!-- 設定タブ -->
 		<TabItem Header="設定">
 			<ScrollViewer>
