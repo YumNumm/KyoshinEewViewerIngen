@@ -99,13 +99,20 @@ WebSocket 固有:
 2. リクエストのヘッダとボディを収集する（マスキング適用）
 3. `base.SendAsync` を実行し、所要時間を計測する
 4. レスポンスのヘッダを収集する
-5. ボディは以下をすべて満たす場合のみ取得する
-   - `Content-Type` が `text/*`、`application/json`、`application/xml`、
-     `application/xhtml+xml`、`application/problem+json` のいずれか
-   - `Content-Length` が **256KB** 以下、または `Content-Length` が不明
+5. ボディは `Content-Type` が `text/*`、`application/json`、`application/xml`、
+   `application/x-www-form-urlencoded`、`application/javascript`、
+   または `+json` / `+xml` で終わる形式の場合のみ取得する
 6. 取得する場合は `LoadIntoBufferAsync()` でバッファ化してから読む。
    バッファ済みの `HttpContent` は呼び出し側が改めて読めるため、既存処理を壊さない
-7. 例外発生時も記録する（`Error` にメッセージを入れ、例外は再スローする）
+7. 記録する文字列は **256KB** で切り詰める。伏せ字を適用してから切り詰めることで、
+   切断面に認証情報が残らないようにする
+8. 例外発生時も記録する（`Error` にメッセージを入れ、例外は再スローする）
+
+`Content-Length` による事前の足切りは行わない。アプリの大半の `HttpClient` は
+`AutomaticDecompression` を有効にしており、その場合 `Content-Length` が取り除かれるため、
+判定材料として使えないためである。上限つきの `LoadIntoBufferAsync(maxBufferSize)` も採用しない
+— 上限超過で例外になった際にストリームが中途半端に消費され、呼び出し元の読み取りを壊すため。
+代わりに Content-Type で対象を絞り、読み込み後に記録内容だけを切り詰める。
 
 この Content-Type フィルタにより、強震モニタが 1〜2 秒毎に取得する PNG 画像は
 自動的にボディ取得の対象外になる。一覧には行として現れるが、ボディは保持しない。
@@ -123,17 +130,23 @@ WebSocket 固有:
 - `Set-Cookie`
 - `Proxy-Authorization`
 
-ボディのマスキング対象（JSON のキーに対応する値を `***` に置換）:
+JSON ボディのマスキング対象（キーに対応する値を `***` に置換）:
 
 - `access_token`
 - `refresh_token`
 - `id_token`
 - `client_secret`
-- `code`
+- `code_verifier`
 
-DM-D.S.S の OAuth トークンエンドポイントのレスポンスが平文で残ることを防ぐのが主目的。
+フォームエンコードされたボディでは、上記に加えて `code` も対象にする。
+DM-D.S.S のトークン要求は `code` に認可コードを載せるためである。
+一方で JSON の `code` は対象にしない。気象庁のデータが地域コード等で多用しており、
+伏せると本来の用途を果たせなくなる。
 
-URL はマスクしない。EQMonitor API の `BaseUrl` は配布物に含めない非公開情報だが、
+WebSocket の接続先はクエリを丸ごと落とす（`NetworkCaptureMasker.SanitizeEndpoint`）。
+DM-D.S.S の WebSocket URL はクエリに ticket を載せるためである。
+
+HTTP の URL はマスクしない。EQMonitor API の `BaseUrl` は配布物に含めない非公開情報だが、
 マスクすると機能の用途を果たせなくなる。記録が端末内メモリのみに留まり、
 エクスポート機能を持たないことを前提とする。
 
@@ -184,15 +197,9 @@ public static HttpClient Create(HttpMessageHandler? innerHandler = null)
 
 ### 設定
 
-`KyoshinEewViewer.Core/Models/KyoshinEewViewerConfiguration.cs` に追加する。
-
-```csharp
-public class NetworkDebugConfig : ReactiveObject
-{
-    /// <summary>通信内容を記録するか</summary>
-    public bool Enable { get; set; } = false;
-}
-```
+`KyoshinEewViewer.Core/Models/KyoshinEewViewerConfiguration.cs` の既存の `DebugConfig` へ
+`RecordNetworkTraffic`（既定 `false`）を追加する。デバッグ用の設定を集める場所が既にあるため、
+専用のセクションは新設しない。
 
 保持件数 500 件・ボディ上限 256KB は定数とし、設定項目には出さない。
 調整が必要になってから公開すればよい。
@@ -213,6 +220,9 @@ public class NetworkDebugConfig : ReactiveObject
 ## テスト
 
 `tests/KyoshinEewViewer.Tests/Services/NetworkCaptureHandlerTests.cs` を追加する。
+
+`NetworkCaptureHandler` は記録先を省略可能なコンストラクタ引数として受け取る。
+省略時は DI から解決するため通常の利用に影響はなく、テストでは記録先を直接渡せる。
 
 検証項目:
 
