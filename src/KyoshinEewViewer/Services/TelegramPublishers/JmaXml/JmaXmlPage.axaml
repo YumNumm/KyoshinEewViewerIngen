@@ -41,7 +41,7 @@
                     <StackPanel Grid.Column="1">
                         <TextBlock Text="受信を無効にしています" />
                         <TextBlock FontSize="12" Foreground="{DynamicResource SubForegroundColor}"
-                                   Text="DM-D.S.S を利用していない場合、地震情報･津波情報･台風情報のいずれも受信できなくなり、各画面が受信エラーの表示になります。" />
+                                   Text="DM-D.S.S を利用していない場合、津波情報･台風情報を受信できなくなり、各画面が受信エラーの表示になります。地震情報は EQMonitor API から受信できていればそのまま表示されます。" />
                     </StackPanel>
                 </Grid>
             </Border>
