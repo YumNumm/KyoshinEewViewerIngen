@@ -1,5 +1,7 @@
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
+using KyoshinEewViewer.Services.EqMonitor;
 using Generated = KyoshinEewViewer.EqMonitorApi.Generated;
 
 namespace KyoshinEewViewer.Tests.Services;
@@ -97,5 +99,14 @@ public class EqMonitorApiClientTests
 		Assert.Equal("強い揺れに警戒してください", item.Headline);
 		Assert.Equal(Generated.JmaIntensity._5Plus, item.Forecast_intensity!.Max_intensity!.Value);
 		Assert.Equal(9, item.Accuracy!.Hypocenter);
+	}
+
+	[Fact(DisplayName = "User-Agent とビルド番号が EQMonitor の求める形式になっている")]
+	public void 識別ヘッダの形式()
+	{
+		// KyoshinEewViewer-{プラットフォーム}-v{x.x.x}
+		Assert.Matches(new Regex(@"^KyoshinEewViewer-(Android|iOS|macOS|Windows|Browser|Linux|Unknown)-v\d+\.\d+\.\d+$"),
+			EqMonitorApiProvider.UserAgent);
+		Assert.Matches(new Regex(@"^\d+$"), EqMonitorApiProvider.BuildNumber);
 	}
 }
