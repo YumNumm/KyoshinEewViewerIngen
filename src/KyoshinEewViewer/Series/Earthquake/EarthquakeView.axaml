@@ -288,8 +288,9 @@
             </StackPanel>
         </Border>
 
-        <!-- 右上ボタンs -->
-        <StackPanel Orientation="Horizontal" Margin="5" Spacing="5" VerticalAlignment="Top" HorizontalAlignment="Right">
+        <!-- 右上ボタンs 広い画面向け -->
+        <StackPanel Orientation="Horizontal" Margin="5" Spacing="5" VerticalAlignment="Top" HorizontalAlignment="Right"
+                    IsVisible="{Binding !IsNarrowLayout}">
             <Button ToolTip.Tip="地震履歴を検索する" ToolTip.ShowDelay="0"
 				    Command="{Binding OpenSearchAsync}"
 				    IsVisible="{Binding CanSearch}">
@@ -305,28 +306,32 @@
 				    IsVisible="{Binding IsDebugBuild}">
                 <TextBlock Text="&#xf07c;" Classes="icon" />
             </Button>
-            <ToggleButton IsChecked="{Binding IsObservationSheetOpen}">
-                <ToggleButton.IsVisible>
-                    <MultiBinding Converter="{x:Static BoolConverters.And}">
-                        <Binding Path="IsNarrowLayout" />
-                        <Binding Path="ObservationIntensityGroups" Converter="{x:Static ObjectConverters.IsNotNull}" />
-                    </MultiBinding>
-                </ToggleButton.IsVisible>
-                <StackPanel Orientation="Horizontal" Spacing="5">
-                    <TextBlock Text="&#xf03a;" Classes="icon" />
-                    <TextBlock Text="各地の震度" FontSize="13" VerticalAlignment="Center" />
-                </StackPanel>
-            </ToggleButton>
-            <ToggleButton IsChecked="{Binding IsHistorySheetOpen}" IsVisible="{Binding IsNarrowLayout}">
-                <StackPanel Orientation="Horizontal" Spacing="5">
-                    <TextBlock Text="&#xf1da;" Classes="icon" />
-                    <TextBlock Text="過去の地震" FontSize="13" VerticalAlignment="Center" />
-                </StackPanel>
-            </ToggleButton>
-            <ToggleButton IsChecked="{Binding IsHistoryShown}" IsVisible="{Binding !IsNarrowLayout}"
+            <ToggleButton IsChecked="{Binding IsHistoryShown}"
                           ToolTip.Tip="過去の地震リストを表示する" ToolTip.ShowDelay="0">
                 <TextBlock Text="&#xf1da;" Classes="icon" />
             </ToggleButton>
         </StackPanel>
+
+        <!-- 狭い画面向け 情報カードと横に並べられるようメニューへまとめる -->
+        <Button Margin="5" Padding="12,7" VerticalAlignment="Top" HorizontalAlignment="Right"
+                IsVisible="{Binding IsNarrowLayout}">
+            <TextBlock Text="&#xf142;" Classes="icon" />
+            <Button.Flyout>
+                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                    <MenuItem Header="各地の震度" ToggleType="CheckBox"
+                              IsChecked="{Binding IsObservationSheetOpen, Mode=TwoWay}"
+                              IsVisible="{Binding ObservationIntensityGroups, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <MenuItem Header="過去の地震" ToggleType="CheckBox"
+                              IsChecked="{Binding IsHistorySheetOpen, Mode=TwoWay}" />
+                    <MenuItem Header="地震履歴を検索する" Command="{Binding OpenSearchAsync}"
+                              IsVisible="{Binding CanSearch}" />
+                    <Separator IsVisible="{Binding IsDebugBuild}" />
+                    <MenuItem Header="時刻表を開く" Command="{Binding OpenTimetableWindow}"
+                              IsVisible="{Binding IsDebugBuild}" />
+                    <MenuItem Header="外部のXMLファイルを開く(動作未保障)" Command="{Binding OpenXml}"
+                              IsVisible="{Binding IsDebugBuild}" />
+                </MenuFlyout>
+            </Button.Flyout>
+        </Button>
     </Panel>
 </UserControl>
