@@ -15,6 +15,7 @@ engine: claude
 max-turns: 20
 timeout-minutes: 45
 strict: true
+if: needs.sync.outputs.status == 'conflict'
 
 concurrency:
   group: upstream-sync
@@ -99,7 +100,7 @@ jobs:
           PR_NUMBER: ${{ steps.find_pr.outputs.number }}
           MERGE_SHA: ${{ steps.sync.outputs.merge_sha }}
         run: |
-          body=$(printf 'upstreamの最新変更を競合なしで `develop` へ直接同期しました（merge commit: `%s`）。このPRは不要になったためcloseします。\n\n@YumNumm' "$MERGE_SHA")
+          body=$(printf 'upstreamの最新変更を競合なしでdevelopへ直接同期しました（merge commit: %s）。このPRは不要になったためcloseします。\n\n@YumNumm' "$MERGE_SHA")
           gh pr comment "$PR_NUMBER" \
             --repo YumNumm/KyoshinEewViewerIngen \
             --body "$body"
@@ -107,17 +108,8 @@ jobs:
             --repo YumNumm/KyoshinEewViewerIngen
 
 steps:
-  - name: Skip AI or prepare conflict refs
-    env:
-      SYNC_STATUS: ${{ needs.sync.outputs.status }}
+  - name: Prepare conflict refs
     run: |
-      if [[ "$SYNC_STATUS" != "conflict" ]]; then
-        jq -cn \
-          --arg message "upstream同期は $SYNC_STATUS で完了したためAI推論は不要です。" \
-          '{type:"noop", message:$message}' >> "$GH_AW_SAFE_OUTPUTS"
-        exit 0
-      fi
-
       if git remote get-url upstream >/dev/null 2>&1; then
         git remote set-url upstream https://github.com/ingen084/KyoshinEewViewerIngen.git
       else

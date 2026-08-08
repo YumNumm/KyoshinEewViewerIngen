@@ -205,13 +205,12 @@ gh pr list \
 
 If `status=merged` and a PR exists, comment that clean sync superseded it, mention `@YumNumm`, then close it. Use only `UPSTREAM_SYNC_TOKEN` for these deterministic writes.
 
-- [ ] **Step 3: Add the no-op gate and conflict checkout preparation**
+- [ ] **Step 3: Add the agent condition and conflict checkout preparation**
 
 Configure agent checkout with `ref: develop`, `fetch-depth: 0`, `fetch: ["*", "refs/pulls/open/*"]`, recursive submodules, and forced credential cleanup.
 
-Add a top-level pre-agent `steps:` entry that:
+Set the top-level agent condition to `needs.sync.outputs.status == 'conflict'`, then add a top-level pre-agent `steps:` entry that:
 
-- writes a `noop` JSON line to `$GH_AW_SAFE_OUTPUTS` unless `${{ needs.sync.outputs.status }}` equals `conflict`;
 - on conflict, adds the public upstream fetch URL, sets `disabled://upstream` as push URL, and fetches `upstream/develop`;
 - never receives `UPSTREAM_SYNC_TOKEN` or `ANTHROPIC_API_KEY` directly.
 

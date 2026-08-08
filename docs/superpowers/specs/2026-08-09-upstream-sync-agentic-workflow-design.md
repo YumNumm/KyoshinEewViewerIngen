@@ -36,7 +36,7 @@ AI実行前のカスタムjobが次の処理を行う。
 
 直接pushがnon-fast-forwardで拒否された場合は、最新の `origin/develop` から一度だけ処理をやり直す。再試行後もpushできない場合は書き込まず失敗する。再試行で競合が発生した場合はClaude経路へ移る。
 
-`unchanged` または直接push成功時は、agent jobが `noop` を出力してClaudeを起動しない。
+agent job自体に `needs.sync.outputs.status == 'conflict'` の条件を設定し、`unchanged` または直接push成功時はClaudeを起動しない。
 
 ### Claudeによる競合解消
 
@@ -104,6 +104,8 @@ Agentic Workflowソース自身、`AGENTS.md`、`CLAUDE.md`、`.github/`、依�
 `UPSTREAM_SYNC_TOKEN` は決定的同期jobにだけ渡し、agent job、safe outputs、submodule、upstream remoteには渡さない。決定的同期jobはorigin側の信頼済み同期スクリプト以外を実行せず、upstreamの内容はmergeするだけとする。
 
 使用するGitHub Actionsとgh-aw actionはコンパイル時にcommit SHAへ固定する。`gh aw validate --strict` のschema、actionlint、shellcheck、zizmor、poutine検査を通す。
+
+gh-aw v0.84.3が生成するClaude CLI導入stepはCLI自体をversion pinする一方、npm lockfileを使わないため、Zizmorの `adhoc-packages` だけを生成済み `upstream-sync.lock.yml` に限定して抑止する。他のZizmor監査は抑止しない。
 
 ## エラー処理
 
