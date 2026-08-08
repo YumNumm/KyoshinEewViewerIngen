@@ -215,8 +215,9 @@
 
         <!-- 狭い画面向けレイアウト 一覧はシートに移し、地図を広く使う -->
         <Grid IsVisible="{Binding IsNarrowLayout}" RowDefinitions="auto,*">
-            <!-- 右上のボタン列と重ならないように上側の余白を取る -->
-            <local:EarthquakeSummaryView Margin="5,45,5,0" VerticalAlignment="Top" HorizontalAlignment="Stretch" />
+            <!-- 右上のボタン列と横に並べるため、幅を絞って左上に寄せる -->
+            <local:EarthquakeSummaryView Classes="narrow" Width="170" Margin="4,4,0,0"
+                                         VerticalAlignment="Top" HorizontalAlignment="Left" />
             <local:EarthquakeOverlayView Grid.Row="1" Classes="narrow" />
         </Grid>
 
@@ -227,8 +228,8 @@
                 <Border Grid.Row="1" Classes="sheet">
                     <Grid RowDefinitions="auto,*">
                         <Grid Classes="sheetHeader" ColumnDefinitions="*,auto">
-                            <TextBlock Text="各地の震度" FontWeight="Bold" FontSize="18" Margin="12,0" VerticalAlignment="Center" />
-                            <Button Grid.Column="1" Command="{Binding CloseSheets}" Theme="{StaticResource TransparentButton}" Padding="14,8">
+                            <TextBlock Text="各地の震度" FontWeight="Bold" FontSize="16" Margin="10,0" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Command="{Binding CloseSheets}" Theme="{StaticResource TransparentButton}" Padding="12,6">
                                 <TextBlock Text="&#xf00d;" Classes="icon" />
                             </Button>
                         </Grid>
@@ -245,29 +246,29 @@
                 <Border Grid.Row="1" Classes="sheet">
                     <Grid RowDefinitions="auto,*">
                         <Grid Classes="sheetHeader" ColumnDefinitions="*,auto,auto,auto">
-                            <StackPanel Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center">
-                                <TextBlock Text="過去の地震" FontWeight="Bold" FontSize="18" VerticalAlignment="Center"
+                            <StackPanel Orientation="Horizontal" Margin="10,0" VerticalAlignment="Center">
+                                <TextBlock Text="過去の地震" FontWeight="Bold" FontSize="16" VerticalAlignment="Center"
                                            IsVisible="{Binding !IsSearching}" />
-                                <TextBlock Text="検索結果" FontWeight="Bold" FontSize="18" VerticalAlignment="Center"
+                                <TextBlock Text="検索結果" FontWeight="Bold" FontSize="16" VerticalAlignment="Center"
                                            IsVisible="{Binding IsSearching}" />
-                                <TextBlock Text="{Binding DisplayedEarthquakes.Count, StringFormat={}{0}件, Mode=OneWay}" Margin="6,0,0,3"
-                                           Foreground="{DynamicResource SubForegroundColor}" FontSize="11"
+                                <TextBlock Text="{Binding DisplayedEarthquakes.Count, StringFormat={}{0}件, Mode=OneWay}" Margin="6,0,0,2"
+                                           Foreground="{DynamicResource SubForegroundColor}" FontSize="10"
                                            VerticalAlignment="Bottom" />
-                                <TextBlock Text="{Binding SourceString, StringFormat={}取得元: {0}, Mode=OneWay}" Margin="6,0,0,3"
-                                           Foreground="{DynamicResource SubForegroundColor}" FontSize="11"
+                                <TextBlock Text="{Binding SourceString, StringFormat={}取得元: {0}, Mode=OneWay}" Margin="6,0,0,2"
+                                           Foreground="{DynamicResource SubForegroundColor}" FontSize="10"
                                            VerticalAlignment="Bottom" IsVisible="{Binding !IsSearching}" />
                             </StackPanel>
                             <Button Grid.Column="1" ToolTip.Tip="地震履歴を検索する"
                                     Command="{Binding OpenSearchAsync}" IsVisible="{Binding CanSearch}"
-                                    Theme="{StaticResource TransparentButton}" Padding="14,8">
+                                    Theme="{StaticResource TransparentButton}" Padding="12,6">
                                 <TextBlock Text="&#xf002;" Classes="icon" />
                             </Button>
                             <Button Grid.Column="2" ToolTip.Tip="検索を解除する"
                                     Command="{Binding ClearSearch}" IsVisible="{Binding IsSearching}"
-                                    Theme="{StaticResource TransparentButton}" Padding="14,8">
+                                    Theme="{StaticResource TransparentButton}" Padding="12,6">
                                 <TextBlock Text="&#xf0e2;" Classes="icon" />
                             </Button>
-                            <Button Grid.Column="3" Command="{Binding CloseSheets}" Theme="{StaticResource TransparentButton}" Padding="14,8">
+                            <Button Grid.Column="3" Command="{Binding CloseSheets}" Theme="{StaticResource TransparentButton}" Padding="12,6">
                                 <TextBlock Text="&#xf00d;" Classes="icon" />
                             </Button>
                         </Grid>
@@ -287,8 +288,9 @@
             </StackPanel>
         </Border>
 
-        <!-- 右上ボタンs -->
-        <StackPanel Orientation="Horizontal" Margin="5" Spacing="5" VerticalAlignment="Top" HorizontalAlignment="Right">
+        <!-- 右上ボタンs 広い画面向け -->
+        <StackPanel Orientation="Horizontal" Margin="5" Spacing="5" VerticalAlignment="Top" HorizontalAlignment="Right"
+                    IsVisible="{Binding !IsNarrowLayout}">
             <Button ToolTip.Tip="地震履歴を検索する" ToolTip.ShowDelay="0"
 				    Command="{Binding OpenSearchAsync}"
 				    IsVisible="{Binding CanSearch}">
@@ -304,28 +306,32 @@
 				    IsVisible="{Binding IsDebugBuild}">
                 <TextBlock Text="&#xf07c;" Classes="icon" />
             </Button>
-            <ToggleButton IsChecked="{Binding IsObservationSheetOpen}">
-                <ToggleButton.IsVisible>
-                    <MultiBinding Converter="{x:Static BoolConverters.And}">
-                        <Binding Path="IsNarrowLayout" />
-                        <Binding Path="ObservationIntensityGroups" Converter="{x:Static ObjectConverters.IsNotNull}" />
-                    </MultiBinding>
-                </ToggleButton.IsVisible>
-                <StackPanel Orientation="Horizontal" Spacing="5">
-                    <TextBlock Text="&#xf03a;" Classes="icon" />
-                    <TextBlock Text="各地の震度" FontSize="13" VerticalAlignment="Center" />
-                </StackPanel>
-            </ToggleButton>
-            <ToggleButton IsChecked="{Binding IsHistorySheetOpen}" IsVisible="{Binding IsNarrowLayout}">
-                <StackPanel Orientation="Horizontal" Spacing="5">
-                    <TextBlock Text="&#xf1da;" Classes="icon" />
-                    <TextBlock Text="過去の地震" FontSize="13" VerticalAlignment="Center" />
-                </StackPanel>
-            </ToggleButton>
-            <ToggleButton IsChecked="{Binding IsHistoryShown}" IsVisible="{Binding !IsNarrowLayout}"
+            <ToggleButton IsChecked="{Binding IsHistoryShown}"
                           ToolTip.Tip="過去の地震リストを表示する" ToolTip.ShowDelay="0">
                 <TextBlock Text="&#xf1da;" Classes="icon" />
             </ToggleButton>
         </StackPanel>
+
+        <!-- 狭い画面向け 情報カードと横に並べられるようメニューへまとめる -->
+        <Button Margin="5" Padding="12,7" VerticalAlignment="Top" HorizontalAlignment="Right"
+                IsVisible="{Binding IsNarrowLayout}">
+            <TextBlock Text="&#xf142;" Classes="icon" />
+            <Button.Flyout>
+                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                    <MenuItem Header="各地の震度" ToggleType="CheckBox"
+                              IsChecked="{Binding IsObservationSheetOpen, Mode=TwoWay}"
+                              IsVisible="{Binding ObservationIntensityGroups, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <MenuItem Header="過去の地震" ToggleType="CheckBox"
+                              IsChecked="{Binding IsHistorySheetOpen, Mode=TwoWay}" />
+                    <MenuItem Header="地震履歴を検索する" Command="{Binding OpenSearchAsync}"
+                              IsVisible="{Binding CanSearch}" />
+                    <Separator IsVisible="{Binding IsDebugBuild}" />
+                    <MenuItem Header="時刻表を開く" Command="{Binding OpenTimetableWindow}"
+                              IsVisible="{Binding IsDebugBuild}" />
+                    <MenuItem Header="外部のXMLファイルを開く(動作未保障)" Command="{Binding OpenXml}"
+                              IsVisible="{Binding IsDebugBuild}" />
+                </MenuFlyout>
+            </Button.Flyout>
+        </Button>
     </Panel>
 </UserControl>
