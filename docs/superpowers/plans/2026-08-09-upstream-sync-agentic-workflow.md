@@ -234,7 +234,7 @@ Declare these safe outputs:
 - `add-reviewer`: target `"*"`, allowed reviewers `[YumNumm]`, required title prefix `[upstream-sync] `;
 - mentions: only `YumNumm`, maximum one unescaped mention.
 
-Keep protected-files policy at `request_review`. Do not configure `target-repo`, `head-repo`, `allowed-repos`, Issue creation, workflow dispatch, or merge-PR safe outputs.
+Omit `protected-files` so gh-aw's default protected-file review remains active; local `v0.84.3` does not accept `request_review` as an explicit value. Do not configure `target-repo`, `head-repo`, `allowed-repos`, Issue creation, workflow dispatch, or merge-PR safe outputs.
 
 - [ ] **Step 5: Write the complete conflict-resolution prompt**
 
