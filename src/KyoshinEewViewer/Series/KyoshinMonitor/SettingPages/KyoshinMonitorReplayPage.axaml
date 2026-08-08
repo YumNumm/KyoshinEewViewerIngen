@@ -71,7 +71,7 @@
                         <TextBlock Text="{Binding TimeshiftedDateTime, StringFormat={}yyyy/MM/dd HH:mm:ss}" HorizontalAlignment="Center" Margin="0,-28,0,0" Foreground="{DynamicResource SubForegroundColor}" FontSize="14" />
                     </Panel>
                     <Slider Margin="0,5" Value="{Binding TimeshiftSeconds}"
-                            Minimum="0" Maximum="10800" />
+                            Minimum="0" Maximum="{x:Static vm:KyoshinMonitorReplaySettingPage.MaxTimeshiftSeconds}" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,-15,0,0">
                         <StackPanel.Styles>
                             <Style Selector="Button">
