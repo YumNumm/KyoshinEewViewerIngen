@@ -25,6 +25,9 @@ name: CD
 #   MAC_INSTALLER_DIST_P12_BASE64   (macOS のみ) pkg 署名証明書の .p12
 #   MAC_P12_PASSWORD                (macOS のみ) 上記 .p12 のパスワード
 #   MAC_PROVISIONING_PROFILE_BASE64 (macOS のみ) Mac App Store 用プロビジョニングプロファイル
+#   EQMONITOR_BASE_URL              配布ビルドに埋め込む EQMonitor API の既定の接続先。
+#                                   ソースに接続先を持たせないため Secret から環境変数で渡す。
+#                                   未設定でもビルドは成功し、既定の接続先が埋め込まれないだけ
 #
 # iOS は Cloud-managed certificates を使うため証明書もキーチェーンも不要。
 # macOS (Mac App Store) はクラウド署名に対応していないため .p12 が必要。
@@ -250,6 +253,8 @@ jobs:
           APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
           VERSION_SUFFIX: ${{ steps.version.outputs.VERSION_SUFFIX }}
           BUILD_NUMBER: ${{ env.GITHUB_RUN_NUMBER }}
+          # MSBuild が環境変数をプロパティとして解決するため、publish の引数は増やさなくてよい
+          EQMONITOR_BASE_URL: ${{ secrets.EQMONITOR_BASE_URL }}
 
       - name: Packaging
         run: |
@@ -380,6 +385,8 @@ jobs:
       # 署名鍵を渡していないため、どちらも SDK が自動生成する debug キーで署名される
       - name: Build AAB / APK
         shell: bash
+        env:
+          EQMONITOR_BASE_URL: ${{ secrets.EQMONITOR_BASE_URL }}
         run: dotnet publish src/KyoshinEewViewer.Android/KyoshinEewViewer.Android.csproj -c Release -o out/android
 
       - name: Upload AAB artifact
@@ -497,6 +504,8 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+          # スクリプト内の dotnet publish へ環境変数として引き継がれる
+          EQMONITOR_BASE_URL: ${{ secrets.EQMONITOR_BASE_URL }}
           # アップロードは deploy-ios ジョブが行う
           SKIP_UPLOAD: "true"
         shell: bash
@@ -725,6 +734,8 @@ jobs:
           BUILD_NUMBER: ${{ steps.version.outputs.build-number }}
           SIGNING_KEYCHAIN: ${{ steps.keychain.outputs.keychain }}
           PROVISIONING_PROFILE: ${{ steps.keychain.outputs.profile }}
+          # スクリプト内の dotnet publish へ環境変数として引き継がれる
+          EQMONITOR_BASE_URL: ${{ secrets.EQMONITOR_BASE_URL }}
           # アップロードは deploy-macos ジョブが行う
           SKIP_UPLOAD: "true"
         shell: bash

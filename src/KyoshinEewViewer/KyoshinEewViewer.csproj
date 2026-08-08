@@ -12,6 +12,15 @@
 		<InternalsVisibleTo Include="KyoshinEewViewer.Tests" />
 	</ItemGroup>
 
+	<!-- EQMonitor API の既定の接続先。値はリポジトリに持たせず、配信ワークフローから
+	     環境変数 EQMONITOR_BASE_URL で受け取る。未設定のビルドでは属性自体が付かない -->
+	<ItemGroup Condition="'$(EQMONITOR_BASE_URL)' != ''">
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>EqMonitorBaseUrl</_Parameter1>
+			<_Parameter2>$(EQMONITOR_BASE_URL)</_Parameter2>
+		</AssemblyAttribute>
+	</ItemGroup>
+
 	<!-- プロジェクト参照 -->
 	<ItemGroup>
 		<ProjectReference Include="..\KyoshinEewViewer.Core\KyoshinEewViewer.Core.csproj" />

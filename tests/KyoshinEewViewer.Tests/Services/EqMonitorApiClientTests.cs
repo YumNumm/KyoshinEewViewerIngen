@@ -101,6 +101,34 @@ public class EqMonitorApiClientTests
 		Assert.Equal(9, item.Accuracy!.Hypocenter);
 	}
 
+	[Fact(DisplayName = "接続先は設定値を優先し、未設定ならビルド時の既定値へフォールバックする")]
+	public void 接続先の解決()
+	{
+		// 実在しないホスト名を使い、テストから外部へ出ないようにする
+		const string Configured = "https://configuredexample";
+		const string BuiltIn = "https://builtinexample";
+
+		// 設定値がある場合は既定値より優先する
+		Assert.Equal(new Uri("https://configuredexample/"), EqMonitorApiProvider.ResolveBaseUri(Configured, BuiltIn));
+
+		// 設定値が空白のみの場合も未設定として扱い、既定値へ落ちる
+		foreach (var configured in new string?[] { null, "", "   " })
+			Assert.Equal(new Uri("https://builtinexample/"), EqMonitorApiProvider.ResolveBaseUri(configured, BuiltIn));
+
+		// どちらも無ければ利用できない
+		Assert.Null(EqMonitorApiProvider.ResolveBaseUri(null, null));
+		Assert.Null(EqMonitorApiProvider.ResolveBaseUri("", "  "));
+
+		// BaseAddress で最後のパス要素が失われないよう末尾にスラッシュを補う
+		Assert.Equal(new Uri("https://configuredexample/v2/"), EqMonitorApiProvider.ResolveBaseUri($"{Configured}/v2", null));
+		Assert.Equal(new Uri("https://builtinexample/v2/"), EqMonitorApiProvider.ResolveBaseUri(null, $"{BuiltIn}/v2"));
+
+		// http/https 以外や URL として解釈できない値は受け付けない
+		Assert.Null(EqMonitorApiProvider.ResolveBaseUri("ftp://configuredexample/", null));
+		Assert.Null(EqMonitorApiProvider.ResolveBaseUri("not-a-url", null));
+		Assert.Null(EqMonitorApiProvider.ResolveBaseUri(null, "not-a-url"));
+	}
+
 	[Fact(DisplayName = "User-Agent とビルド番号が EQMonitor の求める形式になっている")]
 	public void 識別ヘッダの形式()
 	{
