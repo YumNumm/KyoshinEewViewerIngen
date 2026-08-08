@@ -205,8 +205,9 @@
 
         <!-- 狭い画面向けレイアウト 一覧はシートに移し、地図を広く使う -->
         <Grid IsVisible="{Binding IsNarrowLayout}" RowDefinitions="auto,*">
-            <!-- 右上のボタン列と重ならないように上側の余白を取る -->
-            <local:EarthquakeSummaryView Margin="5,45,5,0" VerticalAlignment="Top" HorizontalAlignment="Stretch" />
+            <!-- 右上のボタン列と横に並べるため、幅を絞って左上に寄せる -->
+            <local:EarthquakeSummaryView Classes="narrow" Width="170" Margin="4,4,0,0"
+                                         VerticalAlignment="Top" HorizontalAlignment="Left" />
             <local:EarthquakeOverlayView Grid.Row="1" Classes="narrow" />
         </Grid>
 
@@ -217,8 +218,8 @@
                 <Border Grid.Row="1" Classes="sheet">
                     <Grid RowDefinitions="auto,*">
                         <Grid Classes="sheetHeader" ColumnDefinitions="*,auto">
-                            <TextBlock Text="各地の震度" FontWeight="Bold" FontSize="18" Margin="12,0" VerticalAlignment="Center" />
-                            <Button Grid.Column="1" Command="{Binding CloseSheets}" Theme="{StaticResource TransparentButton}" Padding="14,8">
+                            <TextBlock Text="各地の震度" FontWeight="Bold" FontSize="16" Margin="10,0" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Command="{Binding CloseSheets}" Theme="{StaticResource TransparentButton}" Padding="12,6">
                                 <TextBlock Text="&#xf00d;" Classes="icon" />
                             </Button>
                         </Grid>
@@ -235,13 +236,13 @@
                 <Border Grid.Row="1" Classes="sheet">
                     <Grid RowDefinitions="auto,*">
                         <Grid Classes="sheetHeader" ColumnDefinitions="*,auto">
-                            <StackPanel Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center">
-                                <TextBlock Text="過去の地震" FontWeight="Bold" FontSize="18" VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding SourceString, StringFormat={}取得元: {0}, Mode=OneWay}" Margin="6,0,0,3"
-                                           Foreground="{DynamicResource SubForegroundColor}" FontSize="11"
+                            <StackPanel Orientation="Horizontal" Margin="10,0" VerticalAlignment="Center">
+                                <TextBlock Text="過去の地震" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding SourceString, StringFormat={}取得元: {0}, Mode=OneWay}" Margin="6,0,0,2"
+                                           Foreground="{DynamicResource SubForegroundColor}" FontSize="10"
                                            VerticalAlignment="Bottom" />
                             </StackPanel>
-                            <Button Grid.Column="1" Command="{Binding CloseSheets}" Theme="{StaticResource TransparentButton}" Padding="14,8">
+                            <Button Grid.Column="1" Command="{Binding CloseSheets}" Theme="{StaticResource TransparentButton}" Padding="12,6">
                                 <TextBlock Text="&#xf00d;" Classes="icon" />
                             </Button>
                         </Grid>

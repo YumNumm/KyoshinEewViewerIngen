@@ -742,7 +742,7 @@ public class EarthquakeSeries : SeriesBase
 	/// 縦向きレイアウトで情報カードが地図に重なる高さの目安
 	/// カードの高さは選択中の地震情報によって変わるため固定値で近似する
 	/// </summary>
-	private const double NarrowLayoutTopPadding = 250;
+	private const double NarrowLayoutTopPadding = 200;
 
 	private double _viewWidth = double.PositiveInfinity;
 	/// <summary>

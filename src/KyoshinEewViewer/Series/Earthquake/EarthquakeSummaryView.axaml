@@ -15,12 +15,147 @@
         <conv:IntensityToColorConverter x:Key="IntensityToColor" />
         <conv:LpgmIntensityToColorConverter x:Key="LpgmIntensityToColor" />
     </UserControl.Resources>
+    <UserControl.Styles>
+        <Style Selector="TextBlock.title">
+            <Setter Property="FontSize" Value="19" />
+            <Setter Property="Margin" Value="10,0" />
+        </Style>
+        <Style Selector="TextBlock.placeholder">
+            <Setter Property="FontSize" Value="16" />
+        </Style>
+        <Style Selector="TextBlock.intensityLabel">
+            <Setter Property="FontSize" Value="22" />
+        </Style>
+        <Style Selector="controls|IntensityIcon.mainIntensity">
+            <Setter Property="Width" Value="85" />
+        </Style>
+        <Style Selector="controls|LpgmIntensityIcon.mainLpgmIntensity">
+            <Setter Property="Height" Value="32" />
+        </Style>
+        <Style Selector="StackPanel.body">
+            <Setter Property="Margin" Value="10,5" />
+        </Style>
+        <!-- 項目名。値と重ねて表示するものは負のマージンで詰める -->
+        <Style Selector="TextBlock.label">
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+        <Style Selector="TextBlock.label.overlap">
+            <Setter Property="Margin" Value="0,0,0,-16" />
+        </Style>
+        <Style Selector="TextBlock.dateValue">
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+        <Style Selector="TextBlock.timeValue">
+            <Setter Property="FontSize" Value="23" />
+            <Setter Property="Margin" Value="0,0,0,-3" />
+        </Style>
+        <Style Selector="TextBlock.timeUnit">
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+        <Style Selector="Viewbox.hypocenter">
+            <Setter Property="Height" Value="35" />
+            <Setter Property="MaxWidth" Value="175" />
+        </Style>
+        <Style Selector="Viewbox.volcano">
+            <Setter Property="Height" Value="30" />
+            <Setter Property="MaxWidth" Value="230" />
+        </Style>
+        <Style Selector="TextBlock.magnitudeUnit">
+            <Setter Property="FontSize" Value="22" />
+        </Style>
+        <Style Selector="TextBlock.magnitudeValue">
+            <Setter Property="FontSize" Value="28" />
+        </Style>
+        <Style Selector="TextBlock.magnitudeAlternative">
+            <Setter Property="FontSize" Value="18" />
+        </Style>
+        <Style Selector="TextBlock.depthValue">
+            <Setter Property="FontSize" Value="22" />
+        </Style>
+        <Style Selector="TextBlock.depthUnit">
+            <Setter Property="FontSize" Value="18" />
+        </Style>
+        <Style Selector="TextBlock.depthShallow">
+            <Setter Property="FontSize" Value="21" />
+        </Style>
+        <Style Selector="TextBlock.updated">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Margin" Value="10,0" />
+        </Style>
+
+        <!-- 狭い画面では地図を広く使うため、カードを一回り小さくする -->
+        <Style Selector="local|EarthquakeSummaryView.narrow TextBlock.title">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="Margin" Value="6,0" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow TextBlock.placeholder">
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow TextBlock.intensityLabel">
+            <Setter Property="FontSize" Value="15" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow controls|IntensityIcon.mainIntensity">
+            <Setter Property="Width" Value="58" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow controls|LpgmIntensityIcon.mainLpgmIntensity">
+            <Setter Property="Height" Value="24" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow StackPanel.body">
+            <Setter Property="Margin" Value="6,3" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow TextBlock.label">
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow TextBlock.label.overlap">
+            <Setter Property="Margin" Value="0,0,0,-13" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow TextBlock.dateValue">
+            <Setter Property="FontSize" Value="10" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow TextBlock.timeValue">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Margin" Value="0,0,0,-2" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow TextBlock.timeUnit">
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow Viewbox.hypocenter">
+            <Setter Property="Height" Value="26" />
+            <Setter Property="MaxWidth" Value="120" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow Viewbox.volcano">
+            <Setter Property="Height" Value="22" />
+            <Setter Property="MaxWidth" Value="130" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow TextBlock.magnitudeUnit">
+            <Setter Property="FontSize" Value="16" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow TextBlock.magnitudeValue">
+            <Setter Property="FontSize" Value="21" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow TextBlock.magnitudeAlternative">
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow TextBlock.depthValue">
+            <Setter Property="FontSize" Value="16" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow TextBlock.depthUnit">
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow TextBlock.depthShallow">
+            <Setter Property="FontSize" Value="15" />
+        </Style>
+        <Style Selector="local|EarthquakeSummaryView.narrow TextBlock.updated">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="6,0" />
+        </Style>
+    </UserControl.Styles>
     <StackPanel>
         <Border Background="{DynamicResource DockTitleBackgroundColor}" CornerRadius="4,4,0,0">
             <Panel>
                 <TextBlock
-				    x:Name="InfoTitle"
-				    Text="{Binding CurrentEvent.Title}" FontWeight="Regular" FontSize="19" Margin="10,0"
+				    x:Name="InfoTitle" Classes="title"
+				    Text="{Binding CurrentEvent.Title}" FontWeight="Regular"
 				    VerticalAlignment="Center" HorizontalAlignment="Center"
 				    IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <!-- 詳細の取得中であることを示す -->
@@ -31,7 +166,7 @@
         </Border>
         <Border IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNull}}"
 				Background="{DynamicResource DockTitleBackgroundColor}" CornerRadius="4">
-            <TextBlock Text="リストから選択してください" FontWeight="Regular" FontSize="16" HorizontalAlignment="Center" />
+            <TextBlock Text="リストから選択してください" Classes="placeholder" FontWeight="Regular" HorizontalAlignment="Center" />
         </Border>
         <StackPanel Background="{DynamicResource DockBackgroundColor}"
 			IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}">
@@ -39,9 +174,9 @@
                    IsVisible="{Binding !CurrentEvent.IsUnknownIntensity}">
                 <StackPanel Orientation="Horizontal" Margin="0,0" HorizontalAlignment="Center">
                     <TextBlock Foreground="{Binding CurrentEvent.Intensity, Converter={StaticResource IntensityToColor}}"
-									Text="最大震度" VerticalAlignment="Bottom" FontSize="22" />
-                    <controls:IntensityIcon Intensity="{Binding CurrentEvent.Intensity}"
-											WideMode="True" Width="85" HorizontalAlignment="Center" />
+									Classes="intensityLabel" Text="最大震度" VerticalAlignment="Bottom" />
+                    <controls:IntensityIcon Intensity="{Binding CurrentEvent.Intensity}" Classes="mainIntensity"
+											WideMode="True" HorizontalAlignment="Center" />
                 </StackPanel>
             </Panel>
 
@@ -53,27 +188,27 @@
                             <ScaleTransform ScaleX=".75" />
                         </LayoutTransformControl.LayoutTransform>
                         <TextBlock Foreground="{Binding CurrentEvent.LpgmIntensity, Converter={StaticResource LpgmIntensityToColor}}"
-                                    Text="長周期地震動階級" VerticalAlignment="Bottom" FontSize="22" />
+                                    Classes="intensityLabel" Text="長周期地震動階級" VerticalAlignment="Bottom" />
                     </LayoutTransformControl>
-                    <controls:LpgmIntensityIcon Intensity="{Binding CurrentEvent.LpgmIntensity}"
-											WideMode="True" Height="32" HorizontalAlignment="Center" />
+                    <controls:LpgmIntensityIcon Intensity="{Binding CurrentEvent.LpgmIntensity}" Classes="mainLpgmIntensity"
+											WideMode="True" HorizontalAlignment="Center" />
                 </StackPanel>
             </Panel>
-            <StackPanel Margin="10,5">
-                    <TextBlock Text="発生時刻" FontSize="14" Margin="0,0,0,-16" IsVisible="{Binding !CurrentEvent.IsSokuhou}" />
-                    <TextBlock Text="検知時刻" FontSize="14" Margin="0,0,0,-16" IsVisible="{Binding CurrentEvent.IsSokuhou}" />
+            <StackPanel Classes="body">
+                    <TextBlock Text="発生時刻" Classes="label overlap" IsVisible="{Binding !CurrentEvent.IsSokuhou}" />
+                    <TextBlock Text="検知時刻" Classes="label overlap" IsVisible="{Binding CurrentEvent.IsSokuhou}" />
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0" HorizontalAlignment="Right">
                         <TextBlock
 							Text="{Binding CurrentEvent.Time, StringFormat={}{0:yyyy年MM月dd日}, Mode=OneWay}"
-							x:Name="DateText" FontSize="13" VerticalAlignment="Bottom" />
+							x:Name="DateText" Classes="dateValue" VerticalAlignment="Bottom" />
                         <TextBlock
 							Text="{Binding CurrentEvent.Time, StringFormat={}{0:HH時mm分}, Mode=OneWay}"
-							x:Name="TimeText" Margin="0,0,0,-3" FontSize="23" VerticalAlignment="Bottom" />
-                        <TextBlock Text="頃" FontSize="14" VerticalAlignment="Bottom" />
+							x:Name="TimeText" Classes="timeValue" VerticalAlignment="Bottom" />
+                        <TextBlock Text="頃" Classes="timeUnit" VerticalAlignment="Bottom" />
                     </StackPanel>
 
                     <StackPanel IsVisible="{Binding CurrentEvent.IsHypocenterAvailable}">
-                        <TextBlock Text="震央" FontSize="14" Margin="0,0,0,-16">
+                        <TextBlock Text="震央" Classes="label overlap">
                             <TextBlock.IsVisible>
                                 <MultiBinding Converter="{x:Static BoolConverters.And}">
                                     <Binding Path="CurrentEvent.Place" Converter="{x:Static StringConverters.IsNotNullOrEmpty}" />
@@ -81,15 +216,15 @@
                                 </MultiBinding>
                             </TextBlock.IsVisible>
                         </TextBlock>
-                        <TextBlock Text="地域" FontSize="14" IsVisible="{Binding CurrentEvent.IsVolcano}" Margin="0,0,0,-16"/>
-                        <Viewbox Stretch="Fill" StretchDirection="DownOnly" Height="35" MaxWidth="175" HorizontalAlignment="Right"
-										IsVisible="{Binding CurrentEvent.Place, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <TextBlock Text="地域" Classes="label overlap" IsVisible="{Binding CurrentEvent.IsVolcano}" />
+                        <Viewbox Stretch="Fill" StretchDirection="DownOnly" Classes="hypocenter" HorizontalAlignment="Right"
+											IsVisible="{Binding CurrentEvent.Place, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                             <TextBlock x:Name="HypocenterName" Text="{Binding CurrentEvent.Place}"
-											FontSize="24" FontWeight="Bold" />
+												FontSize="24" FontWeight="Bold" />
                         </Viewbox>
 
-                        <Viewbox Stretch="Fill" StretchDirection="DownOnly" Height="30" MaxWidth="230" HorizontalAlignment="Right" Margin="0,-8,0,0"
-										IsVisible="{Binding CurrentEvent.VolcanoName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <Viewbox Stretch="Fill" StretchDirection="DownOnly" Classes="volcano" HorizontalAlignment="Right" Margin="0,-8,0,0"
+											IsVisible="{Binding CurrentEvent.VolcanoName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                             <TextBlock Text="{Binding CurrentEvent.VolcanoName}" FontSize="20" FontWeight="Bold" />
                         </Viewbox>
 
@@ -102,42 +237,42 @@
                                 </MultiBinding>
                             </Panel.IsVisible>
 
-                            <TextBlock Text="規模" FontSize="14" VerticalAlignment="Top" />
+                            <TextBlock Text="規模" Classes="label" VerticalAlignment="Top" />
                             <StackPanel
-									IsVisible="{Binding CurrentEvent.MagnitudeAlternativeText, Converter={x:Static StringConverters.IsNullOrEmpty}}"
-									Orientation="Horizontal" HorizontalAlignment="Right">
-                                <TextBlock x:Name="MagnitudeSub" Text="M" FontSize="22" FontWeight="Bold"
-												VerticalAlignment="Bottom" />
+										IsVisible="{Binding CurrentEvent.MagnitudeAlternativeText, Converter={x:Static StringConverters.IsNullOrEmpty}}"
+										Orientation="Horizontal" HorizontalAlignment="Right">
+                                <TextBlock x:Name="MagnitudeSub" Text="M" Classes="magnitudeUnit" FontWeight="Bold"
+													VerticalAlignment="Bottom" />
                                 <TextBlock x:Name="Magnitude"
-												Text="{Binding CurrentEvent.Magnitude, StringFormat={}{0:0.0}, Mode=OneWay}"
-												Margin="0,0,0,-2" FontSize="28" FontWeight="Bold"
-												VerticalAlignment="Bottom" />
+													Text="{Binding CurrentEvent.Magnitude, StringFormat={}{0:0.0}, Mode=OneWay}"
+													Classes="magnitudeValue" Margin="0,0,0,-2" FontWeight="Bold"
+													VerticalAlignment="Bottom" />
                             </StackPanel>
                             <TextBlock Text="{Binding CurrentEvent.MagnitudeAlternativeText}"
-											IsVisible="{Binding CurrentEvent.MagnitudeAlternativeText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-											FontSize="18" FontWeight="Bold" VerticalAlignment="Bottom"
-											HorizontalAlignment="Right" />
+												IsVisible="{Binding CurrentEvent.MagnitudeAlternativeText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+												Classes="magnitudeAlternative" FontWeight="Bold" VerticalAlignment="Bottom"
+												HorizontalAlignment="Right" />
                         </Panel>
 
                         <Panel x:Name="DepthBlock" IsVisible="{Binding !CurrentEvent.IsNoDepthData}">
-                            <TextBlock Text="震源の深さ" FontSize="14" VerticalAlignment="Top" />
+                            <TextBlock Text="震源の深さ" Classes="label" VerticalAlignment="Top" />
                             <StackPanel IsVisible="{Binding !CurrentEvent.IsVeryShallow}"
-											Orientation="Horizontal" x:Name="DepthDeep" HorizontalAlignment="Right">
-                                <TextBlock x:Name="DepthValue" Margin="0,0,0,-1"
-												Text="{Binding CurrentEvent.Depth}" FontSize="22"
-												VerticalAlignment="Bottom" />
-                                <TextBlock Text="km" FontSize="18" VerticalAlignment="Bottom" />
+												Orientation="Horizontal" x:Name="DepthDeep" HorizontalAlignment="Right">
+                                <TextBlock x:Name="DepthValue" Margin="0,0,0,-1" Classes="depthValue"
+													Text="{Binding CurrentEvent.Depth}"
+													VerticalAlignment="Bottom" />
+                                <TextBlock Text="km" Classes="depthUnit" VerticalAlignment="Bottom" />
                             </StackPanel>
                             <TextBlock x:Name="DepthShallow"
-											IsVisible="{Binding CurrentEvent.IsVeryShallow}" Text="ごく浅い"
-											FontSize="21" Margin="0,1,0,0" HorizontalAlignment="Right" />
+												IsVisible="{Binding CurrentEvent.IsVeryShallow}" Text="ごく浅い"
+												Classes="depthShallow" Margin="0,1,0,0" HorizontalAlignment="Right" />
                         </Panel>
                     </StackPanel>
             </StackPanel>
         </StackPanel>
         <Border Background="{DynamicResource DockTitleBackgroundColor}" CornerRadius="0,0,4,4">
             <TextBlock
-				Text="{Binding CurrentEvent.UpdatedTime, StringFormat={}{0:d日HH:mm更新}, Mode=OneWay}" FontSize="14" Margin="10,0"
+				Text="{Binding CurrentEvent.UpdatedTime, StringFormat={}{0:d日HH:mm更新}, Mode=OneWay}" Classes="updated"
                 Foreground="{DynamicResource SubForegroundColor}"
 				VerticalAlignment="Center" HorizontalAlignment="Right"
 				IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}" />
