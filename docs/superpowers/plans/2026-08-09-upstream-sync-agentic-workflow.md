@@ -153,7 +153,6 @@ git commit -m "ci: upstream同期スクリプトを追加する"
 
 **Files:**
 - Create: `.github/workflows/upstream-sync.md`
-- Create: `scripts/tests/upstream-sync-workflow-test.sh`
 - Modify: `docs/superpowers/specs/2026-08-09-upstream-sync-agentic-workflow-design.md` only if compiler-confirmed semantics differ from the design
 
 **Interfaces:**
@@ -162,32 +161,15 @@ git commit -m "ci: upstream同期スクリプトを追加する"
 - Agent consumes `${{ needs.sync.outputs.* }}` and emits exactly one code safe output (`create-pull-request` or `push-to-pull-request-branch`) only on conflict.
 - Existing PR updates also emit `add-comment` and `add-reviewer`; first creation uses static `reviewers: [YumNumm]`.
 
-- [ ] **Step 1: Write the workflow contract test**
-
-Create `scripts/tests/upstream-sync-workflow-test.sh` with `set -euo pipefail`. It must fail unless `.github/workflows/upstream-sync.md` exists and contains every fixed safety contract:
-
-```bash
-workflow=.github/workflows/upstream-sync.md
-[[ -f $workflow ]]
-rg -q 'engine: claude' "$workflow"
-rg -q 'strict: true' "$workflow"
-rg -q 'https://github.com/ingen084/KyoshinEewViewerIngen.git' "$workflow"
-rg -q 'YumNumm/KyoshinEewViewerIngen' "$workflow"
-rg -q 'agentic/upstream-sync' "$workflow"
-rg -q 'reviewers: \[YumNumm\]' "$workflow"
-rg -q 'allowed-reviewers: \[YumNumm\]' "$workflow"
-! rg -q 'target-repo:|head-repo:|allowed-repos:|git push upstream' "$workflow"
-```
-
-It must finish by running `gh aw validate upstream-sync --strict`.
+- [ ] **Step 1: Verify the compiler gate is red before adding the workflow**
 
 Run:
 
 ```bash
-bash scripts/tests/upstream-sync-workflow-test.sh
+gh aw validate upstream-sync --strict
 ```
 
-Expected: FAIL because `.github/workflows/upstream-sync.md` does not exist.
+Expected: FAIL because the `upstream-sync` workflow source does not exist. The workflow is configuration consumed by `gh-aw`, so the real compiler/validator is its behavioral test boundary; do not add a source-text grep test.
 
 - [ ] **Step 2: Add the deterministic sync job**
 
@@ -270,7 +252,7 @@ The prompt must explicitly branch on `pull_request_number`:
 Run:
 
 ```bash
-bash scripts/tests/upstream-sync-workflow-test.sh
+gh aw validate upstream-sync --strict
 ```
 
 Expected: exit 0; no unpinned-action, write-permission, wildcard target, or unsafe secret warnings.
@@ -278,7 +260,7 @@ Expected: exit 0; no unpinned-action, write-permission, wildcard target, or unsa
 - [ ] **Step 7: Commit the source workflow**
 
 ```bash
-git add .github/workflows/upstream-sync.md scripts/tests/upstream-sync-workflow-test.sh docs/superpowers/specs/2026-08-09-upstream-sync-agentic-workflow-design.md
+git add .github/workflows/upstream-sync.md docs/superpowers/specs/2026-08-09-upstream-sync-agentic-workflow-design.md
 git commit -m "ci: upstream同期Agentic Workflowを追加する"
 ```
 
@@ -308,7 +290,7 @@ Run:
 
 ```bash
 bash scripts/tests/upstream-sync-test.sh
-bash scripts/tests/upstream-sync-workflow-test.sh
+gh aw validate upstream-sync --strict
 git diff --check
 ```
 
@@ -362,8 +344,8 @@ Resolve only feature-branch conflicts. Re-run Task 3 validation after any rebase
 
 ```bash
 bash scripts/tests/upstream-sync-test.sh
-bash -n scripts/upstream-sync.sh scripts/tests/upstream-sync-test.sh scripts/tests/upstream-sync-workflow-test.sh
-bash scripts/tests/upstream-sync-workflow-test.sh
+bash -n scripts/upstream-sync.sh scripts/tests/upstream-sync-test.sh
+gh aw validate upstream-sync --strict
 gh aw compile upstream-sync --validate --actionlint --approve
 git diff --check origin/develop...HEAD
 git status --short
