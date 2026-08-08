@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using KyoshinEewViewer.Services.NetworkDebug;
 using ReactiveUI;
 using System;
 using System.Diagnostics;
@@ -13,7 +14,7 @@ namespace KyoshinEewViewer.Services.Workflows.BuiltinActions;
 
 public class WebhookAction : WorkflowAction
 {
-	private static HttpClient WebHookHttpClient { get; } = new();
+	private static HttpClient WebHookHttpClient { get; } = NetworkDebugHttpClient.Create();
 	private static JsonSerializerOptions JsonSerializerOptions { get; } = new()
 	{
 		Converters =

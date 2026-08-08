@@ -2,6 +2,7 @@ using Avalonia.Platform;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Core.Models.KyoshinMonitorObservationPoint;
+using KyoshinEewViewer.Services.NetworkDebug;
 using ReactiveUI;
 using Splat;
 using System;
@@ -24,7 +25,7 @@ public class ObservationPointsUpdateService : ReactiveObject
 
 	private ILogger Logger { get; }
 	private KyoshinEewViewerConfiguration Config { get; }
-	private HttpClient Client { get; } = new();
+	private HttpClient Client { get; } = NetworkDebugHttpClient.Create();
 
 	// キャッシュされた観測点データ
 	private ObservationPointV2[]? _cachedObservationPoints;

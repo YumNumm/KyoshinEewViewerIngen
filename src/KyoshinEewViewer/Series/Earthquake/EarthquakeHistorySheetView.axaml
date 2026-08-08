@@ -11,7 +11,7 @@
 			 Foreground="{DynamicResource MainForegroundColor}"
 			 FontFamily="{StaticResource MainFont}">
     <Panel>
-        <ListBox Name="HistoryList" ItemsSource="{Binding Service.Earthquakes}" SelectedItem="{Binding CurrentEvent}"
+        <ListBox Name="HistoryList" ItemsSource="{Binding DisplayedEarthquakes}" SelectedItem="{Binding CurrentEvent}"
                  Background="Transparent" BorderThickness="0" Padding="0">
             <ListBox.Styles>
                 <!-- 行全体をタップ領域にするため、既定のパディングを打ち消す -->

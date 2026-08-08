@@ -4,6 +4,7 @@ using Avalonia.Threading;
 using DynamicData.Binding;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
+using KyoshinEewViewer.Services.NetworkDebug;
 using KyoshinEewViewer.Services.Workflows.BuiltinTriggers;
 using ReactiveUI;
 using Splat;
@@ -27,7 +28,7 @@ public class UpdateCheckService : ReactiveObject
 	public VersionInfo[]? AvailableUpdateVersions { get; private set; }
 
 	private Timer CheckUpdateTask { get; }
-	public HttpClient Client { get; } = new();
+	public HttpClient Client { get; } = NetworkDebugHttpClient.Create();
 	private KyoshinEewViewerConfiguration Config { get; }
 	private WorkflowService WorkflowService { get; }
 

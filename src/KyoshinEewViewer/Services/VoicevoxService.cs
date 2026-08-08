@@ -1,6 +1,7 @@
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Services.Audio;
+using KyoshinEewViewer.Services.NetworkDebug;
 using KyoshinEewViewer.Services.Voicevox;
 using ReactiveUI;
 using Splat;
@@ -23,7 +24,7 @@ namespace KyoshinEewViewer.Services;
 public class VoicevoxService : ReactiveObject, IDisposable
 {
 	private KyoshinEewViewerConfiguration Config { get; }
-	private HttpClient HttpClient { get; } = new();
+	private HttpClient HttpClient { get; } = NetworkDebugHttpClient.Create();
 	private SoundPlayerService SoundPlayerService { get; }
 	private ILogger Logger { get; }
 

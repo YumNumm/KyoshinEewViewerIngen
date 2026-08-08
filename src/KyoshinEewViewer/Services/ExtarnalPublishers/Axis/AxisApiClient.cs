@@ -1,5 +1,6 @@
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Services.ExtarnalPublishers.Axis.ApiModels;
+using KyoshinEewViewer.Services.NetworkDebug;
 using System;
 using System.Net.Http;
 using System.Text.Json;
@@ -9,7 +10,7 @@ namespace KyoshinEewViewer.Services.ExtarnalPublishers.Axis;
 
 public class AxisApiClient
 {
-	private HttpClient HttpClient { get; } = new HttpClient();
+	private HttpClient HttpClient { get; } = NetworkDebugHttpClient.Create();
 
 	public string? Jwt { get; set; }
 

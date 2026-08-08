@@ -1,6 +1,7 @@
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.EqMonitorApi.Generated;
+using KyoshinEewViewer.Services.NetworkDebug;
 using ReactiveUI;
 using Splat;
 using System;
@@ -90,14 +91,11 @@ public class EqMonitorApiProvider : ReactiveObject, IDisposable
 
 		// BaseAddress はリクエスト送信後に変更できないため、接続先ごとに作り直す
 		Reset();
-		_httpClient = new HttpClient(new HttpClientHandler
+		_httpClient = NetworkDebugHttpClient.Create(new HttpClientHandler
 		{
 			AutomaticDecompression = DecompressionMethods.All,
-		})
-		{
-			BaseAddress = uri,
-			Timeout = TimeSpan.FromSeconds(10),
-		};
+		}, TimeSpan.FromSeconds(10));
+		_httpClient.BaseAddress = uri;
 		_httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
 		_httpClient.DefaultRequestHeaders.TryAddWithoutValidation("x-eqmonitor-build", BuildNumber);
 

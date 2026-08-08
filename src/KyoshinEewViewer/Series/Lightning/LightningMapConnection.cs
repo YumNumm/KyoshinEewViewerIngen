@@ -1,3 +1,4 @@
+using KyoshinEewViewer.Services.NetworkDebug;
 using System;
 using System.Diagnostics;
 using System.Net.WebSockets;
@@ -16,6 +17,12 @@ public class LightningMapConnection
 	public event Action? Disconnected;
 
 	private ClientWebSocket WebSocket { get; } = new();
+
+	/// <summary>
+	/// 接続先。通信内容の記録に使用する
+	/// </summary>
+	private string _endpointUrl = "";
+
 	private Task? WebSocketConnectionTask { get; set; }
 	private CancellationTokenSource? TokenSource { get; set; }
 	private Timer? Timer { get; set; }
@@ -35,14 +42,18 @@ public class LightningMapConnection
 		var server = _webSocketServers[random.Next(0, _webSocketServers.Length - 1)];
 
 		TokenSource = new CancellationTokenSource();
+		_endpointUrl = $"wss://{server}/";
 		//クライアント側のWebSocketを定義
-		await WebSocket.ConnectAsync(new Uri($"wss://{server}/"), TokenSource.Token);
+		await WebSocket.ConnectAsync(new Uri(_endpointUrl), TokenSource.Token);
+		NetworkDebugRecorder.RecordWebSocket(_endpointUrl, WebSocketDirection.Connect);
 		Timer = new Timer(async s =>
 		{
-			await WebSocket.SendAsync(Encoding.UTF8.GetBytes("{\"wsServer\":\"" + server + "\"}"),
+			var ping = "{\"wsServer\":\"" + server + "\"}";
+			await WebSocket.SendAsync(Encoding.UTF8.GetBytes(ping),
 									WebSocketMessageType.Text,
 									true,
 									TokenSource.Token);
+			NetworkDebugRecorder.RecordWebSocket(_endpointUrl, WebSocketDirection.Send, ping, Encoding.UTF8.GetByteCount(ping));
 			//Debug.WriteLine("ping sent: " + "{\"wsServer\":\"" + server + "\"}");
 		}, null, Timeout.Infinite, Timeout.Infinite);
 		WebSocketConnectionTask = new Task(async () =>
@@ -56,6 +67,7 @@ public class LightningMapConnection
 										WebSocketMessageType.Text,
 										true,
 										TokenSource.Token);
+				NetworkDebugRecorder.RecordWebSocket(_endpointUrl, WebSocketDirection.Send, "{\"time\":0}", 10);
 
 				while (WebSocket.State == WebSocketState.Open)
 				{
@@ -101,6 +113,7 @@ public class LightningMapConnection
 					}
 
 					var message = Encoding.UTF8.GetString(buffer, 0, length);
+					NetworkDebugRecorder.RecordWebSocket(_endpointUrl, WebSocketDirection.Receive, message, length);
 					//Debug.WriteLine(message);
 					//Arrived?.Invoke(JsonSerializer.Deserialize<Lighitning>(message));
 				}
@@ -125,6 +138,7 @@ public class LightningMapConnection
 
 	private void OnDisconnected()
 	{
+		NetworkDebugRecorder.RecordWebSocket(_endpointUrl, WebSocketDirection.Disconnect);
 		Debug.WriteLine("Closed");
 		//IsDisposed = true;
 		Timer?.Change(Timeout.Infinite, Timeout.Infinite);

@@ -1,3 +1,4 @@
+using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Core.Models.EarthquakeReplay;
 using KyoshinEewViewer.Series.KyoshinMonitor.Services.Eew;
@@ -18,15 +19,33 @@ using KyoshinEewViewer.Series.KyoshinMonitor.Models;
 using KyoshinMonitorLib;
 using System.Text;
 using System.Text.Json;
+using Generated = KyoshinEewViewer.EqMonitorApi.Generated;
 
 namespace KyoshinEewViewer.Series.KyoshinMonitor;
 
 public class ReplayFileEarthquakeInformationHost : EarthquakeInformationHost
 {
+	/// <summary>
+	/// 読み込み元の種別。説明文と終了メッセージの出し分けに使う
+	/// </summary>
+	private enum ReplaySourceKind
+	{
+		File,
+		EewHistory,
+	}
+
+	private ILogger Logger { get; }
 	private EewController EewController { get; set; }
 	private KyoshinMonitorWatchService KyoshinMonitorWatcher { get; }
+	private ReplaySourceKind SourceKind { get; set; } = ReplaySourceKind.File;
 
 	public bool IsRunning => Runner?.IsPlaying ?? false;
+
+	private string ReplaySourceDescription => SourceKind switch
+	{
+		ReplaySourceKind.EewHistory => "緊急地震速報履歴リプレイ",
+		_ => "リプレイファイル",
+	};
 
 	private ReplayFileHeader? _currentHeader;
 	public ReplayFileHeader? CurrentHeader
@@ -64,7 +83,7 @@ public class ReplayFileEarthquakeInformationHost : EarthquakeInformationHost
 			this.RaiseAndSetIfChanged(ref _speedMultiplier, value);
 			if (Runner != null)
 				Runner.SpeedMultiplier = value;
-			ReplayDescription = $"リプレイファイル {SpeedMultiplier:0.0}倍速";
+			UpdateReplayDescription();
 		}
 	}
 
@@ -72,6 +91,9 @@ public class ReplayFileEarthquakeInformationHost : EarthquakeInformationHost
 	{
 		SpeedMultiplier = 1;
 	}
+
+	private void UpdateReplayDescription()
+		=> ReplayDescription = $"{ReplaySourceDescription} {SpeedMultiplier:0.0}倍速";
 
 	private ReplayFileRunner? Runner { get; set; }
 
@@ -96,6 +118,7 @@ public class ReplayFileEarthquakeInformationHost : EarthquakeInformationHost
 		ObservationPointsUpdateService observationPointsUpdateService
 	) : base(true, config)
 	{
+		Logger = logManager.GetLogger<ReplayFileEarthquakeInformationHost>();
 		EewController = new(logManager, series, config, soundPlayer, workflowService) { IsReplay = true };
 		EewController.EewUpdated += OnEewUpdated;
 		KyoshinMonitorWatcher = new(logManager, Config, EewController, observationPointsUpdateService);
@@ -191,11 +214,60 @@ public class ReplayFileEarthquakeInformationHost : EarthquakeInformationHost
 		var reader = new KyoshinReplayFileReader(stream);
 		LoadedHeader = await reader.ReadHeader();
 		LoadedData = await reader.ReadData(LoadedHeader.CompressionMode);
+		SourceKind = ReplaySourceKind.File;
+		Logger.LogInfo($"リプレイファイルを読み込みました: {path} ({LoadedData.Length} 件)");
+	}
+
+	/// <summary>
+	/// EQMonitor API の EEW 履歴をメモリ上にロードする。
+	/// Generated DTO は JSON へ戻さず <see cref="EqMonitorEewConverter.ToEew"/> で直接変換する。
+	/// </summary>
+	public void LoadFromEqMonitorEewItems(IReadOnlyList<Generated.EewItemWithRelations> items)
+	{
+		ArgumentNullException.ThrowIfNull(items);
+
+		LoadedHeader = null;
+		LoadedData = items
+			.OrderBy(i => i.Report_time)
+			.Select(i =>
+			{
+				// DateTime はオフセット付き時刻の壁時計を保持する（システム TZ に依存しない）
+				var time = i.Report_time.DateTime;
+				return (ReplayData)new InMemoryEewReplayData
+				{
+					Time = time,
+					Eew = i.ToEew(time),
+				};
+			})
+			.ToArray();
+		SourceKind = ReplaySourceKind.EewHistory;
+		Logger.LogInfo($"EQMonitor EEW履歴をメモリへ読み込みました: {LoadedData.Length} 報");
+	}
+
+	/// <summary>
+	/// 変換済み EEW の時系列をメモリ上にロードする。
+	/// <paramref name="entries"/> の Time を <see cref="ReplayData.Time"/> として用いる。
+	/// </summary>
+	public void LoadFromEews(IEnumerable<(DateTime Time, Eew Eew)> entries)
+	{
+		ArgumentNullException.ThrowIfNull(entries);
+
+		LoadedHeader = null;
+		LoadedData = entries
+			.OrderBy(e => e.Time)
+			.Select(e => (ReplayData)new InMemoryEewReplayData
+			{
+				Time = e.Time,
+				Eew = e.Eew,
+			})
+			.ToArray();
+		SourceKind = ReplaySourceKind.EewHistory;
+		Logger.LogInfo($"EEW時系列をメモリへ読み込みました: {LoadedData.Length} 報");
 	}
 
 	public void Start()
 	{
-		if (LoadedData == null)
+		if (LoadedData is not { Length: > 0 })
 			return;
 
 		Runner?.StopAsync().ConfigureAwait(false);
@@ -230,24 +302,27 @@ public class ReplayFileEarthquakeInformationHost : EarthquakeInformationHost
 					case JmaXmlTelegramReplayData jma:
 						ProcessJmaXmlEew(jma.Telegram, time);
 						break;
-				case KEViJsonReplayData kevi:
-					switch (kevi.Type)
-					{
-						case KEViJsonReplayData.JsonType.Eew:
-							var eew = JsonSerializer.Deserialize<Eew>(kevi.Json);
-							if (eew != null)
-								EewController.Update(eew, time);
-							break;
-						case KEViJsonReplayData.JsonType.EewWarning:
-							var eewWarning = JsonSerializer.Deserialize<Eew>(kevi.Json);
-							if (eewWarning != null)
-								EewController.UpdateWarning(eewWarning, time);
-							break;
-					}
-					break;
-				case EqMonitorEewReplayData eqMonitorEew:
-					ProcessEqMonitorEew(eqMonitorEew.Json, time);
-					break;
+					case KEViJsonReplayData kevi:
+						switch (kevi.Type)
+						{
+							case KEViJsonReplayData.JsonType.Eew:
+								var eew = JsonSerializer.Deserialize<Eew>(kevi.Json);
+								if (eew != null)
+									EewController.Update(eew, time);
+								break;
+							case KEViJsonReplayData.JsonType.EewWarning:
+								var eewWarning = JsonSerializer.Deserialize<Eew>(kevi.Json);
+								if (eewWarning != null)
+									EewController.UpdateWarning(eewWarning, time);
+								break;
+						}
+						break;
+					case EqMonitorEewReplayData eqMonitorEew:
+						ProcessEqMonitorEew(eqMonitorEew.Json, time);
+						break;
+					case InMemoryEewReplayData memoryEew:
+						ProcessInMemoryEew(memoryEew.Eew, time);
+						break;
 				}
 			}
 
@@ -259,10 +334,11 @@ public class ReplayFileEarthquakeInformationHost : EarthquakeInformationHost
 		Runner.Finished += time =>
 		{
 			OnRealtimeDataUpdated((time, Array.Empty<RealtimeObservationPoint>(), Array.Empty<KyoshinEvent>()));
-			WarningMessage = "リプレイファイルの再生が終了しました";
+			WarningMessage = $"{ReplaySourceDescription}の再生が終了しました";
+			Logger.LogInfo($"{ReplaySourceDescription}の再生が終了しました");
 		};
 
-		ReplayDescription = $"リプレイファイル {SpeedMultiplier:0.0}倍速";
+		UpdateReplayDescription();
 
 		Eews = [];
 		KyoshinEvents = [];
@@ -280,6 +356,7 @@ public class ReplayFileEarthquakeInformationHost : EarthquakeInformationHost
 		// 時刻ジャンプ時のリセット
 		KyoshinMonitorWatcher.TimeJumpDetected += OnTimeJumpDetected;
 
+		Logger.LogInfo($"{ReplaySourceDescription}を開始します: {CurrentData.Length} 件 / {SpeedMultiplier:0.0}倍速");
 		Runner.Start();
 	}
 
@@ -451,6 +528,25 @@ public class ReplayFileEarthquakeInformationHost : EarthquakeInformationHost
 			return;
 
 		if (eew.IsWarning)
+			EewController.UpdateWarning(eew, time);
+
+		EewController.Update(eew, time);
+	}
+
+	/// <summary>
+	/// メモリ上の変換済み EEW をコントローラへ流す。
+	/// 取消報はリアルタイムの EQMonitor 受信と同じく <see cref="EewController.Cancelled"/> を使う。
+	/// </summary>
+	private void ProcessInMemoryEew(Eew eew, DateTime time)
+	{
+		if (eew.IsCancelled)
+		{
+			EewController.Cancelled(eew.Id, time);
+			return;
+		}
+
+		// 警報電文由来の警報地域がある場合は警報キャッシュも更新する
+		if (eew.WarningAreas?.IsWarningTelegram == true)
 			EewController.UpdateWarning(eew, time);
 
 		EewController.Update(eew, time);

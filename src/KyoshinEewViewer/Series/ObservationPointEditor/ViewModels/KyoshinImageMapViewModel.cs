@@ -1,6 +1,7 @@
 using Avalonia;
 using KyoshinEewViewer.Core.Models.KyoshinMonitorObservationPoint;
 using KyoshinEewViewer.Series.ObservationPointEditor.Controls;
+using KyoshinEewViewer.Services.NetworkDebug;
 using KyoshinMonitorLib.UrlGenerator;
 using ReactiveUI;
 using SkiaSharp;
@@ -150,7 +151,7 @@ public class KyoshinImageMapViewModel : ReactiveObject
 
 	#region プライベートフィールド
 
-	private readonly HttpClient _httpClient = new();
+	private readonly HttpClient _httpClient = NetworkDebugHttpClient.Create();
 
 	#endregion
 

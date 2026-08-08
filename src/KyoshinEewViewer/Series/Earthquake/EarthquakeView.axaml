@@ -55,18 +55,28 @@
             <!-- 地震情報一覧 -->
             <Grid Grid.Column="2" IsVisible="{Binding IsHistoryShown}" Margin="5" RowDefinitions="auto,*" Width="240" HorizontalAlignment="Right" VerticalAlignment="Stretch">
                 <Border Background="{DynamicResource DockTitleBackgroundColor}" CornerRadius="4,4,0,0">
-                    <StackPanel Orientation="Horizontal" Margin="5,0">
-                        <TextBlock Text="過去の地震" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding Service.Earthquakes.Count, StringFormat={}{0}件, Mode=OneWay}" Margin="5,2,0,2"
-                                   Foreground="{DynamicResource SubForegroundColor}" FontSize="10"
-                                   VerticalAlignment="Bottom" />
-                        <TextBlock Text="{Binding SourceString, StringFormat={}取得元: {0}, Mode=OneWay}" Margin="5,2,0,2"
-                                   Foreground="{DynamicResource SubForegroundColor}" FontSize="10"
-                                   VerticalAlignment="Bottom" />
-                    </StackPanel>
+                    <Grid ColumnDefinitions="*,auto" Margin="5,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="過去の地震" FontWeight="Bold" FontSize="16" VerticalAlignment="Center"
+                                       IsVisible="{Binding !IsSearching}" />
+                            <TextBlock Text="検索結果" FontWeight="Bold" FontSize="16" VerticalAlignment="Center"
+                                       IsVisible="{Binding IsSearching}" />
+                            <TextBlock Text="{Binding DisplayedEarthquakes.Count, StringFormat={}{0}件, Mode=OneWay}" Margin="5,2,0,2"
+                                       Foreground="{DynamicResource SubForegroundColor}" FontSize="10"
+                                       VerticalAlignment="Bottom" />
+                            <TextBlock Text="{Binding SourceString, StringFormat={}取得元: {0}, Mode=OneWay}" Margin="5,2,0,2"
+                                       Foreground="{DynamicResource SubForegroundColor}" FontSize="10"
+                                       VerticalAlignment="Bottom" IsVisible="{Binding !IsSearching}" />
+                        </StackPanel>
+                        <Button Grid.Column="1" ToolTip.Tip="検索を解除する" ToolTip.ShowDelay="0"
+                                Command="{Binding ClearSearch}" IsVisible="{Binding IsSearching}"
+                                Theme="{StaticResource TransparentButton}" Padding="6,0" VerticalAlignment="Center">
+                            <TextBlock Text="&#xf00d;" FontFamily="{StaticResource IconFont}" FontSize="14" />
+                        </Button>
+                    </Grid>
                 </Border>
                 <Border Grid.Row="1" Background="{DynamicResource DockBackgroundColor}" CornerRadius="0,0,4,4" ClipToBounds="True">
-                    <ListBox Name="HistoryList" ItemsSource="{Binding Service.Earthquakes}" SelectedItem="{Binding CurrentEvent}">
+                    <ListBox Name="HistoryList" ItemsSource="{Binding DisplayedEarthquakes}" SelectedItem="{Binding CurrentEvent}">
                         <ListBox.Styles>
                             <Style Selector="ListBoxItem">
                                 <Setter Property="Padding" Value="-2" />
@@ -235,14 +245,30 @@
             <Grid RowDefinitions="2*,5*">
                 <Border Grid.Row="1" Classes="sheet">
                     <Grid RowDefinitions="auto,*">
-                        <Grid Classes="sheetHeader" ColumnDefinitions="*,auto">
+                        <Grid Classes="sheetHeader" ColumnDefinitions="*,auto,auto,auto">
                             <StackPanel Orientation="Horizontal" Margin="10,0" VerticalAlignment="Center">
-                                <TextBlock Text="過去の地震" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding SourceString, StringFormat={}取得元: {0}, Mode=OneWay}" Margin="6,0,0,2"
+                                <TextBlock Text="過去の地震" FontWeight="Bold" FontSize="16" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsSearching}" />
+                                <TextBlock Text="検索結果" FontWeight="Bold" FontSize="16" VerticalAlignment="Center"
+                                           IsVisible="{Binding IsSearching}" />
+                                <TextBlock Text="{Binding DisplayedEarthquakes.Count, StringFormat={}{0}件, Mode=OneWay}" Margin="6,0,0,2"
                                            Foreground="{DynamicResource SubForegroundColor}" FontSize="10"
                                            VerticalAlignment="Bottom" />
+                                <TextBlock Text="{Binding SourceString, StringFormat={}取得元: {0}, Mode=OneWay}" Margin="6,0,0,2"
+                                           Foreground="{DynamicResource SubForegroundColor}" FontSize="10"
+                                           VerticalAlignment="Bottom" IsVisible="{Binding !IsSearching}" />
                             </StackPanel>
-                            <Button Grid.Column="1" Command="{Binding CloseSheets}" Theme="{StaticResource TransparentButton}" Padding="12,6">
+                            <Button Grid.Column="1" ToolTip.Tip="地震履歴を検索する"
+                                    Command="{Binding OpenSearchAsync}" IsVisible="{Binding CanSearch}"
+                                    Theme="{StaticResource TransparentButton}" Padding="12,6">
+                                <TextBlock Text="&#xf002;" Classes="icon" />
+                            </Button>
+                            <Button Grid.Column="2" ToolTip.Tip="検索を解除する"
+                                    Command="{Binding ClearSearch}" IsVisible="{Binding IsSearching}"
+                                    Theme="{StaticResource TransparentButton}" Padding="12,6">
+                                <TextBlock Text="&#xf0e2;" Classes="icon" />
+                            </Button>
+                            <Button Grid.Column="3" Command="{Binding CloseSheets}" Theme="{StaticResource TransparentButton}" Padding="12,6">
                                 <TextBlock Text="&#xf00d;" Classes="icon" />
                             </Button>
                         </Grid>
@@ -252,8 +278,23 @@
             </Grid>
         </Panel>
 
+        <!-- 震央の範囲を地図で選択中の案内 -->
+        <Border IsVisible="{Binding IsSelectingEpicenterRect}" VerticalAlignment="Top" HorizontalAlignment="Center"
+                Background="{DynamicResource DockTitleBackgroundColor}" CornerRadius="0,0,8,8"
+                Padding="14,8" Margin="0,0,0,0">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock Text="震央の範囲にする2点をクリックしてください" VerticalAlignment="Center" />
+                <Button Content="キャンセル" Command="{Binding CancelEpicenterRectSelection}" Padding="10,3" />
+            </StackPanel>
+        </Border>
+
         <!-- 右上ボタンs -->
         <StackPanel Orientation="Horizontal" Margin="5" Spacing="5" VerticalAlignment="Top" HorizontalAlignment="Right">
+            <Button ToolTip.Tip="地震履歴を検索する" ToolTip.ShowDelay="0"
+				    Command="{Binding OpenSearchAsync}"
+				    IsVisible="{Binding CanSearch}">
+                <TextBlock Text="&#xf002;" Classes="icon" />
+            </Button>
             <Button ToolTip.Tip="時刻表を開く" ToolTip.ShowDelay="0"
 				    Command="{Binding OpenTimetableWindow}"
 				    IsVisible="{Binding IsDebugBuild}">
