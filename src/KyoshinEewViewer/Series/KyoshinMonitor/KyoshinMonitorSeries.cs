@@ -3,6 +3,8 @@ using FluentAvalonia.UI.Controls;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Events;
+using KyoshinEewViewer.Series.EewHistory;
+using KyoshinEewViewer.Series.EewHistory.Models;
 using KyoshinEewViewer.Series.KyoshinMonitor.Events;
 using KyoshinEewViewer.Series.KyoshinMonitor.Models;
 using KyoshinEewViewer.Series.KyoshinMonitor.SettingPages;
@@ -17,8 +19,11 @@ using KyoshinEewViewer.Services.ExtarnalPublishers.Axis;
 using ReactiveUI;
 using Splat;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
+using Generated = KyoshinEewViewer.EqMonitorApi.Generated;
 
 namespace KyoshinEewViewer.Series.KyoshinMonitor;
 
@@ -34,6 +39,7 @@ public class KyoshinMonitorSeries : SeriesBase
 	private Sound StrongShakeDetectedSound { get; set; }
 	private Sound StrongerShakeDetectedSound { get; set; }
 
+	private ILogger Logger { get; }
 	private WorkflowService WorkflowService { get; }
 	private KyoshinEewViewerConfiguration Config { get; }
 
@@ -117,6 +123,42 @@ public class KyoshinMonitorSeries : SeriesBase
 	}
 
 	public void StartReplayFile()
+		=> BeginReplayFileHost();
+
+	/// <summary>
+	/// EQMonitor API から取得した EEW 履歴を既存リプレイ基盤で再生する。
+	/// リアルタイム停止設定・ホスト切替・終了/停止はファイルリプレイと共通。
+	/// </summary>
+	public void StartEewHistoryReplay(IReadOnlyList<Generated.EewItemWithRelations> items)
+	{
+		ArgumentNullException.ThrowIfNull(items);
+		if (items.Count == 0)
+			return;
+
+		ReplayFileInformationHost.LoadFromEqMonitorEewItems(items);
+		BeginReplayFileHost();
+		ActiveRequest.Send(this);
+	}
+
+	/// <summary>
+	/// 変換済み EEW の時系列を既存リプレイ基盤で再生する。
+	/// </summary>
+	public void StartEewHistoryReplay(IEnumerable<(DateTime Time, Eew Eew)> entries)
+	{
+		ArgumentNullException.ThrowIfNull(entries);
+
+		ReplayFileInformationHost.LoadFromEews(entries);
+		if (ReplayFileInformationHost.LoadedData is not { Length: > 0 })
+			return;
+
+		BeginReplayFileHost();
+		ActiveRequest.Send(this);
+	}
+
+	/// <summary>
+	/// リプレイファイルホストでの再生開始に共通する前処理とホスト切替
+	/// </summary>
+	private void BeginReplayFileHost()
 	{
 		if (!Config.KyoshinMonitor.KeepReceiveDuringReplay)
 			RealtimeInformationHost.Stop();
@@ -171,6 +213,7 @@ public class KyoshinMonitorSeries : SeriesBase
 	{
 		SplatRegistrations.RegisterLazySingleton<KyoshinMonitorSeries>();
 
+		Logger = logManager.GetLogger<KyoshinMonitorSeries>();
 		Config = config;
 		WorkflowService = workflowService;
 
@@ -208,6 +251,41 @@ public class KyoshinMonitorSeries : SeriesBase
 	{
 		MessageBus.Current.Listen<MapLoaded>().Subscribe(x => RealtimeInformationHost.MapData = TimeshiftInformationHost.MapData = ReplayFileInformationHost.MapData = x.Data);
 		RealtimeInformationHost.Start();
+
+		// 全 Series の初期化完了後に、有効な EEW履歴 Series へリプレイ要求を接続する
+		Avalonia.Threading.Dispatcher.UIThread.Post(ConnectEewHistoryReplay);
+	}
+
+	/// <summary>
+	/// 有効化されている EEW履歴 Series のリプレイ要求を購読する
+	/// </summary>
+	private void ConnectEewHistoryReplay()
+	{
+		var eewHistory = Locator.Current.GetService<SeriesController>()?.EnabledSeries
+			.OfType<EewHistorySeries>()
+			.FirstOrDefault();
+		if (eewHistory == null)
+			return;
+
+		eewHistory.ReplayRequested += HandleEewHistoryReplayRequested;
+		Logger.LogDebug("EEW履歴Seriesのリプレイ要求を購読しました");
+	}
+
+	/// <summary>
+	/// EEW履歴Seriesからのリプレイ要求を処理する
+	/// </summary>
+	private Task HandleEewHistoryReplayRequested(EewHistoryReplayRequest request)
+	{
+		if (request.RawItems.Count == 0)
+		{
+			Logger.LogWarning($"EEW履歴リプレイを開始できませんでした: 各報がありません ({request.EventId})");
+			return Task.CompletedTask;
+		}
+
+		Logger.LogInfo($"EEW履歴からのリプレイを開始します: {request.EventId}（{request.RawItems.Count}報）");
+		// Generated DTO をそのまま渡し、ホスト側で ToEew 変換する（JSON 再シリアライズしない）
+		StartEewHistoryReplay(request.RawItems);
+		return Task.CompletedTask;
 	}
 
 	public override void RecreateDisplayControl()

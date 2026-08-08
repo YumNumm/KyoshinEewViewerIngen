@@ -1,0 +1,409 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:controls="clr-namespace:KyoshinEewViewer.CustomControl;assembly=KyoshinEewViewer.CustomControl"
+			 xmlns:kmControls="clr-namespace:KyoshinEewViewer.Series.KyoshinMonitor.Controls;assembly=KyoshinEewViewer"
+			 xmlns:conv="clr-namespace:KyoshinEewViewer.Series.Earthquake.Converters;assembly=KyoshinEewViewer"
+			 xmlns:local="clr-namespace:KyoshinEewViewer.Series.EewHistory;assembly=KyoshinEewViewer"
+			 xmlns:models="clr-namespace:KyoshinEewViewer.Series.EewHistory.Models;assembly=KyoshinEewViewer"
+			 xmlns:ui="using:FluentAvalonia.UI.Controls"
+			 mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="640"
+			 x:Class="KyoshinEewViewer.Series.EewHistory.EewHistoryView"
+			 x:DataType="local:EewHistorySeries"
+			 x:CompileBindings="True"
+			 Foreground="{DynamicResource MainForegroundColor}"
+			 HorizontalAlignment="Stretch" VerticalContentAlignment="Stretch"
+			 FontFamily="{StaticResource MainFont}">
+	<UserControl.Resources>
+		<conv:IntensityToColorConverter x:Key="IntensityToColor" />
+	</UserControl.Resources>
+	<UserControl.Styles>
+		<Style Selector="Border.sheetBackdrop">
+			<Setter Property="Background" Value="#66000000" />
+		</Style>
+		<Style Selector="Border.sheet">
+			<Setter Property="Background" Value="{DynamicResource DockBackgroundColor}" />
+			<Setter Property="CornerRadius" Value="12,12,0,0" />
+			<Setter Property="ClipToBounds" Value="True" />
+			<Setter Property="BoxShadow" Value="0 -4 24 0 #44000000" />
+		</Style>
+		<Style Selector="Grid.sheetHeader">
+			<Setter Property="Background" Value="{DynamicResource DockTitleBackgroundColor}" />
+		</Style>
+		<Style Selector="TextBlock.badge">
+			<Setter Property="Foreground" Value="{DynamicResource WarningForegroundColor}" />
+			<Setter Property="Background" Value="{DynamicResource WarningBackgroundColor}" />
+			<Setter Property="FontSize" Value="10" />
+			<Setter Property="Padding" Value="3,0" />
+			<Setter Property="VerticalAlignment" Value="Center" />
+			<Setter Property="Margin" Value="0,0,3,0" />
+		</Style>
+		<Style Selector="ListBoxItem">
+			<Setter Property="Padding" Value="0" />
+			<Setter Property="MinHeight" Value="0" />
+		</Style>
+		<Style Selector="ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Margin" Value="0" />
+		</Style>
+	</UserControl.Styles>
+
+	<Panel>
+		<!-- 広い画面: 左=各報 / 中央=詳細 / 右=イベント履歴 -->
+		<Grid IsVisible="{Binding !IsNarrowLayout}" ColumnDefinitions="220,*,260" Margin="5">
+			<!-- 左: 選択イベントの各報 -->
+			<Grid RowDefinitions="auto,*" Margin="0,0,5,0">
+				<Border Background="{DynamicResource DockTitleBackgroundColor}" CornerRadius="4,4,0,0">
+					<StackPanel Orientation="Horizontal" Margin="8,0">
+						<TextBlock Text="各報" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" />
+						<TextBlock Text="{Binding CurrentReports.Count, StringFormat={}{0}報, Mode=OneWay}"
+								   Margin="6,2,0,2" FontSize="10"
+								   Foreground="{DynamicResource SubForegroundColor}"
+								   VerticalAlignment="Bottom" />
+					</StackPanel>
+				</Border>
+				<Border Grid.Row="1" Background="{DynamicResource DockBackgroundColor}" CornerRadius="0,0,4,4" ClipToBounds="True">
+					<Panel>
+						<ListBox ItemsSource="{Binding CurrentReports}" SelectedItem="{Binding SelectedReport}">
+							<ListBox.ItemTemplate>
+								<DataTemplate DataType="models:EewHistoryListItem">
+									<Panel MinHeight="52">
+										<Grid ColumnDefinitions="48,*" Margin="4,4" Background="Transparent">
+											<TextBlock Text="{Binding SerialNo, StringFormat={}{0:00}報, Mode=OneWay}"
+													   FontSize="14" FontWeight="Bold"
+													   VerticalAlignment="Center" HorizontalAlignment="Center" />
+											<StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+												<TextBlock Text="{Binding ReportTime, StringFormat={}{0:MM/dd HH:mm:ss}, Mode=OneWay}"
+														   FontSize="13" />
+												<StackPanel Orientation="Horizontal">
+													<TextBlock Classes="badge" Text="警報" IsVisible="{Binding IsWarning}" />
+													<TextBlock Classes="badge" Text="取消" IsVisible="{Binding IsCancelled}" />
+													<TextBlock Classes="badge" Text="最終" IsVisible="{Binding IsFinal}" />
+													<TextBlock Classes="badge" Text="PLUM" IsVisible="{Binding IsPlum}" />
+													<TextBlock Classes="badge" Text="訓練" IsVisible="{Binding IsTraining}" />
+													<TextBlock Classes="badge" Text="試験" IsVisible="{Binding IsTest}" />
+												</StackPanel>
+											</StackPanel>
+										</Grid>
+										<Border Background="#88000000" IsVisible="{Binding IsSelecting}">
+											<TextBlock Text="表示中" Foreground="White" FontSize="12"
+													   VerticalAlignment="Center" HorizontalAlignment="Center" />
+										</Border>
+									</Panel>
+								</DataTemplate>
+							</ListBox.ItemTemplate>
+						</ListBox>
+						<Border IsVisible="{Binding IsLoadingReports}" Background="#AA000000">
+							<StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="4">
+								<ui:FAProgressRing IsIndeterminate="True" Width="22" Height="22" HorizontalAlignment="Center" />
+								<TextBlock Text="各報を読み込み中…" FontSize="12" HorizontalAlignment="Center" />
+							</StackPanel>
+						</Border>
+						<Border IsVisible="{Binding ReportsError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+								Background="#AA000000" Padding="8">
+							<TextBlock Text="{Binding ReportsError}" TextWrapping="Wrap" FontSize="12"
+									   VerticalAlignment="Center" HorizontalAlignment="Center" />
+						</Border>
+					</Panel>
+				</Border>
+			</Grid>
+
+			<!-- 中央: 詳細 + リプレイ -->
+			<Grid Grid.Column="1" RowDefinitions="auto,*" Margin="0,0,5,0">
+				<StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
+					<Button Content="リプレイ開始"
+							Command="{Binding StartReplayAsync}"
+							IsEnabled="{Binding CanStartReplay}"
+							Padding="12,6" />
+					<TextBlock Text="{Binding CurrentEvent.EventId, StringFormat={}イベント: {0}, Mode=OneWay}"
+							   VerticalAlignment="Center" FontSize="12"
+							   Foreground="{DynamicResource SubForegroundColor}"
+							   IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}" />
+				</StackPanel>
+				<ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+					<Panel>
+						<Panel IsVisible="{Binding SelectedEew, Converter={x:Static ObjectConverters.IsNotNull}}">
+							<kmControls:EewPanel DataContext="{Binding SelectedEew}"
+												 MaxWidth="360" HorizontalAlignment="Left" />
+						</Panel>
+						<TextBlock Text="報を選択すると詳細が表示されます"
+								   IsVisible="{Binding SelectedEew, Converter={x:Static ObjectConverters.IsNull}}"
+								   Foreground="{DynamicResource SubForegroundColor}"
+								   VerticalAlignment="Center" HorizontalAlignment="Center" />
+					</Panel>
+				</ScrollViewer>
+			</Grid>
+
+			<!-- 右: イベント履歴 -->
+			<Grid Grid.Column="2" RowDefinitions="auto,*">
+				<Border Background="{DynamicResource DockTitleBackgroundColor}" CornerRadius="4,4,0,0">
+					<Grid ColumnDefinitions="*,auto" Margin="8,0">
+						<StackPanel Orientation="Horizontal">
+							<TextBlock Text="緊急地震速報履歴" FontWeight="Bold" FontSize="16" VerticalAlignment="Center"
+									   IsVisible="{Binding !IsSearching}" />
+							<TextBlock Text="検索結果" FontWeight="Bold" FontSize="16" VerticalAlignment="Center"
+									   IsVisible="{Binding IsSearching}" />
+							<TextBlock Text="{Binding DisplayedEvents.Count, StringFormat={}{0}件, Mode=OneWay}"
+									   Margin="6,2,0,2" FontSize="10"
+									   Foreground="{DynamicResource SubForegroundColor}"
+									   VerticalAlignment="Bottom" />
+						</StackPanel>
+						<StackPanel Grid.Column="1" Orientation="Horizontal">
+							<Button ToolTip.Tip="検索を解除する"
+									Command="{Binding ClearSearch}" IsVisible="{Binding IsSearching}"
+									Theme="{StaticResource TransparentButton}" Padding="6,0">
+								<TextBlock Text="&#xf00d;" FontFamily="{StaticResource IconFont}" FontSize="14" />
+							</Button>
+						</StackPanel>
+					</Grid>
+				</Border>
+				<Border Grid.Row="1" Background="{DynamicResource DockBackgroundColor}" CornerRadius="0,0,4,4" ClipToBounds="True">
+					<ListBox Name="EventHistoryList" ItemsSource="{Binding DisplayedEvents}" SelectedItem="{Binding CurrentEvent}">
+						<ListBox.ItemTemplate>
+							<DataTemplate DataType="models:EewHistoryListItem">
+								<Panel Height="56">
+									<Grid ColumnDefinitions="53,*" Background="Transparent">
+										<controls:IntensityIcon Intensity="{Binding MaxIntensity}" WideMode="True"
+																VerticalAlignment="Center" HorizontalAlignment="Center" />
+										<Border Grid.Column="1"
+												BorderBrush="{Binding MaxIntensity, Converter={StaticResource IntensityToColor}, ConverterParameter=Background}"
+												BorderThickness="0">
+											<Panel Margin="2,2,4,2">
+												<Viewbox Stretch="Fill" StretchDirection="DownOnly" Height="22"
+														 HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0,0,50,0">
+													<TextBlock Text="{Binding Place}" FontSize="16" FontWeight="Bold" />
+												</Viewbox>
+												<StackPanel Orientation="Horizontal" VerticalAlignment="Top" Spacing="2">
+													<TextBlock Classes="badge" Text="警報" IsVisible="{Binding IsWarning}" />
+													<TextBlock Classes="badge" Text="取消" IsVisible="{Binding IsCancelled}" />
+													<TextBlock Classes="badge" Text="PLUM" IsVisible="{Binding IsPlum}" />
+													<TextBlock Text="{Binding DisplayTime, StringFormat={}{0:MM/dd HH:mm}, Mode=OneWay}"
+															   FontSize="12"
+															   Foreground="{DynamicResource SubForegroundColor}" />
+												</StackPanel>
+												<StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+													<TextBlock Text="M" FontSize="11" VerticalAlignment="Bottom"
+															   Foreground="{DynamicResource SubForegroundColor}"
+															   IsVisible="{Binding Magnitude, Converter={x:Static ObjectConverters.IsNotNull}}" />
+													<TextBlock Text="{Binding Magnitude, StringFormat={}{0:0.0}, Mode=OneWay}"
+															   FontSize="15" Margin="0,0,0,-2"
+															   Foreground="{DynamicResource SubForegroundColor}"
+															   IsVisible="{Binding Magnitude, Converter={x:Static ObjectConverters.IsNotNull}}" />
+												</StackPanel>
+											</Panel>
+										</Border>
+										<TextBlock IsVisible="{Binding IsTraining}" Text="訓練"
+												   Foreground="{DynamicResource WarningForegroundColor}"
+												   Background="{DynamicResource WarningBackgroundColor}"
+												   FontSize="18" FontWeight="Bold"
+												   VerticalAlignment="Center" HorizontalAlignment="Center" />
+										<TextBlock IsVisible="{Binding IsTest}" Text="試験"
+												   Foreground="{DynamicResource WarningForegroundColor}"
+												   Background="{DynamicResource WarningBackgroundColor}"
+												   FontSize="18" FontWeight="Bold"
+												   VerticalAlignment="Center" HorizontalAlignment="Center" />
+									</Grid>
+									<Border Background="#55000000" IsVisible="{Binding IsCancelled}">
+										<TextBlock Text="取り消されました" FontSize="14" FontWeight="Bold" Foreground="White"
+												   VerticalAlignment="Center" HorizontalAlignment="Center" />
+									</Border>
+									<Border Background="#88000000" IsVisible="{Binding IsSelecting}">
+										<TextBlock Text="表示中" Foreground="White" FontSize="12"
+												   VerticalAlignment="Center" HorizontalAlignment="Center" />
+									</Border>
+								</Panel>
+							</DataTemplate>
+						</ListBox.ItemTemplate>
+					</ListBox>
+				</Border>
+				<Border Grid.Row="1" IsVisible="{Binding IsLoadingMore}"
+						Background="{DynamicResource DockTitleBackgroundColor}" CornerRadius="0,0,4,4"
+						VerticalAlignment="Bottom" Padding="0,3">
+					<TextBlock Text="過去の緊急地震速報を読み込んでいます…" FontSize="11"
+							   Foreground="{DynamicResource SubForegroundColor}" HorizontalAlignment="Center" />
+				</Border>
+				<Border Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsLoading}" Background="#AA000000" CornerRadius="4">
+					<StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="4">
+						<ui:FAProgressRing IsIndeterminate="True" Width="28" Height="28" HorizontalAlignment="Center" />
+						<TextBlock Text="取得中" HorizontalAlignment="Center" />
+					</StackPanel>
+				</Border>
+				<Border Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsFault}" Background="#AA000000" CornerRadius="4">
+					<StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="8" Spacing="6">
+						<TextBlock Text="情報の取得に問題が発生しました" TextWrapping="Wrap" HorizontalAlignment="Center" FontSize="13" />
+						<TextBlock Text="{Binding LoadError}" TextWrapping="Wrap" HorizontalAlignment="Center" FontSize="11"
+								   Foreground="{DynamicResource SubForegroundColor}"
+								   IsVisible="{Binding LoadError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+						<Button Content="再試行" Command="{Binding RefreshAsync}" HorizontalAlignment="Center" />
+					</StackPanel>
+				</Border>
+			</Grid>
+		</Grid>
+
+		<!-- 狭い画面: 詳細を中央に、一覧はシートへ -->
+		<Grid IsVisible="{Binding IsNarrowLayout}" RowDefinitions="auto,*" Margin="5">
+			<StackPanel Orientation="Horizontal" Spacing="8" Margin="0,40,0,6">
+				<Button Content="リプレイ開始"
+						Command="{Binding StartReplayAsync}"
+						IsEnabled="{Binding CanStartReplay}"
+						Padding="12,6" />
+				<TextBlock Text="{Binding CurrentEvent.EventId, StringFormat={}イベント: {0}, Mode=OneWay}"
+						   VerticalAlignment="Center" FontSize="12"
+						   Foreground="{DynamicResource SubForegroundColor}"
+						   IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}" />
+			</StackPanel>
+			<ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+				<Panel>
+					<Panel IsVisible="{Binding SelectedEew, Converter={x:Static ObjectConverters.IsNotNull}}">
+						<kmControls:EewPanel DataContext="{Binding SelectedEew}"
+											 MaxWidth="360" HorizontalAlignment="Stretch" />
+					</Panel>
+					<TextBlock Text="報を選択すると詳細が表示されます"
+							   IsVisible="{Binding SelectedEew, Converter={x:Static ObjectConverters.IsNull}}"
+							   Foreground="{DynamicResource SubForegroundColor}"
+							   VerticalAlignment="Center" HorizontalAlignment="Center" />
+				</Panel>
+			</ScrollViewer>
+		</Grid>
+
+		<!-- 各報シート -->
+		<Panel IsVisible="{Binding IsReportsSheetOpen}">
+			<Border Classes="sheetBackdrop" PointerPressed="SheetBackdrop_PointerPressed" />
+			<Grid RowDefinitions="2*,5*">
+				<Border Grid.Row="1" Classes="sheet">
+					<Grid RowDefinitions="auto,*">
+						<Grid Classes="sheetHeader" ColumnDefinitions="*,auto">
+							<TextBlock Text="各報" FontWeight="Bold" FontSize="18" Margin="12,0" VerticalAlignment="Center" />
+							<Button Grid.Column="1" Command="{Binding CloseSheets}" Theme="{StaticResource TransparentButton}" Padding="14,8">
+								<TextBlock Text="&#xf00d;" Classes="icon" />
+							</Button>
+						</Grid>
+						<ListBox Grid.Row="1" ItemsSource="{Binding CurrentReports}" SelectedItem="{Binding SelectedReport}"
+								 Background="Transparent" BorderThickness="0">
+							<ListBox.ItemTemplate>
+								<DataTemplate DataType="models:EewHistoryListItem">
+									<Grid ColumnDefinitions="56,*" MinHeight="56" Margin="8,4">
+										<TextBlock Text="{Binding SerialNo, StringFormat={}{0:00}報, Mode=OneWay}"
+												   FontSize="16" FontWeight="Bold"
+												   VerticalAlignment="Center" HorizontalAlignment="Center" />
+										<StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+											<TextBlock Text="{Binding ReportTime, StringFormat={}{0:MM/dd HH:mm:ss}, Mode=OneWay}" FontSize="14" />
+											<StackPanel Orientation="Horizontal">
+												<TextBlock Classes="badge" Text="警報" IsVisible="{Binding IsWarning}" />
+												<TextBlock Classes="badge" Text="取消" IsVisible="{Binding IsCancelled}" />
+												<TextBlock Classes="badge" Text="最終" IsVisible="{Binding IsFinal}" />
+												<TextBlock Classes="badge" Text="PLUM" IsVisible="{Binding IsPlum}" />
+												<TextBlock Classes="badge" Text="訓練" IsVisible="{Binding IsTraining}" />
+												<TextBlock Classes="badge" Text="試験" IsVisible="{Binding IsTest}" />
+											</StackPanel>
+										</StackPanel>
+									</Grid>
+								</DataTemplate>
+							</ListBox.ItemTemplate>
+						</ListBox>
+					</Grid>
+				</Border>
+			</Grid>
+		</Panel>
+
+		<!-- イベント履歴シート -->
+		<Panel IsVisible="{Binding IsHistorySheetOpen}">
+			<Border Classes="sheetBackdrop" PointerPressed="SheetBackdrop_PointerPressed" />
+			<Grid RowDefinitions="2*,5*">
+				<Border Grid.Row="1" Classes="sheet">
+					<Grid RowDefinitions="auto,*">
+						<Grid Classes="sheetHeader" ColumnDefinitions="*,auto,auto,auto">
+							<StackPanel Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center">
+								<TextBlock Text="緊急地震速報履歴" FontWeight="Bold" FontSize="18" IsVisible="{Binding !IsSearching}" />
+								<TextBlock Text="検索結果" FontWeight="Bold" FontSize="18" IsVisible="{Binding IsSearching}" />
+								<TextBlock Text="{Binding DisplayedEvents.Count, StringFormat={}{0}件, Mode=OneWay}"
+										   Margin="6,0,0,3" FontSize="11"
+										   Foreground="{DynamicResource SubForegroundColor}" VerticalAlignment="Bottom" />
+							</StackPanel>
+							<Button Grid.Column="1" ToolTip.Tip="緊急地震速報履歴を検索する"
+									Command="{Binding OpenSearchAsync}" IsVisible="{Binding CanSearch}"
+									Theme="{StaticResource TransparentButton}" Padding="14,8">
+								<TextBlock Text="&#xf002;" Classes="icon" />
+							</Button>
+							<Button Grid.Column="2" ToolTip.Tip="検索を解除する"
+									Command="{Binding ClearSearch}" IsVisible="{Binding IsSearching}"
+									Theme="{StaticResource TransparentButton}" Padding="14,8">
+								<TextBlock Text="&#xf0e2;" Classes="icon" />
+							</Button>
+							<Button Grid.Column="3" Command="{Binding CloseSheets}" Theme="{StaticResource TransparentButton}" Padding="14,8">
+								<TextBlock Text="&#xf00d;" Classes="icon" />
+							</Button>
+						</Grid>
+						<Panel Grid.Row="1">
+							<ListBox Name="EventHistorySheetList" ItemsSource="{Binding DisplayedEvents}" SelectedItem="{Binding CurrentEvent}"
+									 Background="Transparent" BorderThickness="0">
+								<ListBox.ItemTemplate>
+									<DataTemplate DataType="models:EewHistoryListItem">
+										<Grid ColumnDefinitions="66,*" Height="66" Margin="4,2">
+											<controls:IntensityIcon Intensity="{Binding MaxIntensity}" WideMode="True"
+																	VerticalAlignment="Center" HorizontalAlignment="Center" />
+											<StackPanel Grid.Column="1" Margin="4,0,8,0" VerticalAlignment="Center" Spacing="2">
+												<TextBlock Text="{Binding Place}" FontSize="16" FontWeight="Bold" />
+												<StackPanel Orientation="Horizontal" Spacing="4">
+													<TextBlock Classes="badge" Text="警報" IsVisible="{Binding IsWarning}" />
+													<TextBlock Classes="badge" Text="取消" IsVisible="{Binding IsCancelled}" />
+													<TextBlock Classes="badge" Text="PLUM" IsVisible="{Binding IsPlum}" />
+													<TextBlock Text="{Binding DisplayTime, StringFormat={}{0:MM/dd HH:mm}, Mode=OneWay}"
+															   FontSize="13" Foreground="{DynamicResource SubForegroundColor}" />
+													<TextBlock Text="{Binding Magnitude, StringFormat={}M{0:0.0}, Mode=OneWay}"
+															   FontSize="13" Foreground="{DynamicResource SubForegroundColor}"
+															   IsVisible="{Binding Magnitude, Converter={x:Static ObjectConverters.IsNotNull}}" />
+												</StackPanel>
+											</StackPanel>
+										</Grid>
+									</DataTemplate>
+								</ListBox.ItemTemplate>
+							</ListBox>
+							<Border IsVisible="{Binding IsLoadingMore}"
+									Background="{DynamicResource DockTitleBackgroundColor}"
+									VerticalAlignment="Bottom" Padding="0,3">
+								<TextBlock Text="過去の緊急地震速報を読み込んでいます…" FontSize="11"
+										   Foreground="{DynamicResource SubForegroundColor}" HorizontalAlignment="Center" />
+							</Border>
+						</Panel>
+					</Grid>
+				</Border>
+			</Grid>
+		</Panel>
+
+		<!-- 右上ボタン -->
+		<StackPanel Orientation="Horizontal" Margin="5" Spacing="5" VerticalAlignment="Top" HorizontalAlignment="Right">
+			<Button ToolTip.Tip="緊急地震速報履歴を検索する" ToolTip.ShowDelay="0"
+					Command="{Binding OpenSearchAsync}"
+					IsVisible="{Binding CanSearch}">
+				<TextBlock Text="&#xf002;" Classes="icon" />
+			</Button>
+			<Button ToolTip.Tip="再読み込み" ToolTip.ShowDelay="0"
+					Command="{Binding RefreshAsync}">
+				<TextBlock Text="&#xf021;" Classes="icon" />
+			</Button>
+			<ToggleButton IsChecked="{Binding IsReportsSheetOpen}" IsVisible="{Binding IsNarrowLayout}">
+				<StackPanel Orientation="Horizontal" Spacing="5">
+					<TextBlock Text="&#xf0cb;" Classes="icon" />
+					<TextBlock Text="各報" FontSize="13" VerticalAlignment="Center" />
+				</StackPanel>
+			</ToggleButton>
+			<ToggleButton IsChecked="{Binding IsHistorySheetOpen}" IsVisible="{Binding IsNarrowLayout}">
+				<StackPanel Orientation="Horizontal" Spacing="5">
+					<TextBlock Text="&#xf1da;" Classes="icon" />
+					<TextBlock Text="履歴" FontSize="13" VerticalAlignment="Center" />
+				</StackPanel>
+			</ToggleButton>
+		</StackPanel>
+
+		<Border IsVisible="{Binding !CanSearch}" Background="#CC000000">
+			<StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24" Spacing="8">
+				<TextBlock Text="緊急地震速報履歴を利用できません" FontSize="18" FontWeight="Bold"
+						   HorizontalAlignment="Center" />
+				<TextBlock Text="設定で EQMonitor API と緊急地震速報の取得を有効にし、接続先を指定してください。"
+						   TextWrapping="Wrap" HorizontalAlignment="Center"
+						   Foreground="{DynamicResource SubForegroundColor}" />
+			</StackPanel>
+		</Border>
+	</Panel>
+</UserControl>
