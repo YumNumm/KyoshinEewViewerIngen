@@ -87,9 +87,12 @@ gh-awのPR安全出力ではmerge commitを保持するため `signed-commits: f
 
 ## 権限と安全境界
 
-単一Workflow内の決定的jobが `origin/develop` へ直接pushするため、このWorkflowに限り `strict: false` とする。権限はjob単位で分離する。
+`GITHUB_TOKEN` で作成したpushイベントは別のGitHub Actions Workflowを起動しないため、決定的jobはrepository secret `UPSTREAM_SYNC_TOKEN` に保存したfine-grained PATを使用する。このPATは `YumNumm/KyoshinEewViewerIngen` だけを対象とし、Contents、Pull requests、Issuesのread/write権限だけを持たせる。これにより直接同期後の既存CDを通常どおり起動する。
 
-- 決定的同期job: `contents: write`、同期PRの整理に必要な最小限の `pull-requests: write`
+Workflowの `GITHUB_TOKEN` はread-onlyのままとし、`strict: true` を維持する。権限はjob単位で分離する。
+
+- 決定的同期jobの `GITHUB_TOKEN`: `contents: read`、`pull-requests: read`
+- 決定的同期jobの `UPSTREAM_SYNC_TOKEN`: このrepository限定のContents、Pull requests、Issues read/write
 - agent job: `contents: read`、`pull-requests: read`、`issues: read`
 - safe outputs job: PR作成・更新・コメント・reviewer要求に必要な書き込み権限
 - upstream remote: 認証情報なし、push URL無効
@@ -98,7 +101,9 @@ gh-awのPR安全出力ではmerge commitを保持するため `signed-commits: f
 
 Agentic Workflowソース自身、`AGENTS.md`、`CLAUDE.md`、`.github/`、依存マニフェストなどのprotected filesをClaudeが変更した場合、gh-aw既定のreview要求を維持し、人間の承認なしにmergeしない。
 
-使用するGitHub Actionsとgh-aw actionはコンパイル時にcommit SHAへ固定する。`strict: false` でも `gh aw validate` のschema、actionlint、shellcheck、zizmor、poutine検査を通す。
+`UPSTREAM_SYNC_TOKEN` は決定的同期jobにだけ渡し、agent job、safe outputs、submodule、upstream remoteには渡さない。決定的同期jobはorigin側の信頼済み同期スクリプト以外を実行せず、upstreamの内容はmergeするだけとする。
+
+使用するGitHub Actionsとgh-aw actionはコンパイル時にcommit SHAへ固定する。`gh aw validate --strict` のschema、actionlint、shellcheck、zizmor、poutine検査を通す。
 
 ## エラー処理
 
@@ -119,7 +124,7 @@ Agentic Workflowソース自身、`AGENTS.md`、`CLAUDE.md`、`.github/`、依�
    - 競合なしのmerge commit作成
    - 競合検出と作業ツリーのcleanup
    - non-fast-forward再試行
-2. `gh aw validate upstream-sync`
+2. `gh aw validate upstream-sync --strict`
 3. `gh aw compile upstream-sync --validate --actionlint`
 4. 生成された `.lock.yml` の権限、repository、branch、secret参照を目視確認
 5. upstream向け書き込みコマンドやcross-repository safe outputが存在しないことを検索で確認
@@ -128,6 +133,9 @@ Agentic Workflowソース自身、`AGENTS.md`、`CLAUDE.md`、`.github/`、依�
 
 ## 導入後の設定
 
-PRのmerge後、repository secret `ANTHROPIC_API_KEY` が未設定なら設定する。Workflowはsecret値をログ、PR、artifactへ出力しない。
+PRのmerge後、次のrepository secretsを設定する。Workflowはsecret値をログ、PR、artifactへ出力しない。
+
+- `ANTHROPIC_API_KEY`: 競合時のClaude実行に使用する。
+- `UPSTREAM_SYNC_TOKEN`: `YumNumm/KyoshinEewViewerIngen` のみに限定したfine-grained PAT。Contents、Pull requests、Issuesのread/write権限を付与する。
 
 初回は `workflow_dispatch` で起動し、Actions summary、直接同期または競合PR、reviewer、通知コメントを確認する。その後、毎日04:00 JSTの定期実行へ任せる。
