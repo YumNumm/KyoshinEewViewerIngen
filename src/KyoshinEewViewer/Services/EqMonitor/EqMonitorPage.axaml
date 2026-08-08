@@ -37,7 +37,7 @@
                 <StackPanel>
                     <TextBlock Text="ベース URL" Margin="0,0,10,5" />
                     <TextBox Text="{Binding Config.EqMonitor.BaseUrl}" IsEnabled="{Binding !Config.EqMonitor.Enable}"
-                             PlaceholderText="https://example.com" Margin="10,0" TextWrapping="Wrap" />
+                             PlaceholderText="{Binding BaseUrlPlaceholder}" Margin="10,0" TextWrapping="Wrap" />
                 </StackPanel>
             </ui:FASettingsExpander>
 

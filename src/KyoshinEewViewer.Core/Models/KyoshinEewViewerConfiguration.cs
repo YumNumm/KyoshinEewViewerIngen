@@ -1211,7 +1211,7 @@ public class KyoshinEewViewerConfiguration : ReactiveObject, IWindowPlacementCon
 	}
 	public class EqMonitorConfig : ReactiveObject
 	{
-		private bool _enable;
+		private bool _enable = true;
 		/// <summary>
 		/// EQMonitor API からの受信を行うか
 		/// </summary>
@@ -1224,7 +1224,8 @@ public class KyoshinEewViewerConfiguration : ReactiveObject, IWindowPlacementCon
 		private string _baseUrl = "";
 		/// <summary>
 		/// API のベース URL<br/>
-		/// 配布物に接続先を持たせないため、既定値は設けず利用者に入力させる
+		/// ソースに接続先を持たせないため既定値は設けない。
+		/// 未入力の場合はビルド時に埋め込まれた既定の接続先を使う
 		/// </summary>
 		public string BaseUrl
 		{

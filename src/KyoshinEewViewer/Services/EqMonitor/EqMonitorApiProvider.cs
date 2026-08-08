@@ -6,6 +6,7 @@ using ReactiveUI;
 using Splat;
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
@@ -16,8 +17,8 @@ namespace KyoshinEewViewer.Services.EqMonitor;
 /// EQMonitor API のクライアントを設定に応じて提供する
 /// </summary>
 /// <remarks>
-/// 接続先は配布物に一切含めず、利用者が設定した BaseUrl のみを使う。
-/// BaseUrl が未設定または不正な場合はクライアントを提供しない
+/// 接続先はソースに書かず、利用者が設定した BaseUrl か、配信ワークフローがビルド時に
+/// 埋め込んだ既定値のいずれかを使う。どちらも無い場合はクライアントを提供しない
 /// </remarks>
 public class EqMonitorApiProvider : ReactiveObject, IDisposable
 {
@@ -46,10 +47,18 @@ public class EqMonitorApiProvider : ReactiveObject, IDisposable
 	public static string BuildNumber { get; } =
 		AssemblyVersion.Revision.ToString(CultureInfo.InvariantCulture);
 
+	/// <summary>
+	/// 配信ワークフローがビルド時に埋め込んだ既定の接続先<br/>
+	/// 埋め込まれていないビルドでは null
+	/// </summary>
+	public static string? BuiltInBaseUrl { get; } = Assembly.GetExecutingAssembly()
+		.GetCustomAttributes<AssemblyMetadataAttribute>()
+		.FirstOrDefault(a => a.Key == "EqMonitorBaseUrl")?.Value;
+
 	private ILogger Logger { get; }
 	private KyoshinEewViewerConfiguration Config { get; }
 
-	private string? _appliedBaseUrl;
+	private Uri? _appliedBaseUri;
 	private HttpClient? _httpClient;
 	private EqMonitorApiClient? _client;
 
@@ -62,32 +71,49 @@ public class EqMonitorApiProvider : ReactiveObject, IDisposable
 	}
 
 	/// <summary>
-	/// 現在の設定に対応したクライアントを取得する
+	/// 利用する接続先を決定する<br/>
+	/// 利用者が設定した接続先を優先し、未設定であればビルド時に埋め込まれた既定値へフォールバックする
 	/// </summary>
-	/// <returns>接続先が未設定もしくは不正な場合は null</returns>
-	public EqMonitorApiClient? GetClient()
+	/// <param name="configured">利用者が設定した接続先</param>
+	/// <param name="builtIn">ビルド時に埋め込まれた既定の接続先</param>
+	/// <returns>どちらも未設定、もしくは接続先が不正な場合は null</returns>
+	internal static Uri? ResolveBaseUri(string? configured, string? builtIn)
 	{
-		var baseUrl = Config.EqMonitor.BaseUrl?.Trim();
+		var baseUrl = configured?.Trim();
 		if (string.IsNullOrEmpty(baseUrl))
-		{
-			Reset();
+			baseUrl = builtIn?.Trim();
+		if (string.IsNullOrEmpty(baseUrl))
 			return null;
-		}
 
 		// HttpClient.BaseAddress は末尾にスラッシュがないと最後のパス要素が失われる
 		if (!baseUrl.EndsWith('/'))
 			baseUrl += '/';
 
-		// 設定が変わっていなければ既存のクライアントを使い回す
-		if (_appliedBaseUrl == baseUrl)
-			return _client;
-
 		if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
+			return null;
+
+		return uri;
+	}
+
+	/// <summary>
+	/// 現在の設定に対応したクライアントを取得する
+	/// </summary>
+	/// <returns>接続先が未設定もしくは不正な場合は null</returns>
+	public EqMonitorApiClient? GetClient()
+	{
+		var uri = ResolveBaseUri(Config.EqMonitor.BaseUrl, BuiltInBaseUrl);
+		if (uri == null)
 		{
-			Logger.LogWarning("EQMonitor API の接続先が正しくないため利用できません");
+			// 接続先が一つも与えられていない状態は異常ではないため警告しない
+			if (!string.IsNullOrWhiteSpace(Config.EqMonitor.BaseUrl) || !string.IsNullOrWhiteSpace(BuiltInBaseUrl))
+				Logger.LogWarning("EQMonitor API の接続先が正しくないため利用できません");
 			Reset();
 			return null;
 		}
+
+		// 設定が変わっていなければ既存のクライアントを使い回す
+		if (_appliedBaseUri == uri)
+			return _client;
 
 		// BaseAddress はリクエスト送信後に変更できないため、接続先ごとに作り直す
 		Reset();
@@ -99,7 +125,7 @@ public class EqMonitorApiProvider : ReactiveObject, IDisposable
 		_httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
 		_httpClient.DefaultRequestHeaders.TryAddWithoutValidation("x-eqmonitor-build", BuildNumber);
 
-		_appliedBaseUrl = baseUrl;
+		_appliedBaseUri = uri;
 		_client = new EqMonitorApiClient(_httpClient);
 		Logger.LogInfo("EQMonitor API の接続先を設定しました");
 		return _client;
@@ -115,7 +141,7 @@ public class EqMonitorApiProvider : ReactiveObject, IDisposable
 		_httpClient?.Dispose();
 		_httpClient = null;
 		_client = null;
-		_appliedBaseUrl = null;
+		_appliedBaseUri = null;
 	}
 
 	public void Dispose()
