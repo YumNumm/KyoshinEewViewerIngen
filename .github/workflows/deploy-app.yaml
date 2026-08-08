@@ -19,6 +19,8 @@ name: CD
 #   ASC_KEY_ID                      ASC API キー ID
 #   ASC_ISSUER_ID                   ASC の issuer ID (UUID)。asc auth issuer-id で取得
 #   ASC_PRIVATE_KEY_B64             AuthKey_<KEY_ID>.p8 を base64 化したもの
+#   TESTFLIGHT_EXTERNAL_GROUP       Variables 推奨。iOS の配布先ベータグループ ID または名前。
+#                                   未設定なら "External Test" グループの ID を既定値として使う
 #   MAC_APP_DIST_P12_BASE64         (macOS のみ) .app 署名証明書の .p12
 #   MAC_INSTALLER_DIST_P12_BASE64   (macOS のみ) pkg 署名証明書の .p12
 #   MAC_P12_PASSWORD                (macOS のみ) 上記 .p12 のパスワード
@@ -29,8 +31,12 @@ name: CD
 #
 # ストア配信 (build-ios / build-macos) は develop への push のときだけ自動で走る。
 # タグ push は GitHub Releases 用の成果物づくりが目的なので、ストアへは上げない。
-# TestFlight のベータグループへの配布は testflight_group を指定したときだけ行うため、
-# push 由来のビルドは内部にアップロードされるだけで外部配信はされない。
+#
+# iOS は develop への push のたびに TestFlight の外部テスターグループへ配布する。
+# 配布時の「テスト対象」(What to Test) には前回配信からの PR 一覧を載せる。
+# 前回配信した commit は本文末尾の `rev: <SHA>` として ASC 側に持たせてあり、
+# scripts/build-testflight-changelog.sh がそれを読み戻して差分を組み立てる。
+# (ASC の Build リソースには commit を持たせられる欄が無いための措置)
 
 on:
   push:
@@ -70,7 +76,8 @@ on:
         type: string
         default: ""
       testflight_group:
-        description: "iOS の配布先 TestFlight テスターグループ名。空ならアップロードのみ行う"
+        description: "iOS の配布先 TestFlight テスターグループ ID / 名前。空なら
+          TESTFLIGHT_EXTERNAL_GROUP (既定の外部テスターグループ) へ配布する"
         type: string
         default: ""
       skip_upload:
@@ -99,6 +106,8 @@ env:
   ASC_BYPASS_KEYCHAIN: "1"
   # スピナーの制御文字でログが汚れるのを防ぐ
   ASC_SPINNER_DISABLED: "1"
+  # TestFlight の「テスト対象」の locale。変更履歴の書き込みと読み戻しで同じ値を使う
+  TESTFLIGHT_LOCALE: "ja"
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -511,10 +520,14 @@ jobs:
     environment: testflight
     permissions:
       contents: read
+      # merge commit の本文が空の PR のタイトルを gh で引くのに使う
+      pull-requests: read
     steps:
-      # mise.toml を読ませるためにチェックアウトする (asc CLI の解決に必要)
+      # mise.toml を読ませるためにチェックアウトする (asc CLI の解決に必要)。
+      # 変更履歴を組み立てるのに前回配信した commit まで遡るため全履歴を取る
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Setup mise
@@ -528,6 +541,19 @@ jobs:
           name: ios-ipa
           path: ipa
 
+      # 前回配信したビルドの「テスト対象」から rev を読み戻し、そこからの PR を並べる
+      - name: Build changelog
+        env:
+          ASC_APP_ID: ${{ vars.ASC_APP_ID || secrets.ASC_APP_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+          OUTPUT_PATH: ${{ github.workspace }}/out/testflight-changelog.txt
+          # PR タイトルの引き直し用。GITHUB_REPOSITORY と併せて gh が使えるようにする
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: ./scripts/build-testflight-changelog.sh
+
       - name: Upload to App Store Connect
         env:
           ASC_APP_ID: ${{ vars.ASC_APP_ID || secrets.ASC_APP_ID }}
@@ -536,7 +562,8 @@ jobs:
           ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
           APP_VERSION: ${{ needs.build-ios.outputs.app-version }}
           BUILD_NUMBER: ${{ needs.build-ios.outputs.build-number }}
-          TESTFLIGHT_GROUP: ${{ inputs.testflight_group }}
+          TESTFLIGHT_GROUP: ${{ inputs.testflight_group || vars.TESTFLIGHT_EXTERNAL_GROUP || '2706fecb-47f0-47da-b802-08987ae78803' }}
+          CHANGELOG_PATH: ${{ github.workspace }}/out/testflight-changelog.txt
         shell: bash
         run: |
           IPA_PATH=""
@@ -549,32 +576,26 @@ jobs:
             echo "::error::ipa が見つかりません。"
             exit 1
           fi
-          if [ -n "$TESTFLIGHT_GROUP" ]; then
-            # 外部テスターグループはベータ審査を通す必要があるため --submit / --confirm を付ける
-            asc publish testflight \
-              --app "$ASC_APP_ID" \
-              --ipa "$IPA_PATH" \
-              --group "$TESTFLIGHT_GROUP" \
-              --wait \
-              --submit \
-              --confirm \
-              --timeout 30m
-            exit 0
+          if [ -z "$TESTFLIGHT_GROUP" ]; then
+            echo "::error::配布先のテスターグループが解決できませんでした。Variables の TESTFLIGHT_EXTERNAL_GROUP を確認してください。"
+            exit 1
           fi
-          asc builds upload \
+          echo "バージョン $APP_VERSION / ビルド $BUILD_NUMBER をグループ $TESTFLIGHT_GROUP へ配信します"
+          # 外部テスターグループはベータ審査を通す必要があるため --submit / --confirm を付ける。
+          # バージョンとビルド番号は ipa から読み取られるため渡さない
+          # (--build-number は --ipa 無しだと既存ビルドの検索条件になり、意味が変わる)。
+          # --test-notes の内容は次回の差分の起点にもなるので、失敗したら配信ごと失敗させる
+          asc publish testflight \
             --app "$ASC_APP_ID" \
             --ipa "$IPA_PATH" \
-            --version "$APP_VERSION" \
-            --build-number "$BUILD_NUMBER" \
-            --output json
-          # アップロード直後は ASC 側にビルドが現れるまで数分かかる
-          asc builds wait \
-            --app "$ASC_APP_ID" \
-            --version "$APP_VERSION" \
-            --build-number "$BUILD_NUMBER" \
-            --platform IOS \
-            --timeout 30m \
-            --fail-on-invalid
+            --group "$TESTFLIGHT_GROUP" \
+            --test-notes "$(cat "$CHANGELOG_PATH")" \
+            --locale "$TESTFLIGHT_LOCALE" \
+            --wait \
+            --submit \
+            --confirm \
+            --notify \
+            --timeout 30m
 
   # ---------------------------------------------------------------------------
   # macOS (Mac App Store)

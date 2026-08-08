@@ -50,6 +50,9 @@ OUTPUT_DIR="${OUTPUT_DIR:-$REPO_ROOT/out/testflight-ios}"
 ASC_BIN="${ASC_BIN:-}"
 
 # TestFlight のテスターグループ。指定すると asc publish testflight で配布まで行う。
+# なお CD が付ける変更履歴 (テスト対象の末尾の rev マーカー) はここでは付かないため、
+# 手動配信を挟むと次回の CD が差分の起点を 1 つ前のビルドまで遡って探すことになる。
+# scripts/build-testflight-changelog.sh 参照
 TESTFLIGHT_GROUP="${TESTFLIGHT_GROUP:-}"
 
 SKIP_UPLOAD="${SKIP_UPLOAD:-false}"
