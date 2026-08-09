@@ -2,3 +2,5 @@
 # (バイナリは自動判定。upstream / マージベースと改行コードを揃え、
 #  CRLF/LF 混在による不要なマージ衝突を防ぐ)
 * text=auto
+
+.github/workflows/*.lock.yml linguist-generated=true merge=ours

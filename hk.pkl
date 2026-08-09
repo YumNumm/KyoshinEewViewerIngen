@@ -31,7 +31,7 @@ local linters = new Mapping<String, Step> {
         // --offline でローカルフックから GitHub API を叩かないようにする。
         // 空文字の GITHUB_TOKEN / GH_TOKEN が環境に残っていると zizmor が起動時に落ちるため env -u で外す。
         glob = workflowAndActionGlobs
-        check = "mise exec -- env -u GITHUB_TOKEN -u GH_TOKEN zizmor --offline --min-severity low {{files}}"
+        check = "mise exec -- env -u GITHUB_TOKEN -u GH_TOKEN zizmor --config .github/zizmor.yml --offline --min-severity low {{files}}"
     }
     ["pinact"] {
         glob = workflowAndActionGlobs
@@ -39,6 +39,8 @@ local linters = new Mapping<String, Step> {
     }
     ["actionlint"] {
         glob = workflowGlobs
+        // gh-aw生成物はconcurrency.queue拡張を含むため、compiler組み込みactionlintで検証する。
+        exclude = List(".github/workflows/**/*.lock.yml")
         check = "mise exec -- actionlint {{files}}"
     }
     ["shellcheck"] {
