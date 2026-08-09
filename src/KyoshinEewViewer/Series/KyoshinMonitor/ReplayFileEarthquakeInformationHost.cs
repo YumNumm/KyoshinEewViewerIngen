@@ -231,8 +231,9 @@ public class ReplayFileEarthquakeInformationHost : EarthquakeInformationHost
 			.OrderBy(i => i.Report_time)
 			.Select(i =>
 			{
-				// DateTime はオフセット付き時刻の壁時計を保持する（システム TZ に依存しない）
-				var time = i.Report_time.DateTime;
+				// 震源の発生時刻 (EqMonitorEewConverter) や一覧表示と同じくローカル時刻へ揃える。
+				// ここだけ UTC 壁時計にすると P･S 波の経過時間が負になり到達予想円が描画されない
+				var time = i.Report_time.LocalDateTime;
 				return (ReplayData)new InMemoryEewReplayData
 				{
 					Time = time,
@@ -265,6 +266,15 @@ public class ReplayFileEarthquakeInformationHost : EarthquakeInformationHost
 		Logger.LogInfo($"EEW時系列をメモリへ読み込みました: {LoadedData.Length} 報");
 	}
 
+	/// <summary>
+	/// 強震モニタを遡って取得できる範囲に収まっているか
+	/// </summary>
+	private static bool IsInKyoshinMonitorRange(DateTime time)
+	{
+		var elapsed = DateTime.Now - time;
+		return elapsed >= TimeSpan.Zero && elapsed <= KyoshinMonitorWatchService.MaxTimeshift;
+	}
+
 	public void Start()
 	{
 		if (LoadedData is not { Length: > 0 })
@@ -275,6 +285,9 @@ public class ReplayFileEarthquakeInformationHost : EarthquakeInformationHost
 		CurrentHeader = LoadedHeader;
 		CurrentData = LoadedData;
 
+		// EEW履歴リプレイは強震モニタの画像を持たないため、遡れる範囲内であれば実データを取得して補完する
+		var fetchKyoshinMonitor = SourceKind == ReplaySourceKind.EewHistory;
+
 		Runner = new ReplayFileRunner(CurrentData)
 		{
 			SpeedMultiplier = SpeedMultiplier,
@@ -283,7 +296,14 @@ public class ReplayFileEarthquakeInformationHost : EarthquakeInformationHost
 		{
 			// 毎秒ぴったりの場合はタイマーイベントを発生させる
 			if (time.Millisecond == 0)
+			{
 				EewController.TimerElapsed(time);
+
+				// 遡れる範囲を外れているときは取得しない
+				// 多重実行は KyoshinMonitorWatchService 側で抑止される
+				if (fetchKyoshinMonitor && IsInKyoshinMonitorRange(time))
+					_ = KyoshinMonitorWatcher.TimerElapsed(time);
+			}
 
 			// 強震モニタ
 			string? eewJson = null;
@@ -348,7 +368,7 @@ public class ReplayFileEarthquakeInformationHost : EarthquakeInformationHost
 		OnEewUpdated(DateTime.Now, []);
 		KyoshinMonitorWatcher.ResetHistories();
 		EventStateTracker.Clear();
-		_ = KyoshinMonitorWatcher.Initalize();
+		_ = InitializeKyoshinMonitorAsync(fetchKyoshinMonitor, CurrentData[0].Time);
 
 		// 観測点から地域マッピングを構築
 		KyoshinMonitorWatcher.RealtimeDataUpdated += BuildRegionMap;
@@ -358,6 +378,24 @@ public class ReplayFileEarthquakeInformationHost : EarthquakeInformationHost
 
 		Logger.LogInfo($"{ReplaySourceDescription}を開始します: {CurrentData.Length} 件 / {SpeedMultiplier:0.0}倍速");
 		Runner.Start();
+	}
+
+	/// <summary>
+	/// 走時表と観測点を準備し、強震モニタを取得しない場合はその旨を通知する
+	/// </summary>
+	/// <remarks>
+	/// <see cref="KyoshinMonitorWatchService.Initalize"/> が最後に「初回のデータ取得中です」を表示するため、
+	/// 取得しないことの通知はその完了後に行う必要がある。
+	/// </remarks>
+	private async Task InitializeKyoshinMonitorAsync(bool fetchKyoshinMonitor, DateTime startTime)
+	{
+		await KyoshinMonitorWatcher.Initalize();
+
+		if (fetchKyoshinMonitor && !IsInKyoshinMonitorRange(startTime))
+		{
+			WarningMessage = "強震モニタを遡れる範囲外のため、緊急地震速報のみ再生します";
+			Logger.LogInfo($"強震モニタを遡れる範囲外のため取得を行いません: {startTime:yyyy/MM/dd HH:mm:ss}");
+		}
 	}
 
 	private void OnTimeJumpDetected(TimeSpan jump)

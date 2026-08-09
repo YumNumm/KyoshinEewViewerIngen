@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using FluentAvalonia.UI.Controls;
 using KyoshinEewViewer.Core.Models;
+using KyoshinEewViewer.Series.KyoshinMonitor.Services;
 using KyoshinEewViewer.Services;
 using ReactiveUI;
 using System;
@@ -32,13 +33,18 @@ public class KyoshinMonitorReplaySettingPage : ReactiveObject, ISettingPage
 	public ISubWindowsService? SubWindowService { get; }
 
 
+	/// <summary>
+	/// 遡ることができる最大秒数
+	/// </summary>
+	public static double MaxTimeshiftSeconds { get; } = KyoshinMonitorWatchService.MaxTimeshift.TotalSeconds;
+
 	private int _timeshiftSeconds = 0;
 	public int TimeshiftSeconds
 	{
 		get => _timeshiftSeconds;
 		set {
-			if (value > 10800)
-				value = 10800;
+			if (value > MaxTimeshiftSeconds)
+				value = (int)MaxTimeshiftSeconds;
 			if (value < 0)
 				value = 0;
 			this.RaiseAndSetIfChanged(ref _timeshiftSeconds, value);

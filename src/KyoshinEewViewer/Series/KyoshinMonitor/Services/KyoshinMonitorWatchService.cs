@@ -25,6 +25,11 @@ namespace KyoshinEewViewer.Series.KyoshinMonitor.Services;
 
 public class KyoshinMonitorWatchService
 {
+	/// <summary>
+	/// 強震モニタを遡って取得できる最大の時間。タイムシフトで選択できる範囲と共通
+	/// </summary>
+	public static readonly TimeSpan MaxTimeshift = TimeSpan.FromHours(3);
+
 	private static HttpClient? _httpClient;
 	private static readonly Lock _staticInitLock = new();
 

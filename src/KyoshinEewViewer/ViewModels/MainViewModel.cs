@@ -339,7 +339,6 @@ public partial class MainViewModel : NavigationPaneViewModelBase
 		}
 
 		SeriesController.RegisterSeries(KyoshinMonitorSeries.MetaData);
-		SeriesController.RegisterSeries(EewHistorySeries.MetaData);
 		SeriesController.RegisterSeries(EarthquakeSeries.MetaData);
 		SeriesController.RegisterSeries(TsunamiSeries.MetaData);
 		SeriesController.RegisterSeries(RadarSeries.MetaData);
@@ -349,6 +348,7 @@ public partial class MainViewModel : NavigationPaneViewModelBase
 
 		SeriesController.RegisterSeries(Series.Typhoon.TyphoonSeries.MetaData);
 		SeriesController.RegisterSeries(Series.Lightning.LightningSeries.MetaData);
+		SeriesController.RegisterSeries(EewHistorySeries.MetaData);
 		SeriesController.RegisterSeries(Series.ShakeDetectionVerifier.ShakeDetectionVerifierSeries.MetaData);
 		SeriesController.RegisterSeries(ObservationPointEditorSeries.MetaData);
 
