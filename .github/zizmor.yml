@@ -2,4 +2,4 @@ rules:
   adhoc-packages:
     ignore:
       # gh-aw v0.84.3 generates version-pinned Claude CLI installation steps.
-      - upstream-sync.lock.yml
+      - upstream-sync.lock.yaml

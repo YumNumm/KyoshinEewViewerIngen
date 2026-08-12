@@ -32,7 +32,11 @@ local linters = new Mapping<String, Step> {
     }
     ["actionlint"] {
         glob = workflowGlobs
-        exclude = List(".github/workflows/**/*.lock.yml")
+        # gh-aw が生成する .lock.yml / .lock.yaml は concurrency.queue など未対応構文を含む
+        exclude = List(
+            ".github/workflows/**/*.lock.yml",
+            ".github/workflows/**/*.lock.yaml"
+        )
         check = "mise exec -- actionlint {{files}}"
     }
     ["shellcheck"] {
