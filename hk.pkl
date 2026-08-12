@@ -1,12 +1,7 @@
 amends "package://github.com/jdx/hk/releases/download/v1.53.0/hk@1.53.0#/Config.pkl"
 
-// hk util 系ヘルパーは全ファイルを対象にする (see https://hk.jdx.dev/cli/util.html )
 local utilFileGlobs = List("**/*")
-
 local workflowGlobs = List(".github/workflows/**/*.yml", ".github/workflows/**/*.yaml")
-
-// composite action の定義ファイル。actionlint は action.yml を workflow として解釈してしまい
-// syntax-check で誤検知するため、zizmor / pinact だけ対象に含める。
 local actionGlobs = List(".github/actions/**/*.yml", ".github/actions/**/*.yaml")
 
 local workflowAndActionGlobs = workflowGlobs + actionGlobs
@@ -28,8 +23,6 @@ local linters = new Mapping<String, Step> {
         check = "mise exec -- gitleaks git --staged --config .gitleaks.toml"
     }
     ["zizmor"] {
-        // --offline でローカルフックから GitHub API を叩かないようにする。
-        // 空文字の GITHUB_TOKEN / GH_TOKEN が環境に残っていると zizmor が起動時に落ちるため env -u で外す。
         glob = workflowAndActionGlobs
         check = "mise exec -- env -u GITHUB_TOKEN -u GH_TOKEN zizmor --config .github/zizmor.yml --offline --min-severity low {{files}}"
     }
@@ -39,7 +32,6 @@ local linters = new Mapping<String, Step> {
     }
     ["actionlint"] {
         glob = workflowGlobs
-        // gh-aw生成物はconcurrency.queue拡張を含むため、compiler組み込みactionlintで検証する。
         exclude = List(".github/workflows/**/*.lock.yml")
         check = "mise exec -- actionlint {{files}}"
     }

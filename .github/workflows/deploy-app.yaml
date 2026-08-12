@@ -1,18 +1,5 @@
 name: CD
 
-# 配信系をまとめた単一のワークフロー。旧 deploy.yaml / deploy-app.yaml / build-android.yaml を統合した。
-# 各配信先はビルド段階では互いに依存しないため、以下の job が並列で走る。
-#   containers     : ShakeDetectionProducer / ReplayGenerator のコンテナイメージを ghcr.io へ push
-#   desktop-macos  : Desktop 版を self-contained で publish し、タグ時は GitHub Releases 用に固める
-#   android        : debug 署名済みの AAB / APK を artifact として出す
-#   build-ios      : App Store Connect 向けの ipa を作る (クラウド署名)
-#   build-macos    : Mac App Store 向けの pkg を作る (Secrets の .p12 で署名)
-# アップロード系 (deploy-ios / deploy-macos / create-release) だけは対応するビルドに needs で続く。
-#
-# environment は 2 つ使う。
-#   - testflight-build : ビルド用。Secrets の参照範囲を絞るためだけのもので承認は不要
-#   - testflight       : アップロード用。外部への配信になるため必要に応じて承認者を設定する
-#
 # 必要な Secrets / Variables:
 #   ASC_APP_ID                      Variables 推奨。ASC のアプリ ID (数値)。
 #                                   net.yumnumm.KyoshinEewViewer のアプリレコードを作成してから設定する
@@ -28,782 +15,685 @@ name: CD
 #   EQMONITOR_BASE_URL              配布ビルドに埋め込む EQMonitor API の既定の接続先。
 #                                   ソースに接続先を持たせないため Secret から環境変数で渡す。
 #                                   未設定でもビルドは成功し、既定の接続先が埋め込まれないだけ
-#
-# iOS は Cloud-managed certificates を使うため証明書もキーチェーンも不要。
-# macOS (Mac App Store) はクラウド署名に対応していないため .p12 が必要。
-#
-# ストア配信 (build-ios / build-macos) は develop への push のときだけ自動で走る。
-# タグ push は GitHub Releases 用の成果物づくりが目的なので、ストアへは上げない。
-#
-# iOS は develop への push のたびに TestFlight の外部テスターグループへ配布する。
-# 配布時の「テスト対象」(What to Test) には前回配信からの PR 一覧を載せる。
-# 前回配信した commit は本文末尾の `rev: <SHA>` として ASC 側に持たせてあり、
-# scripts/build-testflight-changelog.sh がそれを読み戻して差分を組み立てる。
-# (ASC の Build リソースには commit を持たせられる欄が無いための措置)
-
 on:
-  push:
-    branches:
-      - develop
-    tags:
-      - "*.*.*"
-  pull_request:
-    paths:
-      - "src/KyoshinEewViewer.Android/**"
-      - ".github/workflows/deploy-app.yaml"
-  workflow_dispatch:
-    inputs:
-      platform:
-        description: "実行対象"
-        type: choice
-        options:
-          - all
-          - containers
-          - desktop
-          - android
-          - store
-          - ios
-          - macos
-        default: all
-      tag:
-        description: "コンテナイメージのタグ（ShakeDetectionProducer / ReplayGenerator 共通。既定:
-          latest）"
-        required: false
-        default: "latest"
-      app_version:
-        description: "アプリのバージョン (CFBundleShortVersionString)"
-        type: string
-        default: "1.0"
-      build_number:
-        description: "ビルド番号 (CFBundleVersion)。空なら App Store Connect から次の番号を取得する"
-        type: string
-        default: ""
-      testflight_group:
-        description: "iOS の配布先 TestFlight テスターグループ ID / 名前。空なら
-          TESTFLIGHT_EXTERNAL_GROUP (既定の外部テスターグループ) へ配布する"
-        type: string
-        default: ""
-      skip_upload:
-        description: "ビルドのみ行い App Store Connect へアップロードしない"
-        type: boolean
-        default: false
+    push:
+        branches:
+            - develop
+        tags:
+            - "*.*.*"
+    workflow_dispatch:
+        inputs:
+            platform:
+                description: "実行対象"
+                type: choice
+                options:
+                    - all
+                    - containers
+                    - desktop
+                    - android
+                    - store
+                    - ios
+                    - macos
+                default: all
+            tag:
+                description: "Container Image Tag"
+                required: false
+                default: "latest"
+            app_version:
+                description: "App Version (CFBundleShortVersionString)"
+                type: string
+                default: "1.0"
+            build_number:
+                description: "Build Number (CFBundleVersion)"
+                type: string
+                default: ""
+            testflight_group:
+                description:
+                    "iOS の配布先 TestFlight テスターグループ ID / 名前。空なら
+                    TESTFLIGHT_EXTERNAL_GROUP (既定の外部テスターグループ) へ配布する"
+                type: string
+                default: ""
+            skip_upload:
+                description: "ビルドのみ行い App Store Connect へアップロードしない"
+                type: boolean
+                default: false
 
 permissions:
-  contents: read
+    contents: read
 
 concurrency:
-  # ビルド番号を App Store Connect から取る job がある以上、並走すると同じ番号を取り合うため直列化する。
-  # 配信途中のアップロードを切らないよう cancel-in-progress は false 固定
-  # (統合前の build-android は true だったので、Android のビルドも中断されなくなった)
-  group: deploy-app-${{ github.ref }}
-  cancel-in-progress: false
+    # ビルド番号を App Store Connect から取る job がある以上、並走すると同じ番号を取り合うため直列化する。
+    # 配信途中のアップロードを切らないよう cancel-in-progress は false 固定
+    # (統合前の build-android は true だったので、Android のビルドも中断されなくなった)
+    group: deploy-app-${{ github.ref }}
+    cancel-in-progress: false
 
 env:
-  REGISTRY: ghcr.io
-  # .NET SDK のバージョンは mise.toml / mise.lock 側で管理する
-  XCODE_VERSION: "26.6"
-  # mise が asdf の dotnet プラグインを入れる際に同意を求めて失敗するため非対話で許可する
-  MISE_YES: "1"
-  # asc CLI を非対話環境向けに設定する (docs/TESTFLIGHT_MACOS.md「遭遇したエラー 2」)
-  # キーチェーン方式は GUI の許可ダイアログ待ちでハングし得るため CI では必ず環境変数認証にする
-  ASC_BYPASS_KEYCHAIN: "1"
-  # スピナーの制御文字でログが汚れるのを防ぐ
-  ASC_SPINNER_DISABLED: "1"
-  # TestFlight の「テスト対象」の locale。変更履歴の書き込みと読み戻しで同じ値を使う
-  TESTFLIGHT_LOCALE: "ja"
+    REGISTRY: ghcr.io
+    XCODE_VERSION: "26.6"
+    MISE_YES: "1"
+    ASC_BYPASS_KEYCHAIN: "1"
+    ASC_SPINNER_DISABLED: "1"
+    TESTFLIGHT_LOCALE: "ja"
 
 jobs:
-  # ---------------------------------------------------------------------------
-  # コンテナイメージ
-  # ---------------------------------------------------------------------------
-  containers:
-    name: ${{ matrix.name }} Docker Image
-    if: >-
-      github.event_name == 'push'
-      || (github.event_name == 'workflow_dispatch'
-      && (inputs.platform == 'all' || inputs.platform == 'containers'))
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      packages: write
-    strategy:
-      # 片方のイメージの失敗でもう片方を落とさない
-      fail-fast: false
-      matrix:
-        include:
-          - name: ShakeDetectionProducer
-            image: shake-detection-producer
-            dockerfile: src/Sandboxes/ShakeDetectionProducer/Dockerfile
-          - name: ReplayGenerator
-            image: replay-generator
-            dockerfile: src/Sandboxes/ReplayGenerator/Dockerfile
-    steps:
-      # https://github.com/actions/checkout
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          submodules: recursive
-          persist-credentials: false
+    containers:
+        name: ${{ matrix.name }} Docker Image
+        if: >-
+            github.event_name == 'push'
+            || (github.event_name == 'workflow_dispatch'
+            && (inputs.platform == 'all' || inputs.platform == 'containers'))
+        runs-on: ubuntu-24.04
+        permissions:
+            contents: read
+            packages: write
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - name: ShakeDetectionProducer
+                      image: shake-detection-producer
+                      dockerfile: src/Sandboxes/ShakeDetectionProducer/Dockerfile
+                    - name: ReplayGenerator
+                      image: replay-generator
+                      dockerfile: src/Sandboxes/ReplayGenerator/Dockerfile
+        steps:
+            # https://github.com/actions/checkout
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  submodules: recursive
+                  persist-credentials: false
 
-      # https://github.com/docker/setup-qemu-action
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+            # https://github.com/docker/setup-qemu-action
+            - name: Set up QEMU
+              uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
 
-      # https://github.com/docker/setup-buildx-action
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+            # https://github.com/docker/setup-buildx-action
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
-      # https://github.com/docker/login-action
-      - name: Log in to Container Registry
-        uses: docker/login-action@371161bbe7024a29a25c5e19bfcbc0804fe9ad2c # v4.5.2
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+            # https://github.com/docker/login-action
+            - name: Log in to Container Registry
+              uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
 
-      # https://github.com/docker/metadata-action
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
-        with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}
-          tags: |
-            type=raw,value=${{ inputs.tag || 'latest' }}
-            type=sha,prefix=
-            type=ref,event=branch
+            # https://github.com/docker/metadata-action
+            - name: Extract metadata (tags, labels) for Docker
+              id: meta
+              uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+              with:
+                  images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}
+                  tags: |
+                      type=raw,value=${{ inputs.tag || 'latest' }}
+                      type=sha,prefix=
+                      type=ref,event=branch
 
-      # https://github.com/docker/build-push-action
-      - name: Build and push Docker image
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
-        with:
-          context: .
-          file: ${{ matrix.dockerfile }}
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          # イメージごとにスコープを分けないとキャッシュを取り合う
-          cache-from: type=gha,scope=${{ matrix.image }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+            # https://github.com/docker/build-push-action
+            - name: Build and push Docker image
+              uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+              with:
+                  context: .
+                  file: ${{ matrix.dockerfile }}
+                  push: true
+                  platforms: linux/amd64,linux/arm64
+                  tags: ${{ steps.meta.outputs.tags }}
+                  labels: ${{ steps.meta.outputs.labels }}
+                  cache-from: type=gha,scope=${{ matrix.image }}
+                  cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
-  # ---------------------------------------------------------------------------
-  # Desktop (macOS)
-  # ---------------------------------------------------------------------------
-  desktop-macos:
-    name: Build Desktop (macOS ${{ matrix.arch }})
-    if: >-
-      github.event_name == 'push'
-      || (github.event_name == 'workflow_dispatch'
-      && (inputs.platform == 'all' || inputs.platform == 'desktop'))
-    runs-on: macos-26
-    strategy:
-      matrix:
-        arch: [ arm64 ]
-    env:
-      RELEASE_PREFIX: KyoshinEewViewer
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          submodules: recursive
-          persist-credentials: false
-
-      - uses: FranzDiebold/github-env-vars-action@e8118971bd6b60524ae66a2d870bc83088e3a3c9 # v2.9.0
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
-        with:
-          dotnet-version: 10.0.x
-
-      - name: Parse version from tag
-        id: version
+    desktop-macos:
+        name: Build Desktop (macOS ${{ matrix.arch }})
+        if: >-
+            github.event_name == 'push'
+            || (github.event_name == 'workflow_dispatch'
+            && (inputs.platform == 'all' || inputs.platform == 'desktop'))
+        runs-on: macos-26
+        strategy:
+            matrix:
+                arch:
+                    - arm64
         env:
-          GITHUB_REF_NAME_RAW: ${{ github.ref }}
-        run: |
-          if [[ "$GITHUB_REF_NAME_RAW" =~ refs/tags/(.*) ]]; then
-            TAG_NAME="${BASH_REMATCH[1]}"
+            RELEASE_PREFIX: KyoshinEewViewer
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  submodules: recursive
+                  persist-credentials: false
 
-            if [[ "$TAG_NAME" == *"-"* ]]; then
-              APP_VERSION=$(echo "$TAG_NAME" | cut -d'-' -f1)
-              VERSION_SUFFIX=$(echo "$TAG_NAME" | cut -d'-' -f2-)
-            else
-              APP_VERSION="$TAG_NAME"
-              VERSION_SUFFIX=""
-            fi
+            - uses: FranzDiebold/github-env-vars-action@e8118971bd6b60524ae66a2d870bc83088e3a3c9 # v2.9.0
 
-            echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_OUTPUT"
-            echo "VERSION_SUFFIX=$VERSION_SUFFIX" >> "$GITHUB_OUTPUT"
-            echo "Parsed version: $APP_VERSION, suffix: $VERSION_SUFFIX"
-          else
-            echo "APP_VERSION=0.1.1" >> "$GITHUB_OUTPUT"
-            echo "VERSION_SUFFIX=" >> "$GITHUB_OUTPUT"
-          fi
-        shell: bash
+            - name: Setup .NET
+              uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+              with:
+                  dotnet-version: 10.0.x
 
-      - name: Restore workload
-        run: sudo dotnet workload restore
+            - name: Parse version from tag
+              id: version
+              env:
+                  GITHUB_REF_NAME_RAW: ${{ github.ref }}
+              run: |
+                  if [[ "$GITHUB_REF_NAME_RAW" =~ refs/tags/(.*) ]]; then
+                    TAG_NAME="${BASH_REMATCH[1]}"
 
-      - name: Build
-        run: |
-          dotnet publish src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj \
-          -c Release \
-          -r osx-${{ matrix.arch }} \
-          -o tmp \
-          -p:PublishSingleFile=true \
-          --self-contained true
-        env:
-          APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
-          VERSION_SUFFIX: ${{ steps.version.outputs.VERSION_SUFFIX }}
-          BUILD_NUMBER: ${{ env.GITHUB_RUN_NUMBER }}
-          # MSBuild が環境変数をプロパティとして解決するため、publish の引数は増やさなくてよい
-          EQMONITOR_BASE_URL: ${{ secrets.EQMONITOR_BASE_URL }}
+                    if [[ "$TAG_NAME" == *"-"* ]]; then
+                      APP_VERSION=$(echo "$TAG_NAME" | cut -d'-' -f1)
+                      VERSION_SUFFIX=$(echo "$TAG_NAME" | cut -d'-' -f2-)
+                    else
+                      APP_VERSION="$TAG_NAME"
+                      VERSION_SUFFIX=""
+                    fi
 
-      - name: Packaging
-        run: |
-          mkdir tmp2
-          cp -r build-files/KyoshinEewViewer.Desktop.app tmp2/
-          sed -i -e "s/KEVI_VERSION/$APP_VERSION/" tmp2/KyoshinEewViewer.Desktop.app/Contents/Info.plist
-          mkdir tmp2/KyoshinEewViewer.Desktop.app/Contents/MacOS
-          mv tmp/* tmp2/KyoshinEewViewer.Desktop.app/Contents/MacOS/
-        env:
-          APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
+                    echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_OUTPUT"
+                    echo "VERSION_SUFFIX=$VERSION_SUFFIX" >> "$GITHUB_OUTPUT"
+                    echo "Parsed version: $APP_VERSION, suffix: $VERSION_SUFFIX"
+                  else
+                    echo "APP_VERSION=0.1.1" >> "$GITHUB_OUTPUT"
+                    echo "VERSION_SUFFIX=" >> "$GITHUB_OUTPUT"
+                  fi
+              shell: bash
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: build-kyoshin-eew-viewer-desktop-macos-${{ matrix.arch }}
-          path: tmp2/*
+            - name: Restore workload
+              run: sudo dotnet workload restore
 
-      - name: Archive
-        uses: TheDoctor0/zip-release@b57d897cb5d60cb78b51a507f63fa184cfe35554 # 0.7.6
+            - name: Build
+              run: |
+                  dotnet publish src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj \
+                  -c Release \
+                  -r osx-${{ matrix.arch }} \
+                  -o tmp \
+                  -p:PublishSingleFile=true \
+                  --self-contained true
+              env:
+                  APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
+                  VERSION_SUFFIX: ${{ steps.version.outputs.VERSION_SUFFIX }}
+                  BUILD_NUMBER: ${{ env.GITHUB_RUN_NUMBER }}
+                  # MSBuild が環境変数をプロパティとして解決するため、publish の引数は増やさなくてよい
+                  EQMONITOR_BASE_URL: ${{ secrets.EQMONITOR_BASE_URL }}
+
+            - name: Packaging
+              run: |
+                  mkdir tmp2
+                  cp -r build-files/KyoshinEewViewer.Desktop.app tmp2/
+                  sed -i -e "s/KEVI_VERSION/$APP_VERSION/" tmp2/KyoshinEewViewer.Desktop.app/Contents/Info.plist
+                  mkdir tmp2/KyoshinEewViewer.Desktop.app/Contents/MacOS
+                  mv tmp/* tmp2/KyoshinEewViewer.Desktop.app/Contents/MacOS/
+              env:
+                  APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
+
+            - name: Upload artifacts
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+              with:
+                  name: build-kyoshin-eew-viewer-desktop-macos-${{ matrix.arch }}
+                  path: tmp2/*
+
+            - name: Archive
+              uses: TheDoctor0/zip-release@b57d897cb5d60cb78b51a507f63fa184cfe35554 # 0.7.6
+              if: startsWith(github.ref, 'refs/tags/')
+              with:
+                  type: "zip"
+                  directory: tmp2
+                  path: "*"
+                  filename: ../${{ env.RELEASE_PREFIX }}-macos-${{ matrix.arch }}.zip
+
+            - name: Upload release assets
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+              if: startsWith(github.ref, 'refs/tags/')
+              with:
+                  name: release-macos-${{ matrix.arch }}
+                  path: ${{ env.RELEASE_PREFIX }}-macos-${{ matrix.arch }}.zip
+
+    create-release:
+        name: Create GitHub Release
+        needs:
+            - desktop-macos
+        runs-on: ubuntu-24.04-arm
         if: startsWith(github.ref, 'refs/tags/')
-        with:
-          type: "zip"
-          directory: tmp2
-          path: "*"
-          filename: ../${{ env.RELEASE_PREFIX }}-macos-${{ matrix.arch }}.zip
+        permissions:
+            contents: write
+        steps:
+            - uses: FranzDiebold/github-env-vars-action@e8118971bd6b60524ae66a2d870bc83088e3a3c9 # v2.9.0
 
-      - name: Upload release assets
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          name: release-macos-${{ matrix.arch }}
-          path: ${{ env.RELEASE_PREFIX }}-macos-${{ matrix.arch }}.zip
+            - name: Download all release assets
+              uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+              with:
+                  pattern: release-*
+                  path: release-assets
+                  merge-multiple: true
 
-  create-release:
-    name: Create GitHub Release
-    needs:
-      - desktop-macos
-    runs-on: ubuntu-24.04-arm
-    if: startsWith(github.ref, 'refs/tags/')
-    permissions:
-      contents: write
-    steps:
-      - uses: FranzDiebold/github-env-vars-action@e8118971bd6b60524ae66a2d870bc83088e3a3c9 # v2.9.0
+            - name: Create Release
+              uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+              with:
+                  files: release-assets/*
+                  name: KyoshinEewViewer.Desktop v${{ env.CI_ACTION_REF_NAME }}
+                  draft: true
+                  prerelease: false
 
-      - name: Download all release assets
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          pattern: release-*
-          path: release-assets
-          merge-multiple: true
+    android:
+        name: Build Android
+        if: >-
+            github.event_name == 'push'
+            || github.event_name == 'pull_request'
+            || (github.event_name == 'workflow_dispatch'
+            && (inputs.platform == 'all' || inputs.platform == 'android'))
+        runs-on: ubuntu-24.04
+        timeout-minutes: 90
+        permissions:
+            contents: read
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  submodules: recursive
+                  persist-credentials: false
 
-      - name: Create Release
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
-        with:
-          files: release-assets/*
-          name: KyoshinEewViewer.Desktop v${{ env.CI_ACTION_REF_NAME }}
-          draft: true
-          prerelease: false
+            - name: Setup JDK 21
+              uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+              with:
+                  distribution: temurin
+                  java-version: "21"
 
-  # ---------------------------------------------------------------------------
-  # Android
-  # ---------------------------------------------------------------------------
-  # ここで出すのは動作確認用の debug 署名済みパッケージで、鍵もビルド番号も要らない。
-  # Google Play への配信を始める段階で ASC 相当の署名とビルド番号の管理を足す
-  android:
-    name: Build Android
-    if: >-
-      github.event_name == 'push'
-      || github.event_name == 'pull_request'
-      || (github.event_name == 'workflow_dispatch'
-      && (inputs.platform == 'all' || inputs.platform == 'android'))
-    runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          # CSV ソースジェネレータが jma-code-dictionary/csv に依存する
-          submodules: recursive
-          persist-credentials: false
+            - name: Setup mise
+              uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
+              with:
+                  install: false
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # .NET Android の SDK は JDK 21 以外を XA0030 で弾く。
-      # ランナー既定の JAVA_HOME は 17 を指しているため明示的に切り替える
-      - name: Setup JDK 21
-        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
-        with:
-          distribution: temurin
-          java-version: "21"
+            - name: Install tools via mise
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              shell: bash
+              run: |
+                  mise install --yes
+                  mise ls --current
 
-      # .NET SDK は mise.toml / mise.lock 側で管理しているため setup-dotnet は使わない。
-      # mise 本体だけ入れ、ツールの導入は次のステップで行う。
-      # mise.lock が dotnet を asdf バックエンドで固定しており、プラグイン未導入の
-      # 環境では同意を求めて失敗する。mise-action は --yes を渡さないため自分で渡す
-      # (プラグイン名 dotnet は core プラグインと衝突するので明示的な導入はできない)
-      - name: Setup mise (.NET SDK)
-        uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
-        with:
-          install: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Restore workload
+              shell: bash
+              run: dotnet workload restore src/KyoshinEewViewer.Android/KyoshinEewViewer.Android.csproj
 
-      - name: Install tools via mise
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          mise install --yes
-          mise ls --current
+            - name: Install missing Android SDK components
+              shell: bash
+              run: |
+                  dotnet build src/KyoshinEewViewer.Android/KyoshinEewViewer.Android.csproj \
+                    -t:InstallAndroidDependencies \
+                    -p:AndroidSdkDirectory="$ANDROID_HOME" \
+                    -p:AcceptAndroidSDKLicenses=true
 
-      # android ワークロードが無いと net10.0-android をビルドできない。
-      # mise の dotnet はユーザー領域に入るため sudo は不要
-      - name: Restore workload
-        shell: bash
-        run: dotnet workload restore src/KyoshinEewViewer.Android/KyoshinEewViewer.Android.csproj
+            - name: Build AAB / APK
+              shell: bash
+              env:
+                  EQMONITOR_BASE_URL: ${{ secrets.EQMONITOR_BASE_URL }}
+              run: dotnet publish src/KyoshinEewViewer.Android/KyoshinEewViewer.Android.csproj -c Release -o out/android
 
-      # ランナー同梱の Android SDK に API 36 のプラットフォームや build-tools が
-      # 入っていない場合、ビルド時に XA5207 で落ちる。不足分を先に入れておく
-      - name: Install missing Android SDK components
-        shell: bash
-        run: |
-          dotnet build src/KyoshinEewViewer.Android/KyoshinEewViewer.Android.csproj \
-            -t:InstallAndroidDependencies \
-            -p:AndroidSdkDirectory="$ANDROID_HOME" \
-            -p:AcceptAndroidSDKLicenses=true
+            - name: Upload AAB artifact
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+              with:
+                  name: android-aab
+                  path: out/android/*.aab
+                  if-no-files-found: error
+                  retention-days: 7
 
-      # Release では SDK の既定 (AndroidPackageFormats=aab;apk) で AAB と APK の両方が出る。
-      # 署名鍵を渡していないため、どちらも SDK が自動生成する debug キーで署名される
-      - name: Build AAB / APK
-        shell: bash
-        env:
-          EQMONITOR_BASE_URL: ${{ secrets.EQMONITOR_BASE_URL }}
-        run: dotnet publish src/KyoshinEewViewer.Android/KyoshinEewViewer.Android.csproj -c Release -o out/android
+            - name: Upload APK artifact
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+              with:
+                  name: android-apk
+                  path: out/android/*.apk
+                  if-no-files-found: error
+                  retention-days: 7
 
-      - name: Upload AAB artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: android-aab
-          path: out/android/*.aab
-          if-no-files-found: error
-          retention-days: 7
+    build-ios:
+        name: Build iOS
+        if: >-
+            (github.event_name == 'push' && github.ref == 'refs/heads/develop')
+            || (github.event_name == 'workflow_dispatch'
+            && (inputs.platform == 'all' || inputs.platform == 'store' || inputs.platform == 'ios'))
+        runs-on: macos-26
+        timeout-minutes: 120
+        environment: testflight-build
+        permissions:
+            contents: read
+        outputs:
+            app-version: ${{ steps.version.outputs.app-version }}
+            build-number: ${{ steps.version.outputs.build-number }}
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  submodules: recursive
+                  persist-credentials: false
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: android-apk
-          path: out/android/*.apk
-          if-no-files-found: error
-          retention-days: 7
+            - name: Select Xcode
+              uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+              with:
+                  xcode-version: ${{ env.XCODE_VERSION }}
 
-  # ---------------------------------------------------------------------------
-  # iOS (App Store Connect / TestFlight)
-  # ---------------------------------------------------------------------------
-  build-ios:
-    name: Build iOS
-    if: >-
-      (github.event_name == 'push' && github.ref == 'refs/heads/develop')
-      || (github.event_name == 'workflow_dispatch'
-      && (inputs.platform == 'all' || inputs.platform == 'store' || inputs.platform == 'ios'))
-    runs-on: macos-26
-    timeout-minutes: 120
-    # 承認ゲートは deploy 側に置く。ここで environment を指定しているのは
-    # Secrets の参照範囲を environment に閉じるため (zizmor secrets-outside-env)
-    environment: testflight-build
-    permissions:
-      contents: read
-    outputs:
-      app-version: ${{ steps.version.outputs.app-version }}
-      build-number: ${{ steps.version.outputs.build-number }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          submodules: recursive
-          persist-credentials: false
+            - name: Setup mise
+              uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
+              with:
+                  install: false
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # ランナー既定の Xcode に依存すると更新でビルドが揺れるため固定する
-      - name: Select Xcode
-        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
-        with:
-          xcode-version: ${{ env.XCODE_VERSION }}
+            - name: Install tools via mise
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              shell: bash
+              run: |
+                  mise install --yes
+                  mise ls --current
 
-      # .NET SDK も asc CLI も mise.toml / mise.lock で管理しているため mise だけで揃える。
-      # setup-dotnet を併用すると mise の dotnet と PATH を取り合って
-      # ワークロードの入った SDK と別の SDK を引きかねない。
-      # asc は github: バックエンドから取得するため、GITHUB_TOKEN が無いと
-      # GitHub API のレート制限に当たる (docs/TESTFLIGHT_MACOS.md 参照)
-      - name: Setup mise (.NET SDK / asc CLI)
-        uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
-        with:
-          install: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Restore workload
+              shell: bash
+              run: dotnet workload restore src/KyoshinEewViewer.iOS/KyoshinEewViewer.iOS.csproj
 
-      - name: Install tools via mise
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          mise install --yes
-          mise ls --current
+            - name: Resolve build number
+              id: version
+              env:
+                  ASC_APP_ID: ${{ vars.ASC_APP_ID || secrets.ASC_APP_ID }}
+                  ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+                  ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+                  ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+                  APP_VERSION: ${{ inputs.app_version || '1.0' }}
+                  INPUT_BUILD_NUMBER: ${{ inputs.build_number }}
+              shell: bash
+              run: |
+                  if [ -z "$ASC_APP_ID" ]; then
+                    echo "::error::ASC_APP_ID が未設定です。net.yumnumm.KyoshinEewViewer のアプリレコードを App Store Connect で作成し、Variables (または Secrets) の ASC_APP_ID に App ID を設定してください。"
+                    exit 1
+                  fi
+                  BUILD_NUMBER="$INPUT_BUILD_NUMBER"
+                  if [ -z "$BUILD_NUMBER" ]; then
+                    if ! NEXT_BUILD_JSON="$(asc builds next-build-number --app "$ASC_APP_ID" --version "$APP_VERSION" --platform IOS --output json)"; then
+                      echo "::error::App Store Connect へ問い合わせできませんでした。ASC_KEY_ID / ASC_ISSUER_ID / ASC_PRIVATE_KEY_B64 を確認してください。"
+                      exit 1
+                    fi
+                    BUILD_NUMBER="$(printf '%s' "$NEXT_BUILD_JSON" | sed -n 's/.*"nextBuildNumber":"\([0-9]*\)".*/\1/p')"
+                  fi
+                  if [ -z "$BUILD_NUMBER" ]; then
+                    echo "::error::ビルド番号の取得に失敗しました。build_number を明示指定してください。"
+                    exit 1
+                  fi
+                  echo "app-version=$APP_VERSION" >> "$GITHUB_OUTPUT"
+                  echo "build-number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+                  echo "バージョン $APP_VERSION / ビルド $BUILD_NUMBER でビルドします"
 
-      # ios ワークロードが無いと net10.0-ios をビルドできない。
-      # mise の dotnet はユーザー領域に入るため sudo は不要
-      - name: Restore workload
-        shell: bash
-        run: dotnet workload restore src/KyoshinEewViewer.iOS/KyoshinEewViewer.iOS.csproj
+            - name: Build ipa
+              env:
+                  APP_ID: ${{ vars.ASC_APP_ID || secrets.ASC_APP_ID }}
+                  APP_VERSION: ${{ steps.version.outputs.app-version }}
+                  BUILD_NUMBER: ${{ steps.version.outputs.build-number }}
+                  ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+                  ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+                  ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+                  EQMONITOR_BASE_URL: ${{ secrets.EQMONITOR_BASE_URL }}
+                  SKIP_UPLOAD: "true"
+              shell: bash
+              run: ./scripts/publish-testflight-ios.sh
 
-      # ビルド番号は github.run_number では駄目。ASC 側の履歴と無関係なので衝突し得る
-      - name: Resolve build number
-        id: version
-        env:
-          ASC_APP_ID: ${{ vars.ASC_APP_ID || secrets.ASC_APP_ID }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
-          APP_VERSION: ${{ inputs.app_version || '1.0' }}
-          INPUT_BUILD_NUMBER: ${{ inputs.build_number }}
-        shell: bash
-        run: |
-          if [ -z "$ASC_APP_ID" ]; then
-            echo "::error::ASC_APP_ID が未設定です。net.yumnumm.KyoshinEewViewer のアプリレコードを App Store Connect で作成し、Variables (または Secrets) の ASC_APP_ID に App ID を設定してください。"
-            exit 1
-          fi
-          BUILD_NUMBER="$INPUT_BUILD_NUMBER"
-          if [ -z "$BUILD_NUMBER" ]; then
-            if ! NEXT_BUILD_JSON="$(asc builds next-build-number --app "$ASC_APP_ID" --version "$APP_VERSION" --platform IOS --output json)"; then
-              echo "::error::App Store Connect へ問い合わせできませんでした。ASC_KEY_ID / ASC_ISSUER_ID / ASC_PRIVATE_KEY_B64 を確認してください。"
-              exit 1
-            fi
-            BUILD_NUMBER="$(printf '%s' "$NEXT_BUILD_JSON" | sed -n 's/.*"nextBuildNumber":"\([0-9]*\)".*/\1/p')"
-          fi
-          if [ -z "$BUILD_NUMBER" ]; then
-            echo "::error::ビルド番号の取得に失敗しました。build_number を明示指定してください。"
-            exit 1
-          fi
-          echo "app-version=$APP_VERSION" >> "$GITHUB_OUTPUT"
-          echo "build-number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
-          echo "バージョン $APP_VERSION / ビルド $BUILD_NUMBER でビルドします"
+            - name: Upload ipa artifact
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+              with:
+                  name: ios-ipa
+                  path: out/testflight-ios/export/*.ipa
+                  if-no-files-found: error
+                  retention-days: 7
 
-      # 無署名の .app から .xcarchive を組み立て、xcodebuild -exportArchive で
-      # クラウド署名して ipa にする。証明書 (.p12) やキーチェーンは使わない
-      - name: Build ipa
-        env:
-          APP_ID: ${{ vars.ASC_APP_ID || secrets.ASC_APP_ID }}
-          APP_VERSION: ${{ steps.version.outputs.app-version }}
-          BUILD_NUMBER: ${{ steps.version.outputs.build-number }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
-          # スクリプト内の dotnet publish へ環境変数として引き継がれる
-          EQMONITOR_BASE_URL: ${{ secrets.EQMONITOR_BASE_URL }}
-          # アップロードは deploy-ios ジョブが行う
-          SKIP_UPLOAD: "true"
-        shell: bash
-        run: ./scripts/publish-testflight-ios.sh
+    deploy-ios:
+        name: Deploy iOS
+        needs: build-ios
+        if: ${{ !inputs.skip_upload }}
+        runs-on: macos-26
+        timeout-minutes: 60
+        environment: testflight
+        permissions:
+            contents: read
+            pull-requests: read
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  fetch-depth: 0
+                  persist-credentials: false
 
-      - name: Upload ipa artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ios-ipa
-          path: out/testflight-ios/export/*.ipa
-          if-no-files-found: error
-          retention-days: 7
+            - name: Setup mise
+              uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  deploy-ios:
-    name: Deploy iOS
-    needs: build-ios
-    if: ${{ !inputs.skip_upload }}
-    runs-on: macos-26
-    timeout-minutes: 60
-    # 外部への配信になるため承認ゲートを掛けられるようにする
-    environment: testflight
-    permissions:
-      contents: read
-      # merge commit の本文が空の PR のタイトルを gh で引くのに使う
-      pull-requests: read
-    steps:
-      # mise.toml を読ませるためにチェックアウトする (asc CLI の解決に必要)。
-      # 変更履歴を組み立てるのに前回配信した commit まで遡るため全履歴を取る
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
+            - name: Download ipa artifact
+              uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+              with:
+                  name: ios-ipa
+                  path: ipa
 
-      - name: Setup mise
-        uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Build changelog
+              env:
+                  ASC_APP_ID: ${{ vars.ASC_APP_ID || secrets.ASC_APP_ID }}
+                  ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+                  ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+                  ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+                  OUTPUT_PATH: ${{ github.workspace }}/out/testflight-changelog.txt
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              shell: bash
+              run: ./scripts/build-testflight-changelog.sh
 
-      - name: Download ipa artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: ios-ipa
-          path: ipa
+            - name: Upload to App Store Connect
+              env:
+                  ASC_APP_ID: ${{ vars.ASC_APP_ID || secrets.ASC_APP_ID }}
+                  ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+                  ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+                  ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+                  APP_VERSION: ${{ needs.build-ios.outputs.app-version }}
+                  BUILD_NUMBER: ${{ needs.build-ios.outputs.build-number }}
+                  TESTFLIGHT_GROUP: ${{ inputs.testflight_group || vars.TESTFLIGHT_EXTERNAL_GROUP || '2706fecb-47f0-47da-b802-08987ae78803' }}
+                  CHANGELOG_PATH: ${{ github.workspace }}/out/testflight-changelog.txt
+              shell: bash
+              run: |
+                  IPA_PATH=""
+                  for candidate in ipa/*.ipa; do
+                    [ -f "$candidate" ] || continue
+                    IPA_PATH="$candidate"
+                    break
+                  done
+                  if [ -z "$IPA_PATH" ]; then
+                    echo "::error::ipa が見つかりません。"
+                    exit 1
+                  fi
+                  if [ -z "$TESTFLIGHT_GROUP" ]; then
+                    echo "::error::配布先のテスターグループが解決できませんでした。Variables の TESTFLIGHT_EXTERNAL_GROUP を確認してください。"
+                    exit 1
+                  fi
+                  echo "バージョン $APP_VERSION($BUILD_NUMBER) をグループ $TESTFLIGHT_GROUP へ配信します"
+                  asc publish testflight \
+                    --app "$ASC_APP_ID" \
+                    --ipa "$IPA_PATH" \
+                    --group "$TESTFLIGHT_GROUP" \
+                    --test-notes "$(cat "$CHANGELOG_PATH")" \
+                    --locale "$TESTFLIGHT_LOCALE" \
+                    --wait \
+                    --submit \
+                    --confirm \
+                    --notify \
+                    --timeout 30m
 
-      # 前回配信したビルドの「テスト対象」から rev を読み戻し、そこからの PR を並べる
-      - name: Build changelog
-        env:
-          ASC_APP_ID: ${{ vars.ASC_APP_ID || secrets.ASC_APP_ID }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
-          OUTPUT_PATH: ${{ github.workspace }}/out/testflight-changelog.txt
-          # PR タイトルの引き直し用。GITHUB_REPOSITORY と併せて gh が使えるようにする
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: ./scripts/build-testflight-changelog.sh
+    build-macos:
+        name: Build macOS
+        if: >-
+            (github.event_name == 'push' && github.ref == 'refs/heads/develop')
+            || (github.event_name == 'workflow_dispatch'
+            && (inputs.platform == 'all' || inputs.platform == 'store' || inputs.platform == 'macos'))
+        runs-on: macos-26
+        timeout-minutes: 90
+        environment: testflight-build
+        permissions:
+            contents: read
+        outputs:
+            app-version: ${{ steps.version.outputs.app-version }}
+            build-number: ${{ steps.version.outputs.build-number }}
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  submodules: recursive
+                  persist-credentials: false
 
-      - name: Upload to App Store Connect
-        env:
-          ASC_APP_ID: ${{ vars.ASC_APP_ID || secrets.ASC_APP_ID }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
-          APP_VERSION: ${{ needs.build-ios.outputs.app-version }}
-          BUILD_NUMBER: ${{ needs.build-ios.outputs.build-number }}
-          TESTFLIGHT_GROUP: ${{ inputs.testflight_group || vars.TESTFLIGHT_EXTERNAL_GROUP || '2706fecb-47f0-47da-b802-08987ae78803' }}
-          CHANGELOG_PATH: ${{ github.workspace }}/out/testflight-changelog.txt
-        shell: bash
-        run: |
-          IPA_PATH=""
-          for candidate in ipa/*.ipa; do
-            [ -f "$candidate" ] || continue
-            IPA_PATH="$candidate"
-            break
-          done
-          if [ -z "$IPA_PATH" ]; then
-            echo "::error::ipa が見つかりません。"
-            exit 1
-          fi
-          if [ -z "$TESTFLIGHT_GROUP" ]; then
-            echo "::error::配布先のテスターグループが解決できませんでした。Variables の TESTFLIGHT_EXTERNAL_GROUP を確認してください。"
-            exit 1
-          fi
-          echo "バージョン $APP_VERSION / ビルド $BUILD_NUMBER をグループ $TESTFLIGHT_GROUP へ配信します"
-          # 外部テスターグループはベータ審査を通す必要があるため --submit / --confirm を付ける。
-          # バージョンとビルド番号は ipa から読み取られるため渡さない
-          # (--build-number は --ipa 無しだと既存ビルドの検索条件になり、意味が変わる)。
-          # --test-notes の内容は次回の差分の起点にもなるので、失敗したら配信ごと失敗させる
-          asc publish testflight \
-            --app "$ASC_APP_ID" \
-            --ipa "$IPA_PATH" \
-            --group "$TESTFLIGHT_GROUP" \
-            --test-notes "$(cat "$CHANGELOG_PATH")" \
-            --locale "$TESTFLIGHT_LOCALE" \
-            --wait \
-            --submit \
-            --confirm \
-            --notify \
-            --timeout 30m
+            - name: Select Xcode
+              uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+              with:
+                  xcode-version: ${{ env.XCODE_VERSION }}
 
-  # ---------------------------------------------------------------------------
-  # macOS (Mac App Store)
-  # ---------------------------------------------------------------------------
-  # Mac App Store 版はクラウド署名に対応していないため、Secrets の .p12 を
-  # 一時キーチェーンへ取り込んで署名する。手順は docs/TESTFLIGHT_MACOS.md と同じで、
-  # 実処理は既存の scripts/publish-testflight-macos.sh に任せる。
-  build-macos:
-    name: Build macOS
-    if: >-
-      (github.event_name == 'push' && github.ref == 'refs/heads/develop')
-      || (github.event_name == 'workflow_dispatch'
-      && (inputs.platform == 'all' || inputs.platform == 'store' || inputs.platform == 'macos'))
-    runs-on: macos-26
-    timeout-minutes: 90
-    # build-ios と同じ理由で environment を指定する (承認ゲートは deploy 側)
-    environment: testflight-build
-    permissions:
-      contents: read
-    outputs:
-      app-version: ${{ steps.version.outputs.app-version }}
-      build-number: ${{ steps.version.outputs.build-number }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          submodules: recursive
-          persist-credentials: false
+            - name: Setup mise
+              uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
+              with:
+                  install: false
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Select Xcode
-        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
-        with:
-          xcode-version: ${{ env.XCODE_VERSION }}
+            - name: Install tools via mise
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              shell: bash
+              run: |
+                  mise install --yes
+                  mise ls --current
 
-      # mise 本体だけ入れ、ツールの導入は次のステップで行う。
-      # mise.lock が dotnet を asdf バックエンドで固定しており、プラグイン未導入の
-      # 環境では同意を求めて失敗する。mise-action は --yes を渡さないため自分で渡す
-      # (プラグイン名 dotnet は core プラグインと衝突するので明示的な導入はできない)
-      - name: Setup mise (.NET SDK / asc CLI)
-        uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
-        with:
-          install: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Resolve build number
+              id: version
+              env:
+                  ASC_APP_ID: ${{ vars.ASC_APP_ID || secrets.ASC_APP_ID }}
+                  ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+                  ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+                  ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+                  APP_VERSION: ${{ inputs.app_version || '1.0' }}
+                  INPUT_BUILD_NUMBER: ${{ inputs.build_number }}
+              shell: bash
+              run: |
+                  if [ -z "$ASC_APP_ID" ]; then
+                    echo "::error::ASC_APP_ID is not set. Please create the app record in App Store Connect and set the App ID in Variables (or Secrets) as ASC_APP_ID."
+                    exit 1
+                  fi
+                  BUILD_NUMBER="$INPUT_BUILD_NUMBER"
+                  if [ -z "$BUILD_NUMBER" ]; then
+                    if ! NEXT_BUILD_JSON="$(asc builds next-build-number --app "$ASC_APP_ID" --version "$APP_VERSION" --platform MAC_OS --output json)"; then
+                      echo "::error::Failed to contact App Store Connect. Please check ASC_KEY_ID / ASC_ISSUER_ID / ASC_PRIVATE_KEY_B64."
+                      exit 1
+                    fi
+                    BUILD_NUMBER="$(printf '%s' "$NEXT_BUILD_JSON" | sed -n 's/.*"nextBuildNumber":"\([0-9]*\)".*/\1/p')"
+                  fi
+                  if [ -z "$BUILD_NUMBER" ]; then
+                    echo "::error::Failed to get build number. Please specify build_number explicitly."
+                    exit 1
+                  fi
+                  echo "app-version=$APP_VERSION" >> "$GITHUB_OUTPUT"
+                  echo "build-number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
 
-      - name: Install tools via mise
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          mise install --yes
-          mise ls --current
+            - name: Import signing assets into a temporary keychain
+              id: keychain
+              env:
+                  MAC_APP_DIST_P12_BASE64: ${{ secrets.MAC_APP_DIST_P12_BASE64 }}
+                  MAC_INSTALLER_DIST_P12_BASE64: ${{ secrets.MAC_INSTALLER_DIST_P12_BASE64 }}
+                  MAC_P12_PASSWORD: ${{ secrets.MAC_P12_PASSWORD }}
+                  MAC_PROVISIONING_PROFILE_BASE64: ${{ secrets.MAC_PROVISIONING_PROFILE_BASE64 }}
+              shell: bash
+              run: |
+                  KEYCHAIN="$RUNNER_TEMP/kevi-signing.keychain-db"
+                  KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
+                  APP_P12="$RUNNER_TEMP/mac_app_dist.p12"
+                  INSTALLER_P12="$RUNNER_TEMP/mac_installer_dist.p12"
+                  PROFILE="$RUNNER_TEMP/KEVI_MacAppStore.provisionprofile"
 
-      - name: Resolve build number
-        id: version
-        env:
-          ASC_APP_ID: ${{ vars.ASC_APP_ID || secrets.ASC_APP_ID }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
-          APP_VERSION: ${{ inputs.app_version || '1.0' }}
-          INPUT_BUILD_NUMBER: ${{ inputs.build_number }}
-        shell: bash
-        run: |
-          if [ -z "$ASC_APP_ID" ]; then
-            echo "::error::ASC_APP_ID が未設定です。net.yumnumm.KyoshinEewViewer のアプリレコードを App Store Connect で作成し、Variables (または Secrets) の ASC_APP_ID に App ID を設定してください。"
-            exit 1
-          fi
-          BUILD_NUMBER="$INPUT_BUILD_NUMBER"
-          if [ -z "$BUILD_NUMBER" ]; then
-            if ! NEXT_BUILD_JSON="$(asc builds next-build-number --app "$ASC_APP_ID" --version "$APP_VERSION" --platform MAC_OS --output json)"; then
-              echo "::error::App Store Connect へ問い合わせできませんでした。ASC_KEY_ID / ASC_ISSUER_ID / ASC_PRIVATE_KEY_B64 を確認してください。"
-              exit 1
-            fi
-            BUILD_NUMBER="$(printf '%s' "$NEXT_BUILD_JSON" | sed -n 's/.*"nextBuildNumber":"\([0-9]*\)".*/\1/p')"
-          fi
-          if [ -z "$BUILD_NUMBER" ]; then
-            echo "::error::ビルド番号の取得に失敗しました。build_number を明示指定してください。"
-            exit 1
-          fi
-          echo "app-version=$APP_VERSION" >> "$GITHUB_OUTPUT"
-          echo "build-number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+                  (umask 077 && printf '%s' "$MAC_APP_DIST_P12_BASE64" | base64 --decode > "$APP_P12")
+                  (umask 077 && printf '%s' "$MAC_INSTALLER_DIST_P12_BASE64" | base64 --decode > "$INSTALLER_P12")
+                  (umask 077 && printf '%s' "$MAC_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$PROFILE")
 
-      # ログインキーチェーンを汚さないよう一時キーチェーンを作る。
-      # set-key-partition-list を忘れると codesign がハングまたは errSecInternalComponent で失敗する
-      - name: Import signing assets into a temporary keychain
-        id: keychain
-        env:
-          MAC_APP_DIST_P12_BASE64: ${{ secrets.MAC_APP_DIST_P12_BASE64 }}
-          MAC_INSTALLER_DIST_P12_BASE64: ${{ secrets.MAC_INSTALLER_DIST_P12_BASE64 }}
-          MAC_P12_PASSWORD: ${{ secrets.MAC_P12_PASSWORD }}
-          MAC_PROVISIONING_PROFILE_BASE64: ${{ secrets.MAC_PROVISIONING_PROFILE_BASE64 }}
-        shell: bash
-        run: |
-          KEYCHAIN="$RUNNER_TEMP/kevi-signing.keychain-db"
-          KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
-          APP_P12="$RUNNER_TEMP/mac_app_dist.p12"
-          INSTALLER_P12="$RUNNER_TEMP/mac_installer_dist.p12"
-          PROFILE="$RUNNER_TEMP/KEVI_MacAppStore.provisionprofile"
+                  security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+                  security set-keychain-settings -lut 7200 "$KEYCHAIN"
+                  security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+                  security import "$APP_P12" -k "$KEYCHAIN" -P "$MAC_P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productbuild
+                  security import "$INSTALLER_P12" -k "$KEYCHAIN" -P "$MAC_P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productbuild
+                  EXISTING_KEYCHAINS="$(security list-keychains -d user | tr -d '"' | tr '\n' ' ')"
+                  security list-keychains -d user -s $EXISTING_KEYCHAINS "$KEYCHAIN"
+                  security set-key-partition-list -S apple-tool:,apple:,codesign:,productbuild: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+                  rm -f "$APP_P12" "$INSTALLER_P12"
 
-          # 秘密情報はログへ出さない。他ユーザーから読めないよう umask を絞る
-          (umask 077 && printf '%s' "$MAC_APP_DIST_P12_BASE64" | base64 --decode > "$APP_P12")
-          (umask 077 && printf '%s' "$MAC_INSTALLER_DIST_P12_BASE64" | base64 --decode > "$INSTALLER_P12")
-          (umask 077 && printf '%s' "$MAC_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$PROFILE")
+                  security find-identity -v "$KEYCHAIN"
+                  echo "keychain=$KEYCHAIN" >> "$GITHUB_OUTPUT"
+                  echo "profile=$PROFILE" >> "$GITHUB_OUTPUT"
 
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          # 既定は 5 分でロックされるため延ばす。ネスト署名だけで数分かかる
-          security set-keychain-settings -lut 7200 "$KEYCHAIN"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          security import "$APP_P12" -k "$KEYCHAIN" -P "$MAC_P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productbuild
-          security import "$INSTALLER_P12" -k "$KEYCHAIN" -P "$MAC_P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productbuild
-          # 検索リストへ足さないと codesign が identity を見つけられない
-          EXISTING_KEYCHAINS="$(security list-keychains -d user | tr -d '"' | tr '\n' ' ')"
-          # shellcheck disable=SC2086 # キーチェーン一覧は空白区切りの複数引数として渡す必要がある
-          security list-keychains -d user -s $EXISTING_KEYCHAINS "$KEYCHAIN"
-          # 非対話シェルから codesign / productbuild を使うには partition list の設定が必須
-          security set-key-partition-list -S apple-tool:,apple:,codesign:,productbuild: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
-          rm -f "$APP_P12" "$INSTALLER_P12"
+            - name: Build pkg
+              env:
+                  APP_ID: ${{ vars.ASC_APP_ID || secrets.ASC_APP_ID }}
+                  APP_VERSION: ${{ steps.version.outputs.app-version }}
+                  BUILD_NUMBER: ${{ steps.version.outputs.build-number }}
+                  SIGNING_KEYCHAIN: ${{ steps.keychain.outputs.keychain }}
+                  PROVISIONING_PROFILE: ${{ steps.keychain.outputs.profile }}
+                  EQMONITOR_BASE_URL: ${{ secrets.EQMONITOR_BASE_URL }}
+                  SKIP_UPLOAD: "true"
+              shell: bash
+              run: ./scripts/publish-testflight-macos.sh
 
-          security find-identity -v "$KEYCHAIN"
-          echo "keychain=$KEYCHAIN" >> "$GITHUB_OUTPUT"
-          echo "profile=$PROFILE" >> "$GITHUB_OUTPUT"
+            - name: Upload pkg artifact
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+              with:
+                  name: macos-pkg
+                  path: out/testflight-macos/*.pkg
+                  if-no-files-found: error
+                  retention-days: 7
 
-      - name: Build pkg
-        env:
-          APP_ID: ${{ vars.ASC_APP_ID || secrets.ASC_APP_ID }}
-          APP_VERSION: ${{ steps.version.outputs.app-version }}
-          BUILD_NUMBER: ${{ steps.version.outputs.build-number }}
-          SIGNING_KEYCHAIN: ${{ steps.keychain.outputs.keychain }}
-          PROVISIONING_PROFILE: ${{ steps.keychain.outputs.profile }}
-          # スクリプト内の dotnet publish へ環境変数として引き継がれる
-          EQMONITOR_BASE_URL: ${{ secrets.EQMONITOR_BASE_URL }}
-          # アップロードは deploy-macos ジョブが行う
-          SKIP_UPLOAD: "true"
-        shell: bash
-        run: ./scripts/publish-testflight-macos.sh
+    deploy-macos:
+        name: Deploy macOS
+        needs: build-macos
+        if: ${{ !inputs.skip_upload }}
+        runs-on: macos-26
+        timeout-minutes: 60
+        environment: testflight
+        permissions:
+            contents: read
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
 
-      - name: Upload pkg artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: macos-pkg
-          path: out/testflight-macos/*.pkg
-          if-no-files-found: error
-          retention-days: 7
+            - name: Setup mise
+              uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  deploy-macos:
-    name: Deploy macOS
-    needs: build-macos
-    if: ${{ !inputs.skip_upload }}
-    runs-on: macos-26
-    timeout-minutes: 60
-    environment: testflight
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
+            - name: Download pkg artifact
+              uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+              with:
+                  name: macos-pkg
+                  path: pkg
 
-      - name: Setup mise
-        uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download pkg artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: macos-pkg
-          path: pkg
-
-      - name: Upload to App Store Connect
-        env:
-          ASC_APP_ID: ${{ vars.ASC_APP_ID || secrets.ASC_APP_ID }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
-          APP_VERSION: ${{ needs.build-macos.outputs.app-version }}
-          BUILD_NUMBER: ${{ needs.build-macos.outputs.build-number }}
-        shell: bash
-        run: |
-          PKG_PATH=""
-          for candidate in pkg/*.pkg; do
-            [ -f "$candidate" ] || continue
-            PKG_PATH="$candidate"
-            break
-          done
-          if [ -z "$PKG_PATH" ]; then
-            echo "::error::pkg が見つかりません。"
-            exit 1
-          fi
-          asc builds upload \
-            --app "$ASC_APP_ID" \
-            --pkg "$PKG_PATH" \
-            --version "$APP_VERSION" \
-            --build-number "$BUILD_NUMBER" \
-            --output json
-          asc builds wait \
-            --app "$ASC_APP_ID" \
-            --version "$APP_VERSION" \
-            --build-number "$BUILD_NUMBER" \
-            --platform MAC_OS \
-            --timeout 30m \
-            --fail-on-invalid
+            - name: Upload to App Store Connect
+              env:
+                  ASC_APP_ID: ${{ vars.ASC_APP_ID || secrets.ASC_APP_ID }}
+                  ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+                  ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+                  ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+                  APP_VERSION: ${{ needs.build-macos.outputs.app-version }}
+                  BUILD_NUMBER: ${{ needs.build-macos.outputs.build-number }}
+              shell: bash
+              run: |
+                  PKG_PATH=""
+                  for candidate in pkg/*.pkg; do
+                    [ -f "$candidate" ] || continue
+                    PKG_PATH="$candidate"
+                    break
+                  done
+                  if [ -z "$PKG_PATH" ]; then
+                    echo "::error::pkg not found."
+                    exit 1
+                  fi
+                  asc builds upload \
+                    --app "$ASC_APP_ID" \
+                    --pkg "$PKG_PATH" \
+                    --version "$APP_VERSION" \
+                    --build-number "$BUILD_NUMBER" \
+                    --output json
+                  asc builds wait \
+                    --app "$ASC_APP_ID" \
+                    --version "$APP_VERSION" \
+                    --build-number "$BUILD_NUMBER" \
+                    --platform MAC_OS \
+                    --timeout 30m \
+                    --fail-on-invalid
