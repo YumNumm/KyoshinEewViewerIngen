@@ -154,7 +154,7 @@ jobs:
 
       # https://github.com/docker/login-action
       - name: Log in to Container Registry
-        uses: docker/login-action@371161bbe7024a29a25c5e19bfcbc0804fe9ad2c # v4.5.2
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -340,7 +340,7 @@ jobs:
       # .NET Android の SDK は JDK 21 以外を XA0030 で弾く。
       # ランナー既定の JAVA_HOME は 17 を指しているため明示的に切り替える
       - name: Setup JDK 21
-        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: temurin
           java-version: "21"
