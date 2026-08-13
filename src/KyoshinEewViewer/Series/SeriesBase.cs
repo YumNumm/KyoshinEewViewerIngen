@@ -27,6 +27,17 @@ public abstract class SeriesBase(SeriesMeta meta) : ReactiveObject, IDisposable
 		internal set => this.RaiseAndSetIfChanged(ref _isSeparated, value);
 	}
 
+	private bool _isSheetShown;
+	/// <summary>
+	/// 画面を覆うシート(モーダル)を表示しているかどうか
+	/// 表示中は画面に重なるメインウィンドウ側のボタンを隠すために利用する
+	/// </summary>
+	public bool IsSheetShown
+	{
+		get => _isSheetShown;
+		protected set => this.RaiseAndSetIfChanged(ref _isSheetShown, value);
+	}
+
 	/// <summary>
 	/// DisplayControl の最小表示サイズ。
 	/// 表示領域がこのサイズを下回るとスケーリングが開始される。

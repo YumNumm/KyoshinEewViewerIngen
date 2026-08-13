@@ -1012,6 +1012,7 @@ public class EarthquakeSeries : SeriesBase
 			this.RaiseAndSetIfChanged(ref _isObservationSheetOpen, value);
 			if (value)
 				IsHistorySheetOpen = false;
+			UpdateIsSheetShown();
 		}
 	}
 
@@ -1028,8 +1029,12 @@ public class EarthquakeSeries : SeriesBase
 			this.RaiseAndSetIfChanged(ref _isHistorySheetOpen, value);
 			if (value)
 				IsObservationSheetOpen = false;
+			UpdateIsSheetShown();
 		}
 	}
+
+	private void UpdateIsSheetShown()
+		=> IsSheetShown = IsObservationSheetOpen || IsHistorySheetOpen;
 
 	public void CloseSheets()
 	{
