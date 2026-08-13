@@ -97,6 +97,12 @@ public partial class MainViewModel : NavigationPaneViewModelBase
 		set => this.RaiseAndSetIfChanged(ref _mapPadding, value);
 	}
 
+	/// <summary>
+	/// モバイル端末で動作しているかどうか
+	/// 画面が狭いため、左下のボタン群を一回り小さく表示する
+	/// </summary>
+	public bool IsMobile { get; } = OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
+
 	private double _leftBottomControlOpacity = 1;
 	public double LeftBottomControlOpacity
 	{

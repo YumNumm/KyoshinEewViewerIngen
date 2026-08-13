@@ -475,6 +475,7 @@ public class EewHistorySeries : SeriesBase
 			this.RaiseAndSetIfChanged(ref _isReportsSheetOpen, value);
 			if (value)
 				IsHistorySheetOpen = false;
+			UpdateIsSheetShown();
 		}
 	}
 
@@ -491,8 +492,12 @@ public class EewHistorySeries : SeriesBase
 			this.RaiseAndSetIfChanged(ref _isHistorySheetOpen, value);
 			if (value)
 				IsReportsSheetOpen = false;
+			UpdateIsSheetShown();
 		}
 	}
+
+	private void UpdateIsSheetShown()
+		=> IsSheetShown = IsReportsSheetOpen || IsHistorySheetOpen;
 
 	public void CloseSheets()
 	{

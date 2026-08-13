@@ -249,37 +249,57 @@
                    Margin="{Binding $parent[views:MainView].SafeAreaPadding}">
                 <Border Opacity="{Binding LeftBottomControlOpacity}"
                         CornerRadius="{StaticResource OverlayCornerRadius}"
-                        Classes.narrow="{Binding IsNarrowLayout}">
+                        HorizontalAlignment="Center"
+                        Classes.narrow="{Binding IsNarrowLayout}"
+                        Classes.mobile="{Binding IsMobile}"
+                        Classes.sheetShown="{Binding SelectedSeries.IsSheetShown}">
                     <Border.Styles>
                         <!-- サイドバーを表示しない幅では地図の上に直接重なるため、視認性を確保するために背景を敷く -->
                         <Style Selector="Border.narrow">
                             <Setter Property="Background" Value="{DynamicResource SolidBackgroundFillColorBaseBrush}" />
                         </Style>
+                        <!-- サイドバーを表示しない幅ではシリーズのシートに重なってしまうため、シート表示中は隠す -->
+                        <Style Selector="Border.narrow.sheetShown">
+                            <Setter Property="IsVisible" Value="False" />
+                        </Style>
+                        <Style Selector="Button">
+                            <Setter Property="Padding" Value="10,7" />
+                        </Style>
+                        <Style Selector="Viewbox">
+                            <Setter Property="Height" Value="28" />
+                        </Style>
+                        <!-- モバイルは画面が狭いため、一回り小さく表示する -->
+                        <Style Selector="Border.mobile Button">
+                            <Setter Property="Padding" Value="7,5" />
+                        </Style>
+                        <Style Selector="Border.mobile Viewbox">
+                            <Setter Property="Height" Value="20" />
+                        </Style>
                     </Border.Styles>
                     <StackPanel HorizontalAlignment="Center" Spacing="3">
-                        <Button Name="ToggleNavigationPaneButton" Command="{Binding ToggleNavigationPane}" Padding="10,7" Theme="{StaticResource TransparentButton}" ToolTip.Tip="シリーズを切り替える" IsVisible="{Binding IsNarrowLayout}">
-                            <Viewbox Height="28" Margin="0,2">
+                        <Button Name="ToggleNavigationPaneButton" Command="{Binding ToggleNavigationPane}" Theme="{StaticResource TransparentButton}" ToolTip.Tip="シリーズを切り替える" IsVisible="{Binding IsNarrowLayout}">
+                            <Viewbox Margin="0,2">
                                 <ui:FASymbolIcon Symbol="GlobalNavigationButton" />
                             </Viewbox>
                         </Button>
-                        <Button Name="MuteButton" Command="{Binding ToggleMute}" Padding="10,7" Theme="{StaticResource TransparentButton}" ToolTip.Tip="音声をミュート" IsVisible="{Binding Config.Audio.ShowMuteButtonInMainWindow}">
+                        <Button Name="MuteButton" Command="{Binding ToggleMute}" Theme="{StaticResource TransparentButton}" ToolTip.Tip="音声をミュート" IsVisible="{Binding Config.Audio.ShowMuteButtonInMainWindow}">
                             <Button.Styles>
                                 <Style Selector="ui|FASymbolIcon.muted">
                                     <Setter Property="Foreground" Value="{DynamicResource EmphasisForegroundColor}" />
                                 </Style>
                             </Button.Styles>
-                            <Viewbox Height="28" Margin="0,2">
+                            <Viewbox Margin="0,2">
                                 <ui:FASymbolIcon Symbol="{Binding Config.Audio.IsMuted, Converter={x:Static converter:BoolToStringConverter.VolumeIcon}}" Classes.muted="{Binding Config.Audio.IsMuted}" />
                             </Viewbox>
                         </Button>
-                        <Button Name="HomeButton" Click="HomeButton_Click" Padding="10,7" Theme="{StaticResource TransparentButton}" ToolTip.Tip="地図の座標を戻す">
-                            <Viewbox Height="28" Margin="0,2">
+                        <Button Name="HomeButton" Click="HomeButton_Click" Theme="{StaticResource TransparentButton}" ToolTip.Tip="地図の座標を戻す">
+                            <Viewbox Margin="0,2">
                                 <ui:FASymbolIcon Symbol="Home" />
                             </Viewbox>
                         </Button>
-                        <Button Name="OpenSettingWindowButton" Command="{Binding ShowSettingWindow}" Padding="10,7" Theme="{StaticResource TransparentButton}" ToolTip.Tip="設定画面を開く (長押しでデバッグメニュー)">
+                        <Button Name="OpenSettingWindowButton" Command="{Binding ShowSettingWindow}" Theme="{StaticResource TransparentButton}" ToolTip.Tip="設定画面を開く (長押しでデバッグメニュー)">
                             <Panel>
-                                <Viewbox Height="28" Margin="0,2">
+                                <Viewbox Margin="0,2">
                                     <ui:FASymbolIcon Symbol="Setting" />
                                 </Viewbox>
                                 <ui:FAInfoBadge IsVisible="{Binding UpdateAvailable}" Classes="Caution Icon" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-2,-5,0" />
