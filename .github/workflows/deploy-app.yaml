@@ -21,6 +21,11 @@ on:
             - develop
         tags:
             - "*.*.*"
+    # TODO: CD マトリクスの試走用。検証後に取り除く
+    pull_request:
+        paths:
+            - ".github/workflows/deploy-app.yaml"
+            - ".github/actions/publish-kevi/**"
     workflow_dispatch:
         inputs:
             platform:
@@ -148,6 +153,7 @@ jobs:
         name: Build Desktop (${{ matrix.os }} ${{ matrix.arch }})
         if: >-
             github.event_name == 'push'
+            || github.event_name == 'pull_request'
             || (github.event_name == 'workflow_dispatch'
             && (inputs.platform == 'all' || inputs.platform == 'desktop'))
         runs-on: ${{ matrix.runner }}
@@ -275,7 +281,6 @@ jobs:
         name: Build Android
         if: >-
             github.event_name == 'push'
-            || github.event_name == 'pull_request'
             || (github.event_name == 'workflow_dispatch'
             && (inputs.platform == 'all' || inputs.platform == 'android'))
         runs-on: ubuntu-24.04
