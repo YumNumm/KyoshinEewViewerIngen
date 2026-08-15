@@ -20,6 +20,14 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      # ReactiveUI.Avalonia 12.1.x は ReactiveUI 24 (System.Reactive を廃し
+      # ReactiveUI.Primitives の ISequencer/RxVoid に置き換えた実装) を要求するため、
+      # 全 Series にまたがる Rx 移行を済ませるまで 12.0.x に据え置く。
+      # Splat 20 系は ReactiveUI 24 専用なので併せて除外する
+      - dependency-name: "ReactiveUI.Avalonia"
+        versions: [">=12.1.0"]
+      - dependency-name: "Splat"
+        versions: [">=20.0.0"]
     groups:
       nuget:
         patterns:
