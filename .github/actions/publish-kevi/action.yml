@@ -27,6 +27,10 @@ inputs:
     description: 'true にすると結合テスト用フック (INTEGRATION_TEST) を有効化してビルドする'
     required: false
     default: 'false'
+  eqmonitor-base-url:
+    description: 'ビルドに埋め込む EQMonitor API の既定の接続先。空ならビルドへ埋め込まない'
+    required: false
+    default: ''
   output-dir:
     description: '出力先ディレクトリ'
     required: true
@@ -48,6 +52,8 @@ runs:
         APP_VERSION: ${{ inputs.app-version }}
         VERSION_SUFFIX: ${{ inputs.version-suffix }}
         BUILD_NUMBER: ${{ inputs.build-number }}
+        # MSBuild が環境変数をプロパティとして解決するため、publish の引数は増やさなくてよい
+        EQMONITOR_BASE_URL: ${{ inputs.eqmonitor-base-url }}
         INPUT_OS: ${{ inputs.os }}
         INPUT_ARCH: ${{ inputs.arch }}
         INPUT_INTEGRATION_TEST_BUILD: ${{ inputs.integration-test-build }}
