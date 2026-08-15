@@ -64,7 +64,8 @@
 
     <PropertyGroup>
         <AvaloniaVersion>12.1.1</AvaloniaVersion>
-        <SplatVersion>20.2.0</SplatVersion>
+        <!-- Splat 20 系は ReactiveUI 24 (System.Reactive を廃した独自実装) 用。ReactiveUI.Avalonia 12.0.x に合わせて 19 系に据え置く -->
+        <SplatVersion>19.4.1</SplatVersion>
         <DotnetVersion>10.0.10</DotnetVersion>
     </PropertyGroup>
 
@@ -72,7 +73,9 @@
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
         <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" />
-        <PackageReference Include="ReactiveUI.Avalonia" Version="12.1.1" />
+        <!-- ReactiveUI.Avalonia 12.1.x は ReactiveUI 24 を要求し、System.Reactive (IScheduler/Unit) が使えなくなる。
+             全 Series にまたがる移行が必要なため 12.0.x に据え置く。詳細は .github/dependabot.yml を参照 -->
+        <PackageReference Include="ReactiveUI.Avalonia" Version="12.0.3" />
         <PackageReference Include="Avalonia.Skia" Version="$(AvaloniaVersion)" />
         <PackageReference Include="Avalonia.HarfBuzz" Version="$(AvaloniaVersion)" />
         <PackageReference Include="FluentAvaloniaUI" Version="3.0.2" />
