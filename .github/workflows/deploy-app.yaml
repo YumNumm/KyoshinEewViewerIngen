@@ -144,17 +144,34 @@ jobs:
                   cache-from: type=gha,scope=${{ matrix.image }}
                   cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
-    desktop-macos:
-        name: Build Desktop (macOS ${{ matrix.arch }})
+    desktop:
+        name: Build Desktop (${{ matrix.os }} ${{ matrix.arch }})
         if: >-
             github.event_name == 'push'
             || (github.event_name == 'workflow_dispatch'
             && (inputs.platform == 'all' || inputs.platform == 'desktop'))
-        runs-on: macos-26
+        runs-on: ${{ matrix.runner }}
         strategy:
+            fail-fast: false
             matrix:
-                arch:
-                    - arm64
+                include:
+                    # arm64 は self-contained publish のクロスコンパイルで賄えるため、
+                    # arm64 ランナーは使わず x64 ランナーで両アーキテクチャをビルドする
+                    - os: windows
+                      arch: x64
+                      runner: windows-2025
+                    - os: windows
+                      arch: arm64
+                      runner: windows-2025
+                    - os: ubuntu
+                      arch: x64
+                      runner: ubuntu-24.04
+                    - os: ubuntu
+                      arch: arm64
+                      runner: ubuntu-24.04
+                    - os: macos
+                      arch: arm64
+                      runner: macos-26
         env:
             RELEASE_PREFIX: KyoshinEewViewer
         steps:
@@ -195,60 +212,43 @@ jobs:
                   fi
               shell: bash
 
-            - name: Restore workload
-              run: sudo dotnet workload restore
-
             - name: Build
-              run: |
-                  dotnet publish src/KyoshinEewViewer.Desktop/KyoshinEewViewer.Desktop.csproj \
-                  -c Release \
-                  -r osx-${{ matrix.arch }} \
-                  -o tmp \
-                  -p:PublishSingleFile=true \
-                  --self-contained true
-              env:
-                  APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
-                  VERSION_SUFFIX: ${{ steps.version.outputs.VERSION_SUFFIX }}
-                  BUILD_NUMBER: ${{ env.GITHUB_RUN_NUMBER }}
-                  # MSBuild が環境変数をプロパティとして解決するため、publish の引数は増やさなくてよい
-                  EQMONITOR_BASE_URL: ${{ secrets.EQMONITOR_BASE_URL }}
-
-            - name: Packaging
-              run: |
-                  mkdir tmp2
-                  cp -r build-files/KyoshinEewViewer.Desktop.app tmp2/
-                  sed -i -e "s/KEVI_VERSION/$APP_VERSION/" tmp2/KyoshinEewViewer.Desktop.app/Contents/Info.plist
-                  mkdir tmp2/KyoshinEewViewer.Desktop.app/Contents/MacOS
-                  mv tmp/* tmp2/KyoshinEewViewer.Desktop.app/Contents/MacOS/
-              env:
-                  APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
+              uses: ./.github/actions/publish-kevi
+              with:
+                  os: ${{ matrix.os }}
+                  arch: ${{ matrix.arch }}
+                  app-version: ${{ steps.version.outputs.APP_VERSION }}
+                  version-suffix: ${{ steps.version.outputs.VERSION_SUFFIX }}
+                  build-number: ${{ env.GITHUB_RUN_NUMBER }}
+                  eqmonitor-base-url: ${{ secrets.EQMONITOR_BASE_URL }}
+                  output-dir: out
 
             - name: Upload artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
               with:
-                  name: build-kyoshin-eew-viewer-desktop-macos-${{ matrix.arch }}
-                  path: tmp2/*
+                  name: ${{ env.RELEASE_PREFIX }}-${{ matrix.os }}-${{ matrix.arch }}
+                  path: out/dist/*
 
             - name: Archive
               uses: TheDoctor0/zip-release@b57d897cb5d60cb78b51a507f63fa184cfe35554 # 0.7.6
               if: startsWith(github.ref, 'refs/tags/')
               with:
                   type: "zip"
-                  directory: tmp2
+                  directory: out/dist
                   path: "*"
-                  filename: ../${{ env.RELEASE_PREFIX }}-macos-${{ matrix.arch }}.zip
+                  filename: ../../${{ env.RELEASE_PREFIX }}-${{ matrix.os }}-${{ matrix.arch }}.zip
 
             - name: Upload release assets
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
               if: startsWith(github.ref, 'refs/tags/')
               with:
-                  name: release-macos-${{ matrix.arch }}
-                  path: ${{ env.RELEASE_PREFIX }}-macos-${{ matrix.arch }}.zip
+                  name: release-${{ matrix.os }}-${{ matrix.arch }}
+                  path: ${{ env.RELEASE_PREFIX }}-${{ matrix.os }}-${{ matrix.arch }}.zip
 
     create-release:
         name: Create GitHub Release
         needs:
-            - desktop-macos
+            - desktop
         runs-on: ubuntu-24.04-arm
         if: startsWith(github.ref, 'refs/tags/')
         permissions:
