@@ -50,14 +50,6 @@
                     <ToggleSwitch IsChecked="{Binding Config.EqMonitor.EnableEarthquake}" OnContent="する" OffContent="しない" />
                 </ui:FASettingsExpander.Footer>
             </ui:FASettingsExpander>
-            <ui:FASettingsExpander Header="取得間隔" Description="1000ms 未満を指定しても 1000ms 間隔になります。">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xf017;" FontFamily="{StaticResource IconFont}" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpander.Footer>
-                    <NumericUpDown Value="{Binding Config.EqMonitor.EarthquakePollingIntervalMs}" Minimum="1000" Maximum="600000" Increment="1000" FormatString="0" Width="150" />
-                </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
             <ui:FASettingsExpander Header="取得件数" Description="一度に取得する地震情報の件数です。">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xf0cb;" FontFamily="{StaticResource IconFont}" />
@@ -68,20 +60,12 @@
             </ui:FASettingsExpander>
 
             <TextBlock Text="緊急地震速報" FontWeight="Bold" Margin="10,20,10,5" />
-            <ui:FASettingsExpander Header="緊急地震速報を取得する" Description="ポーリングでの取得のため、他の受信元より遅れる場合があります。">
+            <ui:FASettingsExpander Header="緊急地震速報を取得する">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xf0f3;" FontFamily="{StaticResource IconFont}" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding Config.EqMonitor.EnableEew}" OnContent="する" OffContent="しない" />
-                </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
-            <ui:FASettingsExpander Header="取得間隔" Description="1000ms 未満を指定しても 1000ms 間隔になります。">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xf017;" FontFamily="{StaticResource IconFont}" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpander.Footer>
-                    <NumericUpDown Value="{Binding Config.EqMonitor.EewPollingIntervalMs}" Minimum="1000" Maximum="60000" Increment="1000" FormatString="0" Width="150" />
                 </ui:FASettingsExpander.Footer>
             </ui:FASettingsExpander>
         </StackPanel>

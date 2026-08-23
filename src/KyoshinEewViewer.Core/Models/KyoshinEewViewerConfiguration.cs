@@ -1273,26 +1273,6 @@ public class KyoshinEewViewerConfiguration : ReactiveObject, IWindowPlacementCon
 			set => this.RaiseAndSetIfChanged(ref _enableEew, value);
 		}
 
-		private int _eewPollingIntervalMs = 1000;
-		/// <summary>
-		/// 緊急地震速報のポーリング間隔(ミリ秒)
-		/// </summary>
-		public int EewPollingIntervalMs
-		{
-			get => _eewPollingIntervalMs;
-			set => this.RaiseAndSetIfChanged(ref _eewPollingIntervalMs, value);
-		}
-
-		private int _earthquakePollingIntervalMs = 5000;
-		/// <summary>
-		/// 地震情報のポーリング間隔(ミリ秒)
-		/// </summary>
-		public int EarthquakePollingIntervalMs
-		{
-			get => _earthquakePollingIntervalMs;
-			set => this.RaiseAndSetIfChanged(ref _earthquakePollingIntervalMs, value);
-		}
-
 		private int _earthquakeFetchCount = 50;
 		/// <summary>
 		/// 地震情報を一度に取得する件数
