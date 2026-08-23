@@ -55,6 +55,60 @@
           "message"
         ]
       },
+      "DeviceType": {
+        "enum": [
+          "IOS",
+          "ANDROID",
+          "DESKTOP"
+        ],
+        "type": "string"
+      },
+      "DeviceLocale": {
+        "enum": [
+          "ja",
+          "en",
+          "zh"
+        ],
+        "type": "string"
+      },
+      "DeviceRegisterBody": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/DeviceType"
+          },
+          "locale": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeviceLocale"
+              }
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "DeviceRegisterResponse": {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "deviceToken": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "deviceId",
+          "deviceToken",
+          "expiresAt"
+        ]
+      },
       "JmaIntensity": {
         "enum": [
           "0",
@@ -359,6 +413,50 @@
         ],
         "description": "震源に関する情報"
       },
+      "CatalogIntensityClass": {
+        "enum": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "9",
+          "A",
+          "B",
+          "C",
+          "D",
+          "L",
+          "S",
+          "M",
+          "R",
+          "F",
+          "X"
+        ],
+        "type": "string",
+        "description": "震度階級コード。1〜7:震度1〜7、9:有感であるが震度不明、A:震度5弱、B:震度5強、C:震度6弱、D:震度6強（1996年10月以降の細分化震度）。歴史的階級（それ以前の期間のみ出現）— L:局発地震(最大有感距離100km未満)、S:小局発地震(100km以上200km未満)、M:やや顕著地震(200km以上300km未満)、R:顕著地震(300km以上)、F:有感地震(1984年まで)、X:付近有感(1996年9月まで)",
+        "x-enumNames": [
+          "_1",
+          "_2",
+          "_3",
+          "_4",
+          "_5",
+          "_6",
+          "_7",
+          "_9",
+          "A",
+          "B",
+          "C",
+          "D",
+          "L",
+          "S",
+          "M",
+          "R",
+          "F",
+          "X"
+        ]
+      },
       "IntensityPartial": {
         "type": "object",
         "properties": {
@@ -370,6 +468,14 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/JmaLpgmIntensity"
+              }
+            ]
+          },
+          "max_intensity_class": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CatalogIntensityClass"
               }
             ]
           }
@@ -478,6 +584,21 @@
         },
         "required": [
           "items"
+        ]
+      },
+      "EarthquakeListServiceUnavailableResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": "SERVICE_UNAVAILABLE"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
         ]
       },
       "IntensityTreeRegionId": {
@@ -688,50 +809,6 @@
         "required": [
           "type",
           "value"
-        ]
-      },
-      "CatalogIntensityClass": {
-        "enum": [
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7",
-          "9",
-          "A",
-          "B",
-          "C",
-          "D",
-          "L",
-          "S",
-          "M",
-          "R",
-          "F",
-          "X"
-        ],
-        "type": "string",
-        "description": "震度階級コード。1〜7:震度1〜7、9:有感であるが震度不明、A:震度5弱、B:震度5強、C:震度6弱、D:震度6強（1996年10月以降の細分化震度）。歴史的階級（それ以前の期間のみ出現）— L:局発地震(最大有感距離100km未満)、S:小局発地震(100km以上200km未満)、M:やや顕著地震(200km以上300km未満)、R:顕著地震(300km以上)、F:有感地震(1984年まで)、X:付近有感(1996年9月まで)",
-        "x-enumNames": [
-          "_1",
-          "_2",
-          "_3",
-          "_4",
-          "_5",
-          "_6",
-          "_7",
-          "_9",
-          "A",
-          "B",
-          "C",
-          "D",
-          "L",
-          "S",
-          "M",
-          "R",
-          "F",
-          "X"
         ]
       },
       "CatalogDeterminationFlag": {
@@ -1490,48 +1567,35 @@
           "earthquake"
         ]
       },
-      "HighestIntensityItem": {
+      "CityMaxIntensityItem": {
         "type": "object",
         "properties": {
-          "code": {
+          "city_id": {
             "type": "string",
-            "description": "地域コード（気象庁防災情報XMLフォーマット コード表）"
+            "description": "市区町村コード（気象庁防災情報XMLフォーマット コード表の7桁コード）"
           },
-          "name": {
-            "type": "string",
-            "description": "地域名"
-          },
-          "intensity": {
+          "max_intensity": {
             "$ref": "#/components/schemas/JmaIntensity"
-          },
-          "count": {
-            "type": "integer",
-            "description": "同震度を観測した地震の件数"
-          },
-          "earthquake": {
-            "$ref": "#/components/schemas/EarthquakePartial"
           }
         },
         "required": [
-          "code",
-          "name",
-          "intensity",
-          "count",
-          "earthquake"
+          "city_id",
+          "max_intensity"
         ]
       },
-      "HighestIntensityResponse": {
+      "CityMaxIntensityResponse": {
         "type": "object",
         "properties": {
           "aggregated_at": {
             "type": "string",
             "format": "date-time",
-            "description": "このレスポンスで最高震度集計を生成した時刻"
+            "description": "集計を最後に更新した時刻。更新時刻を取得できなかった場合は null（items は返る）",
+            "nullable": true
           },
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/HighestIntensityItem"
+              "$ref": "#/components/schemas/CityMaxIntensityItem"
             }
           }
         },
@@ -2101,6 +2165,21 @@
           "items"
         ]
       },
+      "EewLatestServiceUnavailableResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": "SERVICE_UNAVAILABLE"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
       "EewArrayResponse": {
         "type": "object",
         "properties": {
@@ -2114,6 +2193,28 @@
         "required": [
           "items"
         ]
+      },
+      "RealtimeTicketResponse": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "issuedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "url",
+          "expiresAt",
+          "issuedAt"
+        ]
       }
     },
     "parameters": {
@@ -2126,20 +2227,7 @@
         },
         "required": true
       },
-      "HighestIntensityQueryParams": {
-        "in": "query",
-        "name": "statuses",
-        "schema": {
-          "type": "array",
-          "items": {
-            "$ref": "#/components/schemas/TelegramStatus"
-          },
-          "default": [
-            "NORMAL"
-          ]
-        }
-      },
-      "IntensityPrefectureCodeParam": {
+      "IntensityRegionCodeParam": {
         "in": "path",
         "name": "code",
         "schema": {
@@ -2148,7 +2236,7 @@
         },
         "required": true
       },
-      "IntensityRegionCodeParam": {
+      "IntensityPrefectureCodeParam": {
         "in": "path",
         "name": "code",
         "schema": {
@@ -2248,6 +2336,47 @@
     }
   },
   "paths": {
+    "/v2/device": {
+      "post": {
+        "operationId": "postV2Device",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceRegisterBody"
+              }
+            }
+          }
+        },
+        "tags": [
+          "Device"
+        ],
+        "description": "デバイスを登録してJWTを返す。X-Firebase-AppCheck または X-Challenge-Code/X-Challenge-Response ヘッダーが存在する場合はそれぞれ検証を試みるが、検証失敗時も registrationType=null として登録を続行する。",
+        "responses": {
+          "201": {
+            "description": "デバイスID と デバイストークン",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceRegisterResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "サーバーエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v2/earthquake": {
       "get": {
         "operationId": "getV2Earthquake",
@@ -2453,7 +2582,7 @@
         "tags": [
           "Earthquake"
         ],
-        "description": "地震情報一覧。sortByでmagnitude/max_intensity/max_lpgm_intensity/depth/origin_timeを指定した場合、NULL値の並び順はPostgreSQLの既定に従います（ASC: 末尾、DESC: 先頭）。カーソルベースのページネーション(cursor)はevent_idに基づくため、sortByがevent_id以外の場合はcursorと併用できません（1ページ目の取得のみ対応）。",
+        "description": "地震情報一覧。sortByでmagnitude/max_intensity/max_lpgm_intensity/depth/origin_timeを指定した場合、値を持たない地震は昇順・降順いずれでも末尾に配置されます。cursorはソート条件を含むため、cursorを渡すときはsortBy/sortOrderを1ページ目と同じ値にしてください（異なる場合は400）。",
         "responses": {
           "200": {
             "description": "地震情報一覧",
@@ -2481,6 +2610,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InternalServerErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "キャッシュとDBの双方が利用できません",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarthquakeListServiceUnavailableResponse"
                 }
               }
             }
@@ -2543,64 +2682,20 @@
         }
       }
     },
-    "/v2/earthquake/intensity/prefecture/highest": {
+    "/v2/earthquake/intensity/city/max": {
       "get": {
-        "operationId": "getV2EarthquakeIntensityPrefectureHighest",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/HighestIntensityQueryParams"
-          }
-        ],
+        "operationId": "getV2EarthquakeIntensityCityMax",
         "tags": [
           "Earthquake"
         ],
-        "description": "都道府県ごとの過去最高震度一覧",
+        "description": "市区町村ごとの観測史上最大震度一覧（全国）。事前集計済みのため都道府県での絞り込みや status 指定はありません。aggregated_at は集計を最後に更新した時刻で、取得できなかった場合は null になります（items は返ります）。観測実績のない市区町村は items に含まれません。",
         "responses": {
           "200": {
-            "description": "都道府県ごとの過去最高震度",
+            "description": "市区町村ごとの観測史上最大震度",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HighestIntensityResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "内部サーバエラー",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v2/earthquake/intensity/prefecture/{code}/city/highest": {
-      "get": {
-        "operationId": "getV2EarthquakeIntensityPrefectureByCodeCityHighest",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/IntensityPrefectureCodeParam"
-          },
-          {
-            "$ref": "#/components/parameters/HighestIntensityQueryParams"
-          }
-        ],
-        "tags": [
-          "Earthquake"
-        ],
-        "description": "指定都道府県内の市区町村ごとの過去最高震度一覧",
-        "responses": {
-          "200": {
-            "description": "市区町村ごとの過去最高震度",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HighestIntensityResponse"
+                  "$ref": "#/components/schemas/CityMaxIntensityResponse"
                 }
               }
             }
@@ -3312,7 +3407,7 @@
         "tags": [
           "Earthquake"
         ],
-        "description": "市区町村コードから地震を検索。ソートはevent_idのみ対応。sortByパラメータは無視されます。",
+        "description": "市区町村コードから地震を検索。event_id以外のソートでは値を持たない地震を末尾に配置します。cursorを渡すときはsortBy/sortOrderを1ページ目と同じ値にしてください（異なる場合は400）。",
         "responses": {
           "200": {
             "description": "市区町村から地震検索",
@@ -3760,6 +3855,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "キャッシュとDBの双方が利用できません",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EewLatestServiceUnavailableResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -3878,6 +3983,44 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/v2/realtime/ticket": {
+      "get": {
+        "operationId": "getV2RealtimeTicket",
+        "tags": [
+          "Realtime"
+        ],
+        "description": "WebSocket 接続用チケット（JWT）を発行する。x-eqmonitor-device-id ヘッダーが必要。",
+        "responses": {
+          "200": {
+            "description": "WebSocket 接続 URL（ticket クエリパラメータ付き）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RealtimeTicketResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "x-eqmonitor-device-id ヘッダーがない"
+          }
+        }
+      }
+    },
+    "/v2/realtime/example": {
+      "get": {
+        "operationId": "getV2RealtimeExample",
+        "tags": [
+          "Realtime"
+        ],
+        "description": "WebSocket 配信型を OpenAPI に公開するための mock endpoint",
+        "responses": {
+          "202": {
+            "description": "Accepted"
           }
         }
       }
