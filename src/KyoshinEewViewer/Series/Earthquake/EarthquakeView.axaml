@@ -6,6 +6,7 @@
 			 xmlns:conv="clr-namespace:KyoshinEewViewer.Series.Earthquake.Converters;assembly=KyoshinEewViewer"
 			 xmlns:local="clr-namespace:KyoshinEewViewer.Series.Earthquake;assembly=KyoshinEewViewer"
 			 xmlns:models="clr-namespace:KyoshinEewViewer.Series.Earthquake.Models;assembly=KyoshinEewViewer"
+			 xmlns:kmoni="clr-namespace:KyoshinMonitorLib;assembly=KyoshinMonitorLib"
 			 xmlns:ui="using:FluentAvalonia.UI.Controls"
 			 mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
 			 x:Class="KyoshinEewViewer.Series.Earthquake.EarthquakeView"
@@ -236,7 +237,56 @@
                         <local:ObservationIntensityListView Grid.Row="1" Classes="narrow" Margin="8,4,4,4" />
                     </Grid>
                 </Border>
-            </Grid>
+			</Grid>
+		</Panel>
+		<!-- 凡例･コメント表示 -->
+        <StackPanel Grid.Column="1" Margin="5" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+            <!-- 凡例表示 -->
+            <Border Background="{DynamicResource DockTitleBackgroundColor}" CornerRadius="4" ClipToBounds="True" HorizontalAlignment="Right" Margin="0,0,0,5">
+                <Border.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                        <Binding Path="Config.Earthquake.ShowIntensityLegend" />
+                        <Binding Path="RemarksIntensities" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                    </MultiBinding>
+                </Border.IsVisible>
+                <StackPanel>
+                    <TextBlock Text="震度" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" />
+                    <ItemsControl ItemsSource="{Binding RemarksIntensities}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="kmoni:JmaIntensity">
+                                <controls:IntensityIcon Intensity="{Binding}" WideMode="True" Height="24" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- コメント表示 -->
+            <StackPanel IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <Border VerticalAlignment="Bottom" HorizontalAlignment="Right" IsVisible="{Binding CurrentEvent.FreeFormComment, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+					    Background="{DynamicResource DockBackgroundColor}" CornerRadius="4" Margin="0,0,0,5">
+                    <TextBlock Text="{Binding CurrentEvent.FreeFormComment}" Margin="5,0" FontSize="12"
+                               HorizontalAlignment="Right" TextWrapping="Wrap" />
+                </Border>
+                <Border VerticalAlignment="Bottom" HorizontalAlignment="Right" IsVisible="{Binding CurrentEvent.Comment, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+					    Background="{DynamicResource DockBackgroundColor}" CornerRadius="4">
+                    <TextBlock Text="{Binding CurrentEvent.Comment}" Margin="5,0" FontSize="18" HorizontalAlignment="Right" TextWrapping="Wrap" />
+                </Border>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- 取り消し表示 -->
+        <Panel IsVisible="{Binding CurrentEvent, Converter={x:Static ObjectConverters.IsNotNull}}"
+			Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Border IsVisible="{Binding CurrentEvent.IsCancelled}" Background="{DynamicResource DockBackgroundColor}" CornerRadius="4">
+                <StackPanel Margin="10">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock Text="&#xf05e;" Classes="icon" FontSize="24" VerticalAlignment="Center" Margin="5,3,5,0" />
+                        <TextBlock Text="この情報は取り消されました。" FontWeight="Bold" FontSize="24" />
+                    </StackPanel>
+                    <TextBlock Text="This information is cancelled." FontSize="16" TextWrapping="Wrap" HorizontalAlignment="Center" Margin="0,10,0,0" />
+                </StackPanel>
+            </Border>
         </Panel>
 
         <!-- 過去の地震のシート -->

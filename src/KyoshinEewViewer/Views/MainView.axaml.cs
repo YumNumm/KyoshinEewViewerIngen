@@ -1,21 +1,22 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.Messaging;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Core.Models.Events;
 using KyoshinEewViewer.Map;
 using KyoshinEewViewer.Services;
 using KyoshinEewViewer.ViewModels;
-using ReactiveUI;
+using Microsoft.Extensions.Logging;
+using R3;
 using SkiaSharp;
-using Splat;
 using System;
 using System.IO;
 using System.Linq;
-using System.Reactive.Linq;
 
 namespace KyoshinEewViewer.Views;
 public partial class MainView : UserControl
@@ -62,18 +63,55 @@ public partial class MainView : UserControl
 		set => SetValue(NavigationPaneLengthProperty, value);
 	}
 
+	/// <summary>
+	/// 音量調整フライアウトを閉じるまでの猶予。ボタンとフライアウトの間をポインタが通過する時間を考慮している
+	/// </summary>
+	private static readonly TimeSpan VolumeFlyoutCloseDelay = TimeSpan.FromMilliseconds(350);
+
+	private DispatcherTimer VolumeFlyoutCloseTimer { get; }
+	/// <summary>ミュートボタンを最後に操作したポインタの種別。キーボード操作などポインタを伴わない場合は null</summary>
+	private PointerType? LastMuteButtonPointerType { get; set; }
+	/// <summary>音量調整フライアウト内でポインタが押下されている (スライダーをドラッグ中の可能性がある)</summary>
+	private bool IsVolumeFlyoutPointerPressed { get; set; }
+
 	public MainView()
 	{
 		InitializeComponent();
 
-		KyoshinEewViewerApp.Selector?.WhenAnyValue(x => x.SelectedWindowTheme).Where(x => x != null)
+		VolumeFlyoutCloseTimer = new DispatcherTimer { Interval = VolumeFlyoutCloseDelay };
+		VolumeFlyoutCloseTimer.Tick += (s, e) => CloseVolumeFlyoutIfPointerAway();
+
+		// Click イベントではポインタの種別が取得できないため、直前の押下時に記録しておく
+		MuteButton.AddHandler(PointerPressedEvent, (s, e) => LastMuteButtonPointerType = e.Pointer.Type, RoutingStrategies.Tunnel);
+		if (FlyoutBase.GetAttachedFlyout(MuteButton) is Flyout volumeFlyout)
+		{
+			// ライトディスミス用のオーバーレイにミュートボタンへの操作が吸われないようにする
+			volumeFlyout.OverlayInputPassThroughElement = MuteButton;
+			if (volumeFlyout.Content is Control volumeFlyoutContent)
+			{
+				// フライアウトは別のポップアップに載るため、ボタン側のイベントだけでは閉じる判定ができない
+				volumeFlyoutContent.PointerEntered += (s, e) => VolumeFlyoutCloseTimer.Stop();
+				volumeFlyoutContent.PointerExited += (s, e) =>
+				{
+					if (e.Pointer.Type != PointerType.Touch)
+						RestartVolumeFlyoutCloseTimer();
+				};
+				// スライダーのドラッグ中はポインタがフライアウトから外れるため、押下状態を見て閉じないようにする
+				volumeFlyoutContent.AddHandler(PointerPressedEvent, (s, e) => IsVolumeFlyoutPointerPressed = true, RoutingStrategies.Tunnel);
+				volumeFlyoutContent.AddHandler(PointerReleasedEvent, (s, e) => IsVolumeFlyoutPointerPressed = false, RoutingStrategies.Tunnel, true);
+			}
+		}
+		// フライアウトの外でポインタが離された場合にも押下状態を解除する
+		AddHandler(PointerReleasedEvent, (s, e) => IsVolumeFlyoutPointerPressed = false, RoutingStrategies.Tunnel, true);
+
+		KyoshinEewViewerApp.Selector?.ObservePropertyChanged(x => x.SelectedWindowTheme).Where(x => x != null)
 				.Subscribe(x => {
 					Map.RefreshResourceCache(x!.Theme);
 					MiniMap.RefreshResourceCache(x!.Theme);
 				});
 
-		var config = Locator.Current.RequireService<KyoshinEewViewerConfiguration>();
-		config.Map.WhenAnyValue(x => x.DisableManualMapControl).Subscribe(x =>
+		var config = ServiceLocator.Current.RequireService<KyoshinEewViewerConfiguration>();
+		config.Map.ObservePropertyChanged(x => x.DisableManualMapControl).Subscribe(x =>
 		{
 			HomeButton.IsVisible = !x;
 			Map.IsDisableManualControl = x;
@@ -84,9 +122,13 @@ public partial class MainView : UserControl
 		Map.Zoom = 6;
 		Map.CenterLocation = new KyoshinMonitorLib.Location(36.474f, 135.264f);
 
-		Map.WhenAnyValue(m => m.CenterLocation, m => m.Zoom).Sample(TimeSpan.FromSeconds(.1)).Subscribe(m =>
+		// R3 の ThrottleLast は dotnet/reactive の Sample 相当
+		Observable.CombineLatest(
+				Map.ObservePropertyChanged(m => m.CenterLocation).AsUnitObservable(),
+				Map.ObservePropertyChanged(m => m.Zoom).AsUnitObservable())
+			.ThrottleLast(TimeSpan.FromSeconds(.1)).Subscribe(m =>
 		{
-			var config = Locator.Current.RequireService<KyoshinEewViewerConfiguration>();
+			var config = ServiceLocator.Current.RequireService<KyoshinEewViewerConfiguration>();
 			Dispatcher.UIThread.Post(new Action(() =>
 			{
 				MiniMapContainer.IsVisible = config.Map.UseMiniMap && Map.IsNavigatedPosition(new RectD(config.Map.Location1.CastPoint(), config.Map.Location2.CastPoint()));
@@ -94,24 +136,24 @@ public partial class MainView : UserControl
 			}));
 		});
 
-		MiniMap.WhenAnyValue(m => m.Bounds).Subscribe(b => ResetMinimapPosition());
+		MiniMap.ObservePropertyChanged(m => m.Bounds).Subscribe(b => ResetMinimapPosition());
 		AttachedToVisualTree += (s, e) =>
 		{
 			ResetMinimapPosition();
 		};
 
 		// ScaledRoot は LayoutTransformControl の子であるため、ウィンドウ拡大率を適用したあとの論理幅が得られる
-		ScaledRoot.WhenAnyValue(p => p.Bounds).Subscribe(_ => UpdateViewWidth());
+		ScaledRoot.ObservePropertyChanged(p => p.Bounds).Subscribe(_ => UpdateViewWidth());
 		DataContextChanged += (s, e) => UpdateViewWidth();
 
-		MessageBus.Current.Listen<MapNavigationRequest>().Subscribe(x =>
+		StrongReferenceMessenger.Default.Register<MapNavigationRequest>(this, (_, x) =>
 		{
 			if (!config.Map.AutoFocus)
 				return;
 			NavigateMap(x, config);
 		});
 
-		MessageBus.Current.Listen<RegistMapPositionRequested>().Subscribe(x =>
+		StrongReferenceMessenger.Default.Register<RegistMapPositionRequested>(this, (_, x) =>
 		{
 			var halfPaddedRect = new PointD(Map.PaddedRect.Width / 2, -Map.PaddedRect.Height / 2);
 			var centerPixel = Map.CenterLocation.ToPixel(Map.Zoom);
@@ -120,7 +162,7 @@ public partial class MainView : UserControl
 			config.Map.Location2 = (centerPixel - halfPaddedRect).ToLocation(Map.Zoom);
 		});
 
-		MessageBus.Current.Listen<MapImageSaveRequested>().Subscribe(x =>
+		StrongReferenceMessenger.Default.Register<MapImageSaveRequested>(this, (_, x) =>
 		{
 			if (x.TargetPath is { } path)
 				SaveMapToFile(path);
@@ -178,14 +220,62 @@ public partial class MainView : UserControl
 		if (e.HoldingState != HoldingState.Started)
 			return;
 		e.Handled = true;
-		LogHost.Default.Info("設定ボタンの長押しによりデバッグメニューを表示します");
-		Locator.Current.GetService<SettingWindowViewModel>()?.ShowDebugMenu();
-		MessageBus.Current.SendMessage(new ShowSettingWindowRequested());
+		AppLog.Default.LogInformation("設定ボタンの長押しによりデバッグメニューを表示します");
+		ServiceLocator.Current.RequireService<SettingWindowViewModel>().ShowDebugMenu();
+		StrongReferenceMessenger.Default.Send(new ShowSettingWindowRequested());
+	}
+
+	private void MuteButton_Click(object? sender, RoutedEventArgs e)
+	{
+		var flyout = FlyoutBase.GetAttachedFlyout(MuteButton) as Flyout;
+		// タッチ操作ではホバーができないため、フライアウトが閉じている間のタップはミュートせず音量調整を開くだけにする
+		if (LastMuteButtonPointerType == PointerType.Touch && flyout?.IsOpen != true)
+			FlyoutBase.ShowAttachedFlyout(MuteButton);
+		else
+			(DataContext as MainViewModel)?.ToggleMute();
+		// キーボード操作の Click に直前のタッチ操作の種別が引き継がれないようにする
+		LastMuteButtonPointerType = null;
+	}
+
+	private void MuteButton_PointerEntered(object? sender, PointerEventArgs e)
+	{
+		// タッチ操作はタップで開くため、ホバー扱いにはしない
+		if (e.Pointer.Type == PointerType.Touch)
+			return;
+		VolumeFlyoutCloseTimer.Stop();
+		FlyoutBase.ShowAttachedFlyout(MuteButton);
+	}
+
+	private void MuteButton_PointerExited(object? sender, PointerEventArgs e)
+	{
+		if (e.Pointer.Type == PointerType.Touch)
+			return;
+		RestartVolumeFlyoutCloseTimer();
+	}
+
+	private void RestartVolumeFlyoutCloseTimer()
+	{
+		VolumeFlyoutCloseTimer.Stop();
+		VolumeFlyoutCloseTimer.Start();
+	}
+
+	private void CloseVolumeFlyoutIfPointerAway()
+	{
+		VolumeFlyoutCloseTimer.Stop();
+		if (FlyoutBase.GetAttachedFlyout(MuteButton) is not Flyout flyout)
+			return;
+		// スライダーのドラッグ中やポインタが乗っている間は閉じない
+		if (IsVolumeFlyoutPointerPressed || MuteButton.IsPointerOver || (flyout.Content is Control content && content.IsPointerOver))
+		{
+			VolumeFlyoutCloseTimer.Start();
+			return;
+		}
+		flyout.Hide();
 	}
 
 	private void HomeButton_Click(object? sender, RoutedEventArgs e)
 	{
-		var config = Locator.Current.RequireService<KyoshinEewViewerConfiguration>();
+		var config = ServiceLocator.Current.RequireService<KyoshinEewViewerConfiguration>();
 		// 自動ナビゲーションが無効な場合はシリーズの範囲ではなくホームポジションに戻す
 		if (!config.Map.AutoFocus)
 		{

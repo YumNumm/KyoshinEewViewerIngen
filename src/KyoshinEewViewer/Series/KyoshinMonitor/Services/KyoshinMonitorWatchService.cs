@@ -9,7 +9,6 @@ using KyoshinMonitorLib;
 using KyoshinMonitorLib.UrlGenerator;
 using Sentry;
 using SkiaSharp;
-using Splat;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -20,6 +19,7 @@ using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace KyoshinEewViewer.Series.KyoshinMonitor.Services;
 
@@ -31,12 +31,13 @@ public class KyoshinMonitorWatchService
 	public static readonly TimeSpan MaxTimeshift = TimeSpan.FromHours(3);
 
 	private static HttpClient? _httpClient;
+	private static WarmSocketPool? _socketPool;
 	private static readonly Lock _staticInitLock = new();
 
 	private static HttpClient HttpClient => _httpClient
 		?? throw new InvalidOperationException("HttpClient が初期化されていません。コンストラクタが先に呼ばれている必要があります。");
 
-	private static void EnsureStaticsInitialized(ILogManager logManager)
+	private static void EnsureStaticsInitialized(ILogger<KyoshinMonitorWatchService> logger)
 	{
 		if (_httpClient is not null) return;
 		lock (_staticInitLock)
@@ -46,7 +47,8 @@ public class KyoshinMonitorWatchService
 			var pool = new WarmSocketPool(
 				new DnsEndPoint("www.kmoni.bosai.go.jp", 80),
 				new WarmSocketPoolOptions(),
-				logManager.GetLogger<WarmSocketPool>());
+				logger);
+			_socketPool = pool;
 
 			var handler = new SocketsHttpHandler()
 			{
@@ -69,9 +71,16 @@ public class KyoshinMonitorWatchService
 	private KyoshinEewViewerConfiguration Config { get; }
 
 	/// <summary>
-	/// 取得タイムアウト(取得間隔の2倍)
+	/// 取得遅延の警告を表示するまでの時間(取得間隔の2倍)
 	/// </summary>
-	private TimeSpan FetchTimeout => TimeSpan.FromSeconds(Math.Max(Config.KyoshinMonitor.FetchFrequency, 1) * 2);
+	private TimeSpan DelayWarningThreshold => TimeSpan.FromSeconds(Math.Max(Config.KyoshinMonitor.FetchFrequency, 1) * 2);
+
+	/// <summary>
+	/// 取得タイムアウト(警告表示閾値+8秒)。
+	/// サーバー負荷を抑えるため in-flight のリクエストは常に1本とし、これを超えるまで打ち切らずに
+	/// 遅延したレスポンスもそのまま処理する。超過時は接続が死んでいるとみなしてキャンセルし、接続ごと破棄する
+	/// </summary>
+	private TimeSpan FetchTimeout => DelayWarningThreshold + TimeSpan.FromSeconds(8);
 	private ObservationPointsUpdateService ObservationPointsUpdateService { get; }
 
 	private KyoshinMonitorLib.ApiResult.WebApi.Eew? LatestEew { get; set; }
@@ -97,29 +106,29 @@ public class KyoshinMonitorWatchService
 
 	private DateTime? _lastSuccessfulFetchTime;
 
-	public KyoshinMonitorWatchService(ILogManager logManager, KyoshinEewViewerConfiguration config, EewController eewControlService, ObservationPointsUpdateService observationPointsUpdateService)
+	public KyoshinMonitorWatchService(ILogger<KyoshinMonitorWatchService> logger, KyoshinEewViewerConfiguration config, EewController eewControlService, ObservationPointsUpdateService observationPointsUpdateService)
 	{
-		EnsureStaticsInitialized(logManager);
+		EnsureStaticsInitialized(logger);
 
-		Logger = logManager.GetLogger<KyoshinMonitorWatchService>();
+		Logger = logger;
 		EewController = eewControlService;
 		Config = config;
 		ObservationPointsUpdateService = observationPointsUpdateService;
-		ShakeDetectionEngine = new ShakeDetectionEngine(logManager);
+		ShakeDetectionEngine = new ShakeDetectionEngine(AppLog.Create<ShakeDetectionEngine>());
 	}
 
 	public async Task Initalize()
 	{
 		if (!TravelTimeTableService.IsInitialized)
 		{
-			Logger.LogInfo("走時表を準備しています。");
+			Logger.LogInformation("走時表を準備しています。");
 			TravelTimeTableService.Initialize();
-			Logger.LogInfo($"走時表を準備しました。");
+			Logger.LogInformation("走時表を準備しました。");
 		}
 
 		if (ShakeDetectionEngine.Points == null)
 		{
-			Logger.LogInfo("観測点情報を読み込んでいます。");
+			Logger.LogInformation("観測点情報を読み込んでいます。");
 
 			// ObservationPointsUpdateServiceから観測点データを取得
 			var observationPoints = await ObservationPointsUpdateService.GetObservationPointsAsync();
@@ -134,7 +143,7 @@ public class KyoshinMonitorWatchService
 			// ShakeDetectionEngineを初期化
 			ShakeDetectionEngine.Initialize(points);
 
-			Logger.LogInfo($"観測点情報を読み込みました。");
+			Logger.LogInformation("観測点情報を読み込みました。");
 		}
 		WarningMessageUpdated?.Invoke("初回のデータ取得中です。しばらくお待ち下さい。");
 	}
@@ -181,9 +190,8 @@ public class KyoshinMonitorWatchService
 		};
 		try
 		{
-			// 画像をGET
-			using var timeoutCts = new CancellationTokenSource(FetchTimeout);
-			using var response = await HttpClient.GetAsync(imageUrl, timeoutCts.Token);
+			// 画像をGET (タイムアウトまで打ち切らず、遅延データもそのまま処理する)
+			using var response = await GetWithDelayWarningAsync(imageUrl, time);
 			if (response.StatusCode != HttpStatusCode.OK)
 			{
 				if (Config.Timer.AutoOffsetIncrement)
@@ -207,7 +215,7 @@ public class KyoshinMonitorWatchService
 				var threshold = TimeSpan.FromSeconds(Math.Max(Config.KyoshinMonitor.FetchFrequency, 1) * 5);
 				if (gap >= threshold)
 				{
-					Logger.LogWarning($"画像取得時刻のジャンプを検出しました: {gap.TotalSeconds:F1}秒 ({lastTime:HH:mm:ss} -> {time:HH:mm:ss})");
+					Logger.LogWarning("画像取得時刻のジャンプを検出しました: {TotalSeconds:F1}秒 ({LastTime:HH:mm:ss} -> {Time:HH:mm:ss})", gap.TotalSeconds, lastTime, time);
 					ResetHistories();
 					TimeJumpDetected?.Invoke(time - lastTime);
 				}
@@ -229,7 +237,7 @@ public class KyoshinMonitorWatchService
 					var contentLength = response.Content.Headers.ContentLength;
 					if (contentLength.HasValue && imageBytes.Length != contentLength.Value)
 					{
-						Logger.LogWarning($"{time:yyyy/MM/dd HH:mm:ss} レスポンスサイズが不一致です: Content-Length={contentLength.Value}, 実際のサイズ={imageBytes.Length}");
+						Logger.LogWarning("{Time:yyyy/MM/dd HH:mm:ss} レスポンスサイズが不一致です: Content-Length={ContentLength}, 実際のサイズ={ActualLength}", time, contentLength.Value, imageBytes.Length);
 					}
 
 					using var imageStream = new MemoryStream(imageBytes);
@@ -255,7 +263,7 @@ public class KyoshinMonitorWatchService
 				var missingRate = (double)missingPoints / totalPoints;
 				if (missingRate >= 0.5)
 				{
-					Logger.LogWarning($"{time:yyyy/MM/dd HH:mm:ss} 観測点の欠損率が高くなっています: {missingPoints}/{totalPoints} ({missingRate:P1})");
+					Logger.LogWarning("{Time:yyyy/MM/dd HH:mm:ss} 観測点の欠損率が高くなっています: {MissingPoints}/{TotalPoints} ({MissingRate:P1})", time, missingPoints, totalPoints, missingRate);
 
 					// 設定が有効な場合はレスポンス画像を保存
 					if (Config.KyoshinMonitor.SaveResponseOnHighMissingRate && imageBytes != null)
@@ -267,7 +275,7 @@ public class KyoshinMonitorWatchService
 							var fileName = $"{time:yyyyMMdd_HHmmss}_{(int)Math.Floor(missingRate * 100):D2}.png";
 							var filePath = Path.Combine(saveDirectory, fileName);
 							await File.WriteAllBytesAsync(filePath, imageBytes);
-							Logger.LogInfo($"レスポンス画像を保存しました: {filePath}");
+							Logger.LogInformation("レスポンス画像を保存しました: {FilePath}", filePath);
 						}
 						catch (Exception ex)
 						{
@@ -283,7 +291,7 @@ public class KyoshinMonitorWatchService
 				if (eewResult.IsSucceeded)
 					UpdateKyoshinMonitorEew(eewResult.Data, time);
 				else
-					Logger.LogWarning($"{time:yyyy/MM/dd HH:mm:ss} EEW情報の取得に失敗しました: {eewResult.FailureReason}");
+					Logger.LogWarning("{Time:yyyy/MM/dd HH:mm:ss} EEW情報の取得に失敗しました: {FailureReason}", time, eewResult.FailureReason);
 			}
 			// 確定済みイベントのみを送信
 			var confirmedEvents = ShakeDetectionEngine.KyoshinEvents.Where(e => e.IsConfirmed).ToArray();
@@ -340,7 +348,7 @@ public class KyoshinMonitorWatchService
 			var threshold = TimeSpan.FromSeconds(Math.Max(Config.KyoshinMonitor.FetchFrequency, 1) * 5);
 			if (gap >= threshold)
 			{
-				Logger.LogWarning($"リプレイ時刻のジャンプを検出しました: {gap.TotalSeconds:F1}秒 ({lastTime:HH:mm:ss} -> {time:HH:mm:ss})");
+				Logger.LogWarning("リプレイ時刻のジャンプを検出しました: {TotalSeconds:F1}秒 ({LastTime:HH:mm:ss} -> {Time:HH:mm:ss})", gap.TotalSeconds, lastTime, time);
 				ResetHistories();
 				TimeJumpDetected?.Invoke(time - lastTime);
 			}
@@ -407,6 +415,29 @@ public class KyoshinMonitorWatchService
 		LatestEew = eewData;
 	}
 
+	/// <summary>
+	/// 遅延警告を表示しつつ GET する。
+	/// 新規 TCP 接続が張りにくい環境 (MAP-E など) では確立済みの keep-alive 接続が貴重なため、
+	/// <see cref="FetchTimeout"/> までリクエストを打ち切らず、遅延したレスポンスもそのまま処理できるようにする
+	/// </summary>
+	private async Task<HttpResponseMessage> GetWithDelayWarningAsync(string url, DateTime time)
+	{
+		using var timeoutCts = new CancellationTokenSource(FetchTimeout);
+		var responseTask = HttpClient.GetAsync(url, timeoutCts.Token);
+		if (await Task.WhenAny(responseTask, Task.Delay(DelayWarningThreshold)) != responseTask)
+			WarningMessageUpdated?.Invoke($"{time:HH:mm:ss} 取得が遅延しています。");
+		try
+		{
+			return await responseTask;
+		}
+		catch (TaskCanceledException)
+		{
+			// タイムアウトでキャンセルした接続は死んでいる疑いが強いため、プール内のソケットも道連れで破棄する
+			_socketPool?.Flush();
+			throw;
+		}
+	}
+
 	private async Task<EewFetchResult> GetEewInfo(DateTime time)
 	{
 		var url = Config.KyoshinMonitor.ReceiveMode switch
@@ -417,8 +448,7 @@ public class KyoshinMonitorWatchService
 		};
 		try
 		{
-			using var timeoutCts = new CancellationTokenSource(FetchTimeout);
-			using var response = await HttpClient.GetAsync(url, timeoutCts.Token);
+			using var response = await GetWithDelayWarningAsync(url, time);
 			if (!response.IsSuccessStatusCode)
 				return EewFetchResult.Failed($"HTTP {(int)response.StatusCode} {response.StatusCode}");
 			return EewFetchResult.Succeeded(JsonSerializer.Deserialize<KyoshinMonitorLib.ApiResult.WebApi.Eew>(await response.Content.ReadAsStringAsync()));

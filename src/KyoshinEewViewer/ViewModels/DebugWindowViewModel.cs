@@ -1,24 +1,28 @@
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Core.Models.Events;
 using KyoshinEewViewer.Core.Models.Metrics;
 using KyoshinEewViewer.Services;
 using KyoshinEewViewer.Services.NetworkDebug;
 using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
-using ReactiveUI;
-using Splat;
 using System;
 using System.ComponentModel;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using KyoshinEewViewer.Core;
 
 namespace KyoshinEewViewer.ViewModels;
 
-public class DebugWindowViewModel : ViewModelBase, IDisposable
+public partial class DebugWindowViewModel : ViewModelBase, IDisposable
 {
 	public string Title => "デバッグウィンドウ";
 
@@ -34,9 +38,8 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 
 	private PropertyChangedEventHandler? _dmdataPublisherPropertyChanged;
 
-	private IDisposable? _metricsSubscription;
-	private IDisposable? _logSubscription;
 	private IDisposable? _networkSubscription;
+	private readonly Subject<NetworkTransactionAdded> _networkEvents = new();
 	private bool _isActive;
 	private readonly InMemoryLoggerProvider? _loggerProvider;
 	private readonly NetworkDebugRecorder? _networkRecorder;
@@ -46,61 +49,29 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 	/// </summary>
 	private readonly List<NetworkTransactionViewModel> _allNetworkTransactions = [];
 
-	private ObservableCollection<LayerMetricsViewModel> _layerMetrics = [];
-	public ObservableCollection<LayerMetricsViewModel> LayerMetrics
-	{
-		get => _layerMetrics;
-		set => this.RaiseAndSetIfChanged(ref _layerMetrics, value);
-	}
+	[ObservableProperty]
+	public partial ObservableCollection<LayerMetricsViewModel> LayerMetrics { get; set; } = [];
 
-	private string _totalFrameTime = "-";
-	public string TotalFrameTime
-	{
-		get => _totalFrameTime;
-		set => this.RaiseAndSetIfChanged(ref _totalFrameTime, value);
-	}
+	[ObservableProperty]
+	public partial string TotalFrameTime { get; set; } = "-";
 
-	private string _zoom = "-";
-	public string Zoom
-	{
-		get => _zoom;
-		set => this.RaiseAndSetIfChanged(ref _zoom, value);
-	}
+	[ObservableProperty]
+	public partial string Zoom { get; set; } = "-";
 
-	private string _isNavigating = "-";
-	public string IsNavigating
-	{
-		get => _isNavigating;
-		set => this.RaiseAndSetIfChanged(ref _isNavigating, value);
-	}
+	[ObservableProperty]
+	public partial string IsNavigating { get; set; } = "-";
 
-	private string _timestamp = "-";
-	public string Timestamp
-	{
-		get => _timestamp;
-		set => this.RaiseAndSetIfChanged(ref _timestamp, value);
-	}
+	[ObservableProperty]
+	public partial string Timestamp { get; set; } = "-";
 
-	private ObservableCollection<LogEntryViewModel> _logEntries = [];
-	public ObservableCollection<LogEntryViewModel> LogEntries
-	{
-		get => _logEntries;
-		set => this.RaiseAndSetIfChanged(ref _logEntries, value);
-	}
+	[ObservableProperty]
+	public partial ObservableCollection<LogEntryViewModel> LogEntries { get; set; } = [];
 
-	private bool _autoScroll = true;
-	public bool AutoScroll
-	{
-		get => _autoScroll;
-		set => this.RaiseAndSetIfChanged(ref _autoScroll, value);
-	}
+	[ObservableProperty]
+	public partial bool AutoScroll { get; set; } = true;
 
-	private bool _scrollToEnd;
-	public bool ScrollToEnd
-	{
-		get => _scrollToEnd;
-		set => this.RaiseAndSetIfChanged(ref _scrollToEnd, value);
-	}
+	[ObservableProperty]
+	public partial bool ScrollToEnd { get; set; }
 
 	/// <summary>
 	/// WebSocket接続先 URL（直接接続モード: ws:// または wss:// で始まる URL）
@@ -111,7 +82,7 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 		set
 		{
 			Config.Dmdata.WebSocketDefaultEndpoint = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-			this.RaisePropertyChanged();
+			OnPropertyChanged();
 		}
 	}
 
@@ -129,26 +100,18 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 				.ToArray();
 			if (Config.Dmdata.WebSocketRedundantEndpoints.Length == 0)
 				Config.Dmdata.WebSocketRedundantEndpoints = null;
-			this.RaisePropertyChanged();
+			OnPropertyChanged();
 		}
 	}
 
-	private ObservableCollection<NetworkTransactionViewModel> _networkTransactions = [];
 	/// <summary>
 	/// 絞り込み後の通信記録
 	/// </summary>
-	public ObservableCollection<NetworkTransactionViewModel> NetworkTransactions
-	{
-		get => _networkTransactions;
-		set => this.RaiseAndSetIfChanged(ref _networkTransactions, value);
-	}
+	[ObservableProperty]
+	public partial ObservableCollection<NetworkTransactionViewModel> NetworkTransactions { get; set; } = [];
 
-	private NetworkTransactionViewModel? _selectedNetworkTransaction;
-	public NetworkTransactionViewModel? SelectedNetworkTransaction
-	{
-		get => _selectedNetworkTransaction;
-		set => this.RaiseAndSetIfChanged(ref _selectedNetworkTransaction, value);
-	}
+	[ObservableProperty]
+	public partial NetworkTransactionViewModel? SelectedNetworkTransaction { get; set; }
 
 	/// <summary>
 	/// 通信内容を記録するか
@@ -159,7 +122,7 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 		set
 		{
 			Config.Debug.RecordNetworkTraffic = value;
-			this.RaisePropertyChanged();
+			OnPropertyChanged();
 		}
 	}
 
@@ -172,33 +135,27 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 		get => _networkHostFilter;
 		set
 		{
-			this.RaiseAndSetIfChanged(ref _networkHostFilter, value);
-			ApplyNetworkFilter();
+			if (SetProperty(ref _networkHostFilter, value))
+				ApplyNetworkFilter();
 		}
 	}
 
-	private bool _isDmdataReconnecting;
-	public bool IsDmdataReconnecting
-	{
-		get => _isDmdataReconnecting;
-		set => this.RaiseAndSetIfChanged(ref _isDmdataReconnecting, value);
-	}
+	[ObservableProperty]
+	public partial bool IsDmdataReconnecting { get; set; }
 
-	private string? _dmdataReconnectStatus;
-	public string? DmdataReconnectStatus
-	{
-		get => _dmdataReconnectStatus;
-		set => this.RaiseAndSetIfChanged(ref _dmdataReconnectStatus, value);
-	}
+	[ObservableProperty]
+	public partial string? DmdataReconnectStatus { get; set; }
 
-	public DebugWindowViewModel(KyoshinEewViewerConfiguration config, InMemoryLoggerProvider? loggerProvider = null)
+	public DebugWindowViewModel(
+		KyoshinEewViewerConfiguration config,
+		InMemoryLoggerProvider? loggerProvider = null,
+		NetworkDebugRecorder? networkRecorder = null,
+		DmdataRedundantTelegramPublisher? dmdataPublisher = null)
 	{
-		SplatRegistrations.RegisterLazySingleton<DebugWindowViewModel>();
-
 		Config = config;
-		_loggerProvider = loggerProvider ?? Locator.Current.GetService<InMemoryLoggerProvider>();
-		_networkRecorder = Locator.Current.GetService<NetworkDebugRecorder>();
-		DmdataPublisher = Locator.Current.GetService<DmdataRedundantTelegramPublisher>();
+		_loggerProvider = loggerProvider ?? ServiceLocator.Current.GetService<InMemoryLoggerProvider>();
+		_networkRecorder = networkRecorder ?? ServiceLocator.Current.GetService<NetworkDebugRecorder>();
+		DmdataPublisher = dmdataPublisher ?? ServiceLocator.Current.GetService<DmdataRedundantTelegramPublisher>();
 		if (DmdataPublisher is INotifyPropertyChanged dmdataInpc)
 		{
 			_dmdataPublisherPropertyChanged = (_, e) =>
@@ -206,29 +163,28 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 				if (e.PropertyName is nameof(DmdataRedundantTelegramPublisher.LastPongSendMilliseconds)
 				    or nameof(DmdataRedundantTelegramPublisher.LastPingIntervalSeconds))
 				{
-					this.RaisePropertyChanged(nameof(DmdataLastPongSendMs));
-					this.RaisePropertyChanged(nameof(DmdataLastPingIntervalSec));
+					OnPropertyChanged(nameof(DmdataLastPongSendMs));
+					OnPropertyChanged(nameof(DmdataLastPingIntervalSec));
 				}
 			};
 			dmdataInpc.PropertyChanged += _dmdataPublisherPropertyChanged;
 		}
 
-		// メトリクス更新イベントをサブスクライブ
-		_metricsSubscription = MessageBus.Current.Listen<MetricsUpdated>()
-			.ObserveOn(RxSchedulers.MainThreadScheduler)
-			.Subscribe(msg => UpdateMetrics(msg.Metrics));
+		// メトリクス更新イベントをサブスクライブ (UI スレッドへマーシャリングする)
+		StrongReferenceMessenger.Default.Register<MetricsUpdated>(this,
+			(_, msg) => Dispatcher.UIThread.Post(() => UpdateMetrics(msg.Metrics)));
 
-		// ログ追加イベントをサブスクライブ
-		_logSubscription = MessageBus.Current.Listen<LogEntryAdded>()
-			.ObserveOn(RxSchedulers.MainThreadScheduler)
-			.Subscribe(msg => AddLogEntry(msg.Entry));
+		// ログ追加イベントをサブスクライブ (UI スレッドへマーシャリングする)
+		StrongReferenceMessenger.Default.Register<LogEntryAdded>(this,
+			(_, msg) => Dispatcher.UIThread.Post(() => AddLogEntry(msg.Entry)));
 
 		// 通信記録は強震モニタにより毎秒発生するため、まとめて追加して描画負荷を抑える
-		_networkSubscription = MessageBus.Current.Listen<NetworkTransactionAdded>()
+		StrongReferenceMessenger.Default.Register<NetworkTransactionAdded>(this,
+			(_, msg) => _networkEvents.OnNext(msg));
+		_networkSubscription = _networkEvents
 			.Buffer(TimeSpan.FromMilliseconds(250))
 			.Where(messages => messages.Count > 0)
-			.ObserveOn(RxSchedulers.MainThreadScheduler)
-			.Subscribe(AddNetworkTransactions);
+			.Subscribe(messages => Dispatcher.UIThread.Post(() => AddNetworkTransactions(messages)));
 
 		// 初回ログ読み込み
 		LoadInitialLogs();
@@ -366,7 +322,7 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 		if (file is null)
 			return;
 
-		MessageBus.Current.SendMessage(new MapImageSaveRequested { TargetPath = file.Path.LocalPath });
+		StrongReferenceMessenger.Default.Send(new MapImageSaveRequested { TargetPath = file.Path.LocalPath });
 	}
 
 	/// <summary>
@@ -376,7 +332,7 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 	{
 		if (_isActive) return;
 		_isActive = true;
-		MessageBus.Current.SendMessage(new MetricsEnabledChanged { IsEnabled = true });
+		StrongReferenceMessenger.Default.Send(new MetricsEnabledChanged { IsEnabled = true });
 	}
 
 	/// <summary>
@@ -386,7 +342,7 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 	{
 		if (!_isActive) return;
 		_isActive = false;
-		MessageBus.Current.SendMessage(new MetricsEnabledChanged { IsEnabled = false });
+		StrongReferenceMessenger.Default.Send(new MetricsEnabledChanged { IsEnabled = false });
 	}
 
 	public void Dispose()
@@ -394,9 +350,9 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 		Deactivate();
 		if (DmdataPublisher is INotifyPropertyChanged dmdataInpc && _dmdataPublisherPropertyChanged is { } h)
 			dmdataInpc.PropertyChanged -= h;
-		_metricsSubscription?.Dispose();
-		_logSubscription?.Dispose();
 		_networkSubscription?.Dispose();
+		_networkEvents.Dispose();
+		StrongReferenceMessenger.Default.UnregisterAll(this);
 		GC.SuppressFinalize(this);
 	}
 
@@ -473,64 +429,32 @@ public class DebugWindowViewModel : ViewModelBase, IDisposable
 	}
 }
 
-public class LayerMetricsViewModel : ReactiveObject
+public partial class LayerMetricsViewModel : ObservableObject
 {
-	private string _layerName = string.Empty;
-	public string LayerName
-	{
-		get => _layerName;
-		set => this.RaiseAndSetIfChanged(ref _layerName, value);
-	}
+	[ObservableProperty]
+	public partial string LayerName { get; set; } = string.Empty;
 
-	private string _renderTime = string.Empty;
-	public string RenderTime
-	{
-		get => _renderTime;
-		set => this.RaiseAndSetIfChanged(ref _renderTime, value);
-	}
+	[ObservableProperty]
+	public partial string RenderTime { get; set; } = string.Empty;
 
-	private string _renderInfo = string.Empty;
-	public string RenderInfo
-	{
-		get => _renderInfo;
-		set => this.RaiseAndSetIfChanged(ref _renderInfo, value);
-	}
+	[ObservableProperty]
+	public partial string RenderInfo { get; set; } = string.Empty;
 }
 
-public class LogEntryViewModel : ReactiveObject
+public partial class LogEntryViewModel : ObservableObject
 {
-	private string _timestamp = string.Empty;
-	public string Timestamp
-	{
-		get => _timestamp;
-		set => this.RaiseAndSetIfChanged(ref _timestamp, value);
-	}
+	[ObservableProperty]
+	public partial string Timestamp { get; set; } = string.Empty;
 
-	private string _logLevel = string.Empty;
-	public string LogLevel
-	{
-		get => _logLevel;
-		set => this.RaiseAndSetIfChanged(ref _logLevel, value);
-	}
+	[ObservableProperty]
+	public partial string LogLevel { get; set; } = string.Empty;
 
-	private string _category = string.Empty;
-	public string Category
-	{
-		get => _category;
-		set => this.RaiseAndSetIfChanged(ref _category, value);
-	}
+	[ObservableProperty]
+	public partial string Category { get; set; } = string.Empty;
 
-	private string _message = string.Empty;
-	public string Message
-	{
-		get => _message;
-		set => this.RaiseAndSetIfChanged(ref _message, value);
-	}
+	[ObservableProperty]
+	public partial string Message { get; set; } = string.Empty;
 
-	private string? _exception;
-	public string? Exception
-	{
-		get => _exception;
-		set => this.RaiseAndSetIfChanged(ref _exception, value);
-	}
+	[ObservableProperty]
+	public partial string? Exception { get; set; }
 }

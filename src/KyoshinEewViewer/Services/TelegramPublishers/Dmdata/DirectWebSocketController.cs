@@ -1,7 +1,7 @@
 using DmdataSharp.WebSocketMessages.V2;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Services.NetworkDebug;
-using Splat;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Net.WebSockets;
@@ -52,9 +52,9 @@ public class DirectWebSocketController : IDisposable
 
 	public string? EndpointUrl { get; private set; }
 
-	public DirectWebSocketController(ILogManager logManager)
+	public DirectWebSocketController(ILogger<DirectWebSocketController> logger)
 	{
-		Logger = logManager.GetLogger<DirectWebSocketController>();
+		Logger = logger;
 	}
 
 	/// <summary>
@@ -75,9 +75,9 @@ public class DirectWebSocketController : IDisposable
 		_webSocket?.Dispose();
 		_webSocket = new ClientWebSocket();
 
-		Logger.LogInfo($"直接WebSocket接続を開始します: {url}");
+		Logger.LogInformation("直接WebSocket接続を開始します: {Url}", url);
 		await _webSocket.ConnectAsync(new Uri(url), _cts.Token);
-		Logger.LogInfo("直接WebSocket接続が確立されました（start メッセージを待機中）");
+		Logger.LogInformation("直接WebSocket接続が確立されました（start メッセージを待機中）");
 		NetworkDebugRecorder.RecordWebSocket(url, WebSocketDirection.Connect);
 
 		// バックグラウンドで受信ループ開始
@@ -102,7 +102,7 @@ public class DirectWebSocketController : IDisposable
 
 					if (result.MessageType == WebSocketMessageType.Close)
 					{
-						Logger.LogInfo("WebSocketサーバーから切断要求を受信しました");
+						Logger.LogInformation("WebSocketサーバーから切断要求を受信しました");
 						NetworkDebugRecorder.RecordWebSocket(EndpointUrl ?? "", WebSocketDirection.Disconnect, result.CloseStatusDescription);
 						try
 						{
@@ -146,7 +146,7 @@ public class DirectWebSocketController : IDisposable
 			switch (type)
 			{
 				case "start":
-					Logger.LogInfo("直接WebSocket: start メッセージを受信しました");
+					Logger.LogInformation("直接WebSocket: start メッセージを受信しました");
 					_isConnected = true;
 					Connected?.Invoke(this, EventArgs.Empty);
 					break;

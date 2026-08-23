@@ -1,3 +1,4 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using DmdataSharp.ApiResponses.V2.Parameters;
 using DmdataSharp.Exceptions;
 using KyoshinEewViewer.Core;
@@ -9,22 +10,21 @@ using KyoshinEewViewer.Services;
 using KyoshinEewViewer.Services.TelegramPublishers;
 using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
 using KyoshinMonitorLib;
-using ReactiveUI;
 using Sentry;
-using Splat;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace KyoshinEewViewer.Series.Earthquake.Services;
 
 /// <summary>
 /// 地震情報の更新を担う
 /// </summary>
-public class EarthquakeWatchService : ReactiveObject
+public class EarthquakeWatchService : ObservableObject
 {
 	private readonly string[] _targetTitles = ["震度速報", "震源に関する情報", "震源・震度に関する情報", "顕著な地震の震源要素更新のお知らせ", "長周期地震動に関する観測情報"];
 
@@ -100,7 +100,7 @@ public class EarthquakeWatchService : ReactiveObject
 			return;
 		}
 
-		Logger.LogInfo($"電文の受信元が失効していますが、{name} から受信しているため表示を継続します");
+		Logger.LogInformation($"電文の受信元が失効していますが、{name} から受信しているため表示を継続します");
 		NotifyExternalSourceActive(name);
 	}
 
@@ -117,14 +117,12 @@ public class EarthquakeWatchService : ReactiveObject
 	}
 
 	public EarthquakeWatchService(
-		ILogManager logManager,
+		ILogger<EarthquakeWatchService> logger,
 		KyoshinEewViewerConfiguration config,
 		TelegramProvideService telegramProvider,
 		DmdataRedundantTelegramPublisher dmdata)
 	{
-		SplatRegistrations.RegisterLazySingleton<EarthquakeWatchService>();
-
-		Logger = logManager.GetLogger<EarthquakeWatchService>();
+		Logger = logger;
 		Config = config;
 
 		telegramProvider.Subscribe(
@@ -205,7 +203,7 @@ public class EarthquakeWatchService : ReactiveObject
 				// 電文以外の受信元が地震情報を提供していれば受信エラーとしない
 				if (ExternalSourceName is { } externalSource)
 				{
-					Logger.LogInfo($"電文の受信元が失効しましたが、{externalSource} から受信しているため表示を継続します");
+					Logger.LogInformation($"電文の受信元が失効しましたが、{externalSource} から受信しているため表示を継続します");
 					NotifyExternalSourceActive(externalSource);
 					return;
 				}
@@ -292,7 +290,7 @@ public class EarthquakeWatchService : ReactiveObject
 			}
 			if (eq == null)
 			{
-				Logger.LogWarning($"イベントID {eventId} が見つからなかったため津波情報による震源情報の更新を行いませんでした。");
+				Logger.LogWarning("イベントID {EventId} が見つからなかったため津波情報による震源情報の更新を行いませんでした。", eventId);
 				continue;
 			}
 			if (!hideNotice)

@@ -1,6 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using FluentAvalonia.UI.Controls;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Core.Models.Events;
@@ -9,7 +11,7 @@ using KyoshinEewViewer.Series;
 using KyoshinEewViewer.Series.Qzss.Events;
 using KyoshinEewViewer.Services;
 using KyoshinEewViewer.Services.EqMonitor;
-using KyoshinEewViewer.Services.ExtarnalPublishers.Axis;
+using KyoshinEewViewer.Services.ExternalPublishers.Axis;
 using KyoshinEewViewer.Services.Feedback;
 using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
 using KyoshinEewViewer.Services.TelegramPublishers.JmaXml;
@@ -18,8 +20,8 @@ using KyoshinEewViewer.Services.Workflows;
 using KyoshinEewViewer.Services.Workflows.BuiltinActions;
 using KyoshinEewViewer.Views.SettingPages;
 using KyoshinMonitorLib;
-using ReactiveUI;
-using Splat;
+using R3;
+using Scriban.Syntax;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -28,10 +30,12 @@ using System.Reactive;
 using System.Reactive.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 
 namespace KyoshinEewViewer.ViewModels;
 
-public class SettingWindowViewModel : NavigationPaneViewModelBase
+public partial class SettingWindowViewModel : NavigationPaneViewModelBase
 {
 	/// <summary>
 	/// 設定項目の一覧のペインは幅 200px あるため、設定内容側に狭い端末の画面幅と同程度 (360px) を残せる幅を下限とする
@@ -47,6 +51,21 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 		{ KyoshinEventLevel.Strong, "強い(震度3程度以上)" },
 		{ KyoshinEventLevel.Stronger, "非常に強い(震度5弱程度以上)" },
 		{ KyoshinEventLevel.Disabled, "利用しない" },
+	};
+	/// <summary>
+	/// 地点予測を展開表示する震度のしきい値の選択肢
+	/// </summary>
+	public static Dictionary<JmaIntensity, string> PointForecastExpandIntensityNames { get; } = new()
+	{
+		{ JmaIntensity.Int1, "震度1以上" },
+		{ JmaIntensity.Int2, "震度2以上" },
+		{ JmaIntensity.Int3, "震度3以上" },
+		{ JmaIntensity.Int4, "震度4以上" },
+		{ JmaIntensity.Int5Lower, "震度5弱以上" },
+		{ JmaIntensity.Int5Upper, "震度5強以上" },
+		{ JmaIntensity.Int6Lower, "震度6弱以上" },
+		{ JmaIntensity.Int6Upper, "震度6強以上" },
+		{ JmaIntensity.Int7, "震度7" },
 	};
 	public static Dictionary<KyoshinEewViewerConfiguration.KyoshinMonitorConfig.Mode, string> KyoshinMonitorModeNames { get; } = new()
 	{
@@ -83,7 +102,7 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 		get => _selectedSettingPage;
 		set {
 			var oldValue = _selectedSettingPage;
-			this.RaiseAndSetIfChanged(ref _selectedSettingPage, value);
+			SetProperty(ref _selectedSettingPage, value);
 			if (value is BasicSettingPage && oldValue is not BasicSettingPage)
 			{
 				SelectedSettingPage = oldValue;
@@ -102,16 +121,15 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 		SoundPlayerService soundPlayerService,
 		WorkflowService workflowService,
 		VoicevoxService voicevoxService,
-		ILogManager logManager,
+		ILogger<SettingWindowViewModel> logger,
 		DmdataSettingPage dmdataPage,
 		AxisSettingPage axisPage,
 		JmaXmlSettingPage jmaXmlPage,
 		EqMonitorSettingPage eqMonitorPage,
 		FeedbackSettingPage feedbackPage,
-		ISubWindowsService? subWindowService)
+		DmdataRedundantTelegramPublisher? dmdataPublisher = null,
+		ISubWindowsService? subWindowService = null)
 	{
-		SplatRegistrations.RegisterLazySingleton<SettingWindowViewModel>();
-
 		Config = config;
 		SeriesController = seriesController ?? throw new ArgumentNullException(nameof(seriesController));
 		UpdateCheckService = updateCheckService;
@@ -119,20 +137,20 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 		WorkflowService = workflowService;
 		VoicevoxService = voicevoxService;
 		SubWindowService = subWindowService;
-		DmdataPublisher = Locator.Current.GetService<DmdataRedundantTelegramPublisher>();
+		DmdataPublisher = dmdataPublisher ?? ServiceLocator.Current.GetService<DmdataRedundantTelegramPublisher>();
 
-		Logger = logManager.GetLogger<SettingWindowViewModel>();
+		Logger = logger;
 
 		Series = SeriesController.AllSeries.Select(s => new SeriesViewModel(s, Config)).ToArray();
 
 		RegisteredSounds = SoundPlayerService.RegisteredSounds.Select(s => new SoundConfigViewModel(s.Key, s.Value)).ToArray();
-		OpenSoundFile = ReactiveCommand.CreateFromTask<KyoshinEewViewerConfiguration.SoundConfig>(async config =>
+		OpenSoundFile = new AsyncRelayCommand<KyoshinEewViewerConfiguration.SoundConfig>(async config =>
 		{
 			if (await PickSoundFileAsync() is { } path)
 				config.FilePath = path;
 		});
 
-		ResetMapPosition = ReactiveCommand.Create(() =>
+		ResetMapPosition = new RelayCommand(() =>
 		{
 			Config.Map.Location1 = new(45.619358f, 145.77399f);
 			Config.Map.Location2 = new(29.997368f, 128.22534f);
@@ -149,14 +167,14 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 		};
 		VersionInfos = updateCheckService.AvailableUpdateVersions;
 
-		updateCheckService.WhenAnyValue(x => x.IsUpdateIndeterminate).Subscribe(x => IsUpdateIndeterminate = x);
-		updateCheckService.WhenAnyValue(x => x.UpdateProgress).Subscribe(x => UpdateProgress = x);
-		updateCheckService.WhenAnyValue(x => x.UpdateProgressMax).Subscribe(x => UpdateProgressMax = x);
-		updateCheckService.WhenAnyValue(x => x.UpdateState).Subscribe(x => UpdateState = x);
+		updateCheckService.ObservePropertyChanged(x => x.IsUpdateIndeterminate).Subscribe(x => IsUpdateIndeterminate = x);
+		updateCheckService.ObservePropertyChanged(x => x.UpdateProgress).Subscribe(x => UpdateProgress = x);
+		updateCheckService.ObservePropertyChanged(x => x.UpdateProgressMax).Subscribe(x => UpdateProgressMax = x);
+		updateCheckService.ObservePropertyChanged(x => x.UpdateState).Subscribe(x => UpdateState = x);
 
 		SelectedWorkflow = WorkflowService.Workflows.FirstOrDefault();
 
-		VoicevoxService.WhenAnyValue(x => x.Speakers)
+		VoicevoxService.ObservePropertyChanged(x => x.Speakers)
 			.Subscribe(s => VoicevoxSpeakerName = s.SelectMany(t => t switch
 			{
 				MultiStyleSpeaker ms => ms.Styles,
@@ -232,12 +250,8 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 
 	public string Title { get; } = "設定 - KyoshinEewViewer for ingen";
 
-	private bool _isDebug;
-	public bool IsDebug
-	{
-		get => _isDebug;
-		set => this.RaiseAndSetIfChanged(ref _isDebug, value);
-	}
+	[ObservableProperty]
+	public partial bool IsDebug { get; set; }
 
 	public List<JmaIntensity> Ints { get; } = [
 		JmaIntensity.Unknown,
@@ -269,12 +283,8 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 	public bool IsSoundActivated => SoundPlayerService.IsAvailable;
 	public SoundConfigViewModel[] RegisteredSounds { get; }
 
-	private Workflow? _selectedWorkflow;
-	public Workflow? SelectedWorkflow
-	{
-		get => _selectedWorkflow;
-		set => this.RaiseAndSetIfChanged(ref _selectedWorkflow, value);
-	}
+	[ObservableProperty]
+	public partial Workflow? SelectedWorkflow { get; set; }
 
 	/// <summary>
 	/// ファイルピッカーが返したファイルを、自身のコンテナへ複製しないと設定として保存できない
@@ -333,7 +343,7 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 		}
 		catch (Exception ex)
 		{
-			LogHost.Default.Warn(ex, "音声ファイルの複製に失敗しました");
+			AppLog.Default.LogWarning(ex, "音声ファイルの複製に失敗しました");
 			// 複製できなくても、選択直後しか開けないとはいえパスが得られている iOS では従来どおりそれを使う。
 			// Android は null のままなので、壊れたパスを設定に保存せず呼び出し側で中断させる
 			return localPath;
@@ -375,6 +385,11 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 		{
 			await workflow.TestRunAsync();
 		}
+		catch (ScriptRuntimeException ex)
+		{
+			// ユーザーが記述したテンプレートの問題のため、Sentry に送信しない
+			Logger.LogWarning(ex, "ワークフローのテスト実行中にテンプレートのエラーが発生しました");
+		}
 		catch (Exception ex)
 		{
 			Logger.LogError(ex, "ワークフローのテスト実行中に例外が発生しました");
@@ -395,18 +410,10 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 		=> UrlOpener.OpenUrl("https://github.com/ingen084/KyoshinEewViewerIngen/blob/develop/workflow-guide.md");
 
 
-	private string _voicevoxSpeakerName = "話者一覧が読み込まれていません";
-	public string VoicevoxSpeakerName
-	{
-		get => _voicevoxSpeakerName;
-		set => this.RaiseAndSetIfChanged(ref _voicevoxSpeakerName, value);
-	}
-	private bool _isVoicevoxTestPlaying;
-	public bool IsVoicevoxTestPlaying
-	{
-		get => _isVoicevoxTestPlaying;
-		set => this.RaiseAndSetIfChanged(ref _isVoicevoxTestPlaying, value);
-	}
+	[ObservableProperty]
+	public partial string VoicevoxSpeakerName { get; set; } = "話者一覧が読み込まれていません";
+	[ObservableProperty]
+	public partial bool IsVoicevoxTestPlaying { get; set; }
 
 	public async Task PlayVoicevoxTestSound()
 	{
@@ -447,54 +454,26 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 
 	#region Update
 
-	private VersionInfo[]? _versionInfos;
-	public VersionInfo[]? VersionInfos
-	{
-		get => _versionInfos;
-		set => this.RaiseAndSetIfChanged(ref _versionInfos, value);
-	}
+	[ObservableProperty]
+	public partial VersionInfo[]? VersionInfos { get; set; }
 
-	private bool _updaterEnable = true;
-	public bool UpdaterEnable
-	{
-		get => _updaterEnable;
-		set => this.RaiseAndSetIfChanged(ref _updaterEnable, value);
-	}
+	[ObservableProperty]
+	public partial bool UpdaterEnable { get; set; } = true;
 
-	private bool _isUpdating;
-	public bool IsUpdating
-	{
-		get => _isUpdating;
-		set => this.RaiseAndSetIfChanged(ref _isUpdating, value);
-	}
+	[ObservableProperty]
+	public partial bool IsUpdating { get; set; }
 
-	private bool _isUpdateIndeterminate;
-	public bool IsUpdateIndeterminate
-	{
-		get => _isUpdateIndeterminate;
-		set => this.RaiseAndSetIfChanged(ref _isUpdateIndeterminate, value);
-	}
+	[ObservableProperty]
+	public partial bool IsUpdateIndeterminate { get; set; }
 
-	private double _updateProgress;
-	public double UpdateProgress
-	{
-		get => _updateProgress;
-		set => this.RaiseAndSetIfChanged(ref _updateProgress, value);
-	}
+	[ObservableProperty]
+	public partial double UpdateProgress { get; set; }
 
-	private double _updateProgressMax;
-	public double UpdateProgressMax
-	{
-		get => _updateProgressMax;
-		set => this.RaiseAndSetIfChanged(ref _updateProgressMax, value);
-	}
+	[ObservableProperty]
+	public partial double UpdateProgressMax { get; set; }
 
-	private string _updateState = "-";
-	public string UpdateState
-	{
-		get => _updateState;
-		set => this.RaiseAndSetIfChanged(ref _updateState, value);
-	}
+	[ObservableProperty]
+	public partial string UpdateState { get; set; } = "-";
 
 	public void StartUpdater()
 	{
@@ -577,51 +556,31 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 		UrlOpener.OpenUrl(logPath);
 	}
 
-	public ReactiveCommand<Unit, Unit> RegistMapPosition { get; } = ReactiveCommand.Create(() => MessageBus.Current.SendMessage(new RegistMapPositionRequested()));
-	public ReactiveCommand<Unit, Unit> ResetMapPosition { get; }
-	public ReactiveCommand<string, Unit> OpenUrl { get; } = ReactiveCommand.Create<string>(url => UrlOpener.OpenUrl(url));
+	public IRelayCommand RegistMapPosition { get; } = new RelayCommand(() => StrongReferenceMessenger.Default.Send(new RegistMapPositionRequested()));
+	public IRelayCommand ResetMapPosition { get; }
+	public IRelayCommand<string> OpenUrl { get; } = new RelayCommand<string>(url => { if (url != null) UrlOpener.OpenUrl(url); });
 
-	public ReactiveCommand<KyoshinEewViewerConfiguration.SoundConfig, Unit> OpenSoundFile { get; }
+	public IAsyncRelayCommand<KyoshinEewViewerConfiguration.SoundConfig> OpenSoundFile { get; }
 
 	#region debug
 	public string CurrentDirectory => Environment.CurrentDirectory;
 
-	private string _replayBasePath = "";
-	public string ReplayBasePath
-	{
-		get => _replayBasePath;
-		set => this.RaiseAndSetIfChanged(ref _replayBasePath, value);
-	}
+	[ObservableProperty]
+	public partial string ReplayBasePath { get; set; } = "";
 
-	private DateTimeOffset _replaySelectedDate = DateTimeOffset.Now;
-	public DateTimeOffset ReplaySelectedDate
-	{
-		get => _replaySelectedDate;
-		set => this.RaiseAndSetIfChanged(ref _replaySelectedDate, value);
-	}
+	[ObservableProperty]
+	public partial DateTimeOffset ReplaySelectedDate { get; set; } = DateTimeOffset.Now;
 
-	private TimeSpan _replaySelectedTime;
-	public TimeSpan ReplaySelectedTime
-	{
-		get => _replaySelectedTime;
-		set => this.RaiseAndSetIfChanged(ref _replaySelectedTime, value);
-	}
+	[ObservableProperty]
+	public partial TimeSpan ReplaySelectedTime { get; set; }
 
-	private string _jmaEqdbId = "20180618075834";
-	public string JmaEqdbId
-	{
-		get => _jmaEqdbId;
-		set => this.RaiseAndSetIfChanged(ref _jmaEqdbId, value);
-	}
+	[ObservableProperty]
+	public partial string JmaEqdbId { get; set; } = "20180618075834";
 	public void ProcessJmaEqdbRequest()
 		=> ProcessJmaEqdbRequested.Request(JmaEqdbId);
 
-	private string _qzqsmHexString = "9AAF8DED25000325BA00DA4A0F5AAC5A8000000008000000200000136DCCFB40";
-	public string QzqsmHexString
-	{
-		get => _qzqsmHexString;
-		set => this.RaiseAndSetIfChanged(ref _qzqsmHexString, value);
-	}
+	[ObservableProperty]
+	public partial string QzqsmHexString { get; set; } = "9AAF8DED25000325BA00DA4A0F5AAC5A8000000008000000200000136DCCFB40";
 
 	public void ProcessDCReportRequest()
 	{
@@ -665,7 +624,7 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 		set
 		{
 			Config.Dmdata.WebSocketDefaultEndpoint = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-			this.RaisePropertyChanged();
+			OnPropertyChanged();
 		}
 	}
 
@@ -680,23 +639,15 @@ public class SettingWindowViewModel : NavigationPaneViewModelBase
 				.ToArray();
 			if (Config.Dmdata.WebSocketRedundantEndpoints.Length == 0)
 				Config.Dmdata.WebSocketRedundantEndpoints = null;
-			this.RaisePropertyChanged();
+			OnPropertyChanged();
 		}
 	}
 
-	private bool _isDmdataReconnecting;
-	public bool IsDmdataReconnecting
-	{
-		get => _isDmdataReconnecting;
-		set => this.RaiseAndSetIfChanged(ref _isDmdataReconnecting, value);
-	}
+	[ObservableProperty]
+	public partial bool IsDmdataReconnecting { get; set; }
 
-	private string? _dmdataReconnectStatus;
-	public string? DmdataReconnectStatus
-	{
-		get => _dmdataReconnectStatus;
-		set => this.RaiseAndSetIfChanged(ref _dmdataReconnectStatus, value);
-	}
+	[ObservableProperty]
+	public partial string? DmdataReconnectStatus { get; set; }
 
 	public async Task ReconnectDmdataAsync()
 	{

@@ -1,7 +1,8 @@
 using AVFoundation;
 using Foundation;
+using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Services.Audio;
-using Splat;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -35,7 +36,7 @@ public sealed class IosAudioBackend : IAudioBackend
 		{
 			// カテゴリの設定に失敗しても既定のカテゴリで鳴る可能性は残るため、初期化自体は成功扱いにする
 			LastError = error.LocalizedDescription;
-			LogHost.Default.Warn($"AVAudioSession のカテゴリ設定に失敗しました: {error.LocalizedDescription}");
+			AppLog.Default.LogWarning("AVAudioSession のカテゴリ設定に失敗しました: {Error}", error.LocalizedDescription);
 		}
 		return true;
 	}
@@ -102,7 +103,7 @@ public sealed class IosAudioBackend : IAudioBackend
 			if (_activeChannelCount++ > 0)
 				return;
 			if (AVAudioSession.SharedInstance().SetActive(true) is { } error)
-				LogHost.Default.Warn($"AVAudioSession の有効化に失敗しました: {error.LocalizedDescription}");
+				AppLog.Default.LogWarning("AVAudioSession の有効化に失敗しました: {Error}", error.LocalizedDescription);
 		}
 	}
 
@@ -114,7 +115,7 @@ public sealed class IosAudioBackend : IAudioBackend
 				return;
 			// NotifyOthersOnDeactivation を付けないと他アプリが音量を戻すきっかけを得られない
 			if (AVAudioSession.SharedInstance().SetActive(false, AVAudioSessionSetActiveOptions.NotifyOthersOnDeactivation) is { } error)
-				LogHost.Default.Warn($"AVAudioSession の無効化に失敗しました: {error.LocalizedDescription}");
+				AppLog.Default.LogWarning("AVAudioSession の無効化に失敗しました: {Error}", error.LocalizedDescription);
 		}
 	}
 

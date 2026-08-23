@@ -7,7 +7,7 @@ using KyoshinEewViewer.Series.EewHistory.Models;
 using KyoshinEewViewer.Series.KyoshinMonitor.Models;
 using KyoshinEewViewer.Services.EqMonitor;
 using ReactiveUI;
-using Splat;
+using R3;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -61,13 +61,11 @@ public class EewHistorySeries : SeriesBase
 	private bool _suppressSelection;
 
 	public EewHistorySeries(
-		ILogManager logManager,
+		ILogger<EewHistorySeries> logger,
 		KyoshinEewViewerConfiguration config,
 		EqMonitorEewHistoryService service) : base(MetaData)
 	{
-		SplatRegistrations.RegisterLazySingleton<EewHistorySeries>();
-
-		Logger = logManager.GetLogger<EewHistorySeries>();
+		Logger = logger;
 		Config = config;
 		Service = service;
 
@@ -77,14 +75,15 @@ public class EewHistorySeries : SeriesBase
 			return;
 		}
 
-		Config.EqMonitor.WhenAnyValue(x => x.Enable, x => x.EnableEew, x => x.BaseUrl)
-			.ObserveOn(RxSchedulers.MainThreadScheduler)
-			.Subscribe(_ =>
-			{
-				this.RaisePropertyChanged(nameof(CanSearch));
-				if (!CanSearch)
-					ClearSearch();
-			});
+		void OnEqMonitorConfigChanged()
+		{
+			OnPropertyChanged(nameof(CanSearch));
+			if (!CanSearch)
+				ClearSearch();
+		}
+		Config.EqMonitor.ObservePropertyChanged(x => x.Enable).Subscribe(_ => OnEqMonitorConfigChanged());
+		Config.EqMonitor.ObservePropertyChanged(x => x.EnableEew).Subscribe(_ => OnEqMonitorConfigChanged());
+		Config.EqMonitor.ObservePropertyChanged(x => x.BaseUrl).Subscribe(_ => OnEqMonitorConfigChanged());
 
 		Service.WhenAnyValue(
 				x => x.IsLoading,
@@ -96,18 +95,18 @@ public class EewHistorySeries : SeriesBase
 			.ObserveOn(RxSchedulers.MainThreadScheduler)
 			.Subscribe(_ =>
 			{
-				this.RaisePropertyChanged(nameof(IsLoading));
-				this.RaisePropertyChanged(nameof(IsLoadingMore));
-				this.RaisePropertyChanged(nameof(IsLoadingReports));
-				this.RaisePropertyChanged(nameof(CanLoadMoreHistory));
-				this.RaisePropertyChanged(nameof(ReportsError));
-				this.RaisePropertyChanged(nameof(CurrentEvent));
-				this.RaisePropertyChanged(nameof(CanStartReplay));
+				OnPropertyChanged(nameof(IsLoading));
+				OnPropertyChanged(nameof(IsLoadingMore));
+				OnPropertyChanged(nameof(IsLoadingReports));
+				OnPropertyChanged(nameof(CanLoadMoreHistory));
+				OnPropertyChanged(nameof(ReportsError));
+				OnPropertyChanged(nameof(CurrentEvent));
+				OnPropertyChanged(nameof(CanStartReplay));
 			});
 
 		Service.SelectedReports.CollectionChanged += (_, _) =>
 		{
-			this.RaisePropertyChanged(nameof(CanStartReplay));
+			OnPropertyChanged(nameof(CanStartReplay));
 			// 選択イベントの各報が入れ替わったら最終報（または末尾）を選ぶ
 			if (_suppressSelection)
 				return;
@@ -167,7 +166,7 @@ public class EewHistorySeries : SeriesBase
 				return;
 			if (_selectedReport != null && !ReferenceEquals(_selectedReport, Service.SelectedItem))
 				_selectedReport.IsSelecting = false;
-			this.RaiseAndSetIfChanged(ref _selectedReport, value);
+			SetProperty(ref _selectedReport, value);
 			if (_selectedReport != null)
 				_selectedReport.IsSelecting = true;
 			SelectedEew = _selectedReport?.Eew;
@@ -181,7 +180,7 @@ public class EewHistorySeries : SeriesBase
 	public Eew? SelectedEew
 	{
 		get => _selectedEew;
-		private set => this.RaiseAndSetIfChanged(ref _selectedEew, value);
+		private set => SetProperty(ref _selectedEew, value);
 	}
 
 	/// <summary>
@@ -202,7 +201,7 @@ public class EewHistorySeries : SeriesBase
 	public bool IsSearching
 	{
 		get => _isSearching;
-		private set => this.RaiseAndSetIfChanged(ref _isSearching, value);
+		private set => SetProperty(ref _isSearching, value);
 	}
 
 	private bool _isFault;
@@ -212,7 +211,7 @@ public class EewHistorySeries : SeriesBase
 	public bool IsFault
 	{
 		get => _isFault;
-		private set => this.RaiseAndSetIfChanged(ref _isFault, value);
+		private set => SetProperty(ref _isFault, value);
 	}
 
 	private string? _loadError;
@@ -222,7 +221,7 @@ public class EewHistorySeries : SeriesBase
 	public string? LoadError
 	{
 		get => _loadError;
-		private set => this.RaiseAndSetIfChanged(ref _loadError, value);
+		private set => SetProperty(ref _loadError, value);
 	}
 
 	/// <summary>
@@ -272,7 +271,7 @@ public class EewHistorySeries : SeriesBase
 		}
 		finally
 		{
-			this.RaisePropertyChanged(nameof(CanLoadMoreHistory));
+			OnPropertyChanged(nameof(CanLoadMoreHistory));
 		}
 	}
 
@@ -379,7 +378,7 @@ public class EewHistorySeries : SeriesBase
 		}
 
 		var request = new EewHistoryReplayRequest(evt.EventId, CurrentReports.ToArray(), evt);
-		Logger.LogInfo($"EEW履歴からのリプレイ開始を要求します: {evt.EventId}（{CurrentReports.Count}報）");
+		Logger.LogInformation($"EEW履歴からのリプレイ開始を要求します: {evt.EventId}（{CurrentReports.Count}報）");
 
 		if (ReplayRequested is null)
 		{
@@ -413,14 +412,14 @@ public class EewHistorySeries : SeriesBase
 		{
 			SelectedReport = null;
 			await Service.SelectAsync(item);
-			this.RaisePropertyChanged(nameof(CurrentEvent));
+			OnPropertyChanged(nameof(CurrentEvent));
 			SelectedReport = Service.SelectedReports.LastOrDefault(r => r.IsFinal)
 				?? Service.SelectedReports.LastOrDefault();
 		}
 		finally
 		{
 			_suppressSelection = false;
-			this.RaisePropertyChanged(nameof(CanStartReplay));
+			OnPropertyChanged(nameof(CanStartReplay));
 		}
 	}
 
@@ -441,7 +440,7 @@ public class EewHistorySeries : SeriesBase
 		set {
 			if (_viewWidth == value)
 				return;
-			this.RaiseAndSetIfChanged(ref _viewWidth, value);
+			SetProperty(ref _viewWidth, value);
 			IsNarrowLayout = value < NarrowLayoutMaxWidth;
 		}
 	}
@@ -456,7 +455,7 @@ public class EewHistorySeries : SeriesBase
 		private set {
 			if (_isNarrowLayout == value)
 				return;
-			this.RaiseAndSetIfChanged(ref _isNarrowLayout, value);
+			SetProperty(ref _isNarrowLayout, value);
 			if (!value)
 				CloseSheets();
 		}
@@ -472,7 +471,7 @@ public class EewHistorySeries : SeriesBase
 		set {
 			if (_isReportsSheetOpen == value)
 				return;
-			this.RaiseAndSetIfChanged(ref _isReportsSheetOpen, value);
+			SetProperty(ref _isReportsSheetOpen, value);
 			if (value)
 				IsHistorySheetOpen = false;
 			UpdateIsSheetShown();
@@ -489,7 +488,7 @@ public class EewHistorySeries : SeriesBase
 		set {
 			if (_isHistorySheetOpen == value)
 				return;
-			this.RaiseAndSetIfChanged(ref _isHistorySheetOpen, value);
+			SetProperty(ref _isHistorySheetOpen, value);
 			if (value)
 				IsReportsSheetOpen = false;
 			UpdateIsSheetShown();

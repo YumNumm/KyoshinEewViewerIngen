@@ -1,5 +1,5 @@
-using KyoshinEewViewer.Services.ExtarnalPublishers.Axis.ApiModels;
 using KyoshinEewViewer.Services.NetworkDebug;
+using KyoshinEewViewer.Services.ExternalPublishers.Axis.ApiModels;
 using System;
 using System.Diagnostics;
 using System.Net.WebSockets;
@@ -8,7 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace KyoshinEewViewer.Services.ExtarnalPublishers.Axis;
+namespace KyoshinEewViewer.Services.ExternalPublishers.Axis;
 
 public class AxisWebSocketConnection
 {

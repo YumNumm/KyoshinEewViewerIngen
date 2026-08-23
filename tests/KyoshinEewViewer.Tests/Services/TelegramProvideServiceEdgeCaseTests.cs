@@ -2,7 +2,8 @@ using KyoshinEewViewer.Services;
 using KyoshinEewViewer.Services.TelegramPublishers;
 using KyoshinEewViewer.Tests.Services.Mocks;
 using Moq;
-using Splat;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace KyoshinEewViewer.Tests.Services;
 
@@ -11,23 +12,16 @@ namespace KyoshinEewViewer.Tests.Services;
 /// </summary>
 public class TelegramProvideServiceEdgeCaseTests : IDisposable
 {
-	private readonly Mock<ILogManager> _mockLogManager;
-	private readonly Mock<IFullLogger> _mockLogger;
-	private readonly Mock<IReadonlyDependencyResolver> _mockServiceProvider;
+	private readonly Mock<ILogger<TelegramProvideService>> _mockLogger;
+	private readonly Mock<IServiceProvider> _mockServiceProvider;
 	private readonly TelegramProvideService _service;
 
 public TelegramProvideServiceEdgeCaseTests()
 	{
-		_mockLogManager = new Mock<ILogManager>();
-		_mockLogger = new Mock<IFullLogger>();
-		
-		// GetLoggerメソッドを適切にセットアップするために、実際の実装を提供
-		_mockLogManager.Setup(x => x.GetLogger(It.IsAny<Type>()))
-			.Returns(_mockLogger.Object);
+		_mockLogger = new Mock<ILogger<TelegramProvideService>>();
+		_mockServiceProvider = new Mock<IServiceProvider>();
 
-		_mockServiceProvider = new Mock<IReadonlyDependencyResolver>();
-
-		_service = new TelegramProvideService(_mockLogManager.Object, _mockServiceProvider.Object);
+		_service = new TelegramProvideService(_mockLogger.Object, _mockServiceProvider.Object);
 	}
 
 	[Fact(DisplayName = "単一プロバイダが全カテゴリをサポートする場合、全てのタイプを処理する")]
@@ -42,7 +36,7 @@ public TelegramProvideServiceEdgeCaseTests()
 
 		var customTypes = new[] { typeof(MockTelegramPublisher) };
 
-		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher), null))
+		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher)))
 			.Returns(universalPublisher);
 
 		// すべてのカテゴリをサブスクライブ
@@ -83,7 +77,7 @@ public TelegramProvideServiceEdgeCaseTests()
 
 		var customTypes = new[] { typeof(MockTelegramPublisher) };
 
-		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher), null))
+		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher)))
 			.Returns(publisher);
 
 		// Act - サブスクライバーなしでStart
@@ -107,7 +101,7 @@ public TelegramProvideServiceEdgeCaseTests()
 
 		var customTypes = new[] { typeof(MockTelegramPublisher) };
 
-		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher), null))
+		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher)))
 			.Returns(publisher);
 
 		var callCount = 0;
@@ -163,7 +157,7 @@ public TelegramProvideServiceEdgeCaseTests()
 			typeof(MockTelegramPublisher)
 		};
 
-		_mockServiceProvider.SetupSequence(x => x.GetService(typeof(MockTelegramPublisher), null))
+		_mockServiceProvider.SetupSequence(x => x.GetService(typeof(MockTelegramPublisher)))
 			.Returns(emptyPublisher)
 			.Returns(workingPublisher);
 
@@ -196,7 +190,7 @@ public TelegramProvideServiceEdgeCaseTests()
 
 		var customTypes = new[] { typeof(MockTelegramPublisher) };
 
-		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher), null))
+		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher)))
 			.Returns(longNamePublisher);
 
 		string? receivedSourceName = null;
@@ -239,7 +233,7 @@ public TelegramProvideServiceEdgeCaseTests()
 
 		var customTypes = new[] { typeof(MockTelegramPublisher) };
 
-		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher), null))
+		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher)))
 			.Returns(publisher);
 
 		var receivedTelegrams = new List<Telegram>();
@@ -291,7 +285,7 @@ public TelegramProvideServiceEdgeCaseTests()
 
 		var customTypes = new[] { typeof(MockTelegramPublisher) };
 
-		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher), null))
+		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher)))
 			.Returns(publisher);
 
 		_service.Subscribe(
@@ -354,7 +348,7 @@ public TelegramProvideServiceEdgeCaseTests()
 
 		var customTypes = new[] { typeof(MockTelegramPublisher) };
 
-		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher), null))
+		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher)))
 			.Returns(publisher);
 
 		var receivedCount = 0;
@@ -399,10 +393,10 @@ public TelegramProvideServiceEdgeCaseTests()
 
 		var customTypes = Enumerable.Repeat(typeof(MockTelegramPublisher), 50).ToArray();
 
-		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher), null))
+		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher)))
 			.Returns(() =>
 			{
-				var callCount = _mockServiceProvider.Invocations.Count(i => i.Method.Name == nameof(IReadonlyDependencyResolver.GetService));
+				var callCount = _mockServiceProvider.Invocations.Count(i => i.Method.Name == nameof(IServiceProvider.GetService));
 				return callCount <= publishers.Length ? publishers[callCount - 1] : null;
 			});
 

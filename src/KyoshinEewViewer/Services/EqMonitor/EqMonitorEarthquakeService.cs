@@ -4,7 +4,7 @@ using KyoshinEewViewer.Series.Earthquake.Models;
 using KyoshinEewViewer.Series.Earthquake.Services;
 using Newtonsoft.Json;
 using ReactiveUI;
-using Splat;
+using R3;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -69,15 +69,13 @@ public class EqMonitorEarthquakeService : ReactiveObject
 	}
 
 	public EqMonitorEarthquakeService(
-		ILogManager logManager,
+		ILogger<EqMonitorEarthquakeService> logger,
 		KyoshinEewViewerConfiguration config,
 		EqMonitorApiProvider apiProvider,
 		EarthquakeWatchService watchService,
 		TimerService timerService)
 	{
-		SplatRegistrations.RegisterLazySingleton<EqMonitorEarthquakeService>();
-
-		Logger = logManager.GetLogger<EqMonitorEarthquakeService>();
+		Logger = logger;
 		Config = config;
 		ApiProvider = apiProvider;
 		WatchService = watchService;
@@ -86,9 +84,13 @@ public class EqMonitorEarthquakeService : ReactiveObject
 		watchService.SourceSwitched.Subscribe(_ => Restore());
 
 		// タイマは他の機能が起動していないと回らないため、有効化された時点で起動しておく
-		Config.EqMonitor.WhenAnyValue(x => x.Enable, x => x.EnableEarthquake)
-			.Where(x => x is { Item1: true, Item2: true })
-			.Subscribe(_ => timerService.StartMainTimer());
+		void StartTimerWhenEnabled()
+		{
+			if (Config.EqMonitor.Enable && Config.EqMonitor.EnableEarthquake)
+				timerService.StartMainTimer();
+		}
+		Config.EqMonitor.ObservePropertyChanged(x => x.Enable).Subscribe(_ => StartTimerWhenEnabled());
+		Config.EqMonitor.ObservePropertyChanged(x => x.EnableEarthquake).Subscribe(_ => StartTimerWhenEnabled());
 
 		timerService.TimerElapsed += t =>
 		{
@@ -126,7 +128,7 @@ public class EqMonitorEarthquakeService : ReactiveObject
 
 			var merged = MergeItems(response.Items);
 			if (merged > 0)
-				Logger.LogInfo($"EQMonitor API から地震情報を {response.Items.Count} 件取得し {merged} 件を取り込みました");
+				Logger.LogInformation($"EQMonitor API から地震情報を {response.Items.Count} 件取得し {merged} 件を取り込みました");
 
 			// 追加読み込みが進めた位置を巻き戻さないよう、カーソルは未設定のときだけ覚える
 			_nextCursor ??= response.Next_token;
@@ -178,7 +180,7 @@ public class EqMonitorEarthquakeService : ReactiveObject
 			_nextCursor = response.Next_token;
 			// 空のページが返ってきた時点で終端とみなす
 			CanLoadMore = _nextCursor != null && response.Items.Count > 0;
-			Logger.LogInfo($"EQMonitor API から過去の地震情報を {response.Items.Count} 件読み込み {merged} 件を取り込みました");
+			Logger.LogInformation($"EQMonitor API から過去の地震情報を {response.Items.Count} 件読み込み {merged} 件を取り込みました");
 		}
 		catch (Exception ex)
 		{

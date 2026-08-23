@@ -1,9 +1,10 @@
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
-using Splat;
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using KyoshinEewViewer.Core;
 
 namespace KyoshinEewViewer;
 
@@ -26,7 +27,7 @@ public static class UrlOpener
 		{
 			if (KyoshinEewViewerApp.TopLevelControl?.Launcher is not { } launcher)
 			{
-				LogHost.Default.Warn($"Launcher が利用できないため {url} を開けませんでした");
+				AppLog.Default.LogWarning("Launcher が利用できないため {Url} を開けませんでした", url);
 				return;
 			}
 
@@ -37,11 +38,11 @@ public static class UrlOpener
 				_ => false,
 			};
 			if (!isOpened)
-				LogHost.Default.Warn($"{url} を開けませんでした");
+				AppLog.Default.LogWarning("{Url} を開けませんでした", url);
 		}
 		catch (Exception ex)
 		{
-			LogHost.Default.Warn(ex, "URLオープンに失敗しました");
+			AppLog.Default.LogError(ex, "URLオープンに失敗しました");
 		}
 	}
 }

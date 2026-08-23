@@ -1,8 +1,9 @@
 using Android.App;
 using Android.Content;
 using Android.Media;
+using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Services.Audio;
-using Splat;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -50,7 +51,7 @@ public sealed class AndroidAudioBackend : IAudioBackend
 	{
 		_audioManager = Application.Context.GetSystemService(Context.AudioService) as AudioManager;
 		if (_audioManager is null)
-			LogHost.Default.Warn("AudioManager を取得できませんでした。他アプリの音量を下げる制御は行われません");
+			AppLog.Default.LogWarning("AudioManager を取得できませんでした。他アプリの音量を下げる制御は行われません");
 		// MediaPlayer 自体は AudioManager が取れなくても鳴らせるため、初期化は成功扱いにする
 		return true;
 	}
@@ -127,7 +128,7 @@ public sealed class AndroidAudioBackend : IAudioBackend
 			if (_audioManager is null)
 				return;
 			if (_audioManager.RequestAudioFocus(_audioFocusRequest) != AudioFocusRequest.Granted)
-				LogHost.Default.Warn("音声フォーカスの取得に失敗しました");
+				AppLog.Default.LogWarning("音声フォーカスの取得に失敗しました");
 		}
 	}
 
@@ -363,7 +364,7 @@ public sealed class AndroidAudioBackend : IAudioBackend
 
 		private void OnError(object? sender, MediaPlayer.ErrorEventArgs e)
 		{
-			LogHost.Default.Warn($"音声の再生中にエラーが発生しました。 What:{e.What} Extra:{e.Extra}");
+			AppLog.Default.LogWarning("音声の再生中にエラーが発生しました。 What:{What} Extra:{Extra}", e.What, e.Extra);
 			// 処理済みとして扱わないことで Completion も呼ばれ、通常の終了処理でチャンネルが解放される。
 			// (処理済みにすると Completion が呼ばれず、再生完了待ちが終わらなくなる)
 			e.Handled = false;
