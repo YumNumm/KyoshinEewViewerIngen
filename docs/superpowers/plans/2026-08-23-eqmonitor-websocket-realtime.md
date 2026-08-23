@@ -57,10 +57,11 @@ Expected: compile failure because the generated endpoints and types are absent.
 
 - [ ] **Step 3: Extend normalization roots**
 
-Keep `/v2/device` and `/v2/realtime` in addition to the current roots. Seed component reachability with `Earthquake` and `EewItemWithRelations`, since realtime components are not necessarily referenced from an HTTP response.
+Keep only the registration and ticket paths by exact match in addition to the existing earthquake/EEW prefixes. A `/v2/device` prefix would accidentally generate all notification-setting APIs. Seed component reachability with `Earthquake` and `EewItemWithRelations`, since realtime components are not necessarily referenced from an HTTP response.
 
 ```python
-KEEP_PREFIXES = ("/v2/earthquake", "/v2/eew", "/v2/device", "/v2/realtime")
+KEEP_PREFIXES = ("/v2/earthquake", "/v2/eew")
+KEEP_PATHS = {"/v2/device", "/v2/realtime/ticket", "/v2/realtime/example"}
 KEEP_SCHEMA_ROOTS = {"Earthquake", "EewItemWithRelations"}
 ```
 
@@ -339,27 +340,11 @@ git commit -m "feat: EQMonitor更新をWebSocketへ移行"
 - Removes: `EewPollingIntervalMs` and `EarthquakePollingIntervalMs`
 - Preserves: `EarthquakeFetchCount`
 
-- [ ] **Step 1: Add a failing reflection assertion**
+- [ ] **Step 1: Remove configuration and UI after the Task 5 behavioral test is GREEN**
 
-```csharp
-var names = typeof(KyoshinEewViewerConfiguration.EqMonitorConfig)
-    .GetProperties().Select(x => x.Name).ToArray();
-Assert.DoesNotContain("EewPollingIntervalMs", names);
-Assert.DoesNotContain("EarthquakePollingIntervalMs", names);
-Assert.Contains("EarthquakeFetchCount", names);
-```
+The Task 5 test that advances timer ticks and observes zero HTTP requests is the regression test for this removal. Delete both properties, both interval setting expanders, and the EEW polling-delay description. Do not add a WebSocket toggle because it is the only realtime transport.
 
-- [ ] **Step 2: Verify RED**
-
-```bash
-dotnet test tests/KyoshinEewViewer.Tests/KyoshinEewViewer.Tests.csproj --filter 'DisplayName~ポーリング設定を公開しない'
-```
-
-- [ ] **Step 3: Remove configuration and UI**
-
-Delete both properties, both interval setting expanders, and the EEW polling-delay description. Do not add a WebSocket toggle because it is the only realtime transport.
-
-- [ ] **Step 4: Verify no periodic symbols remain**
+- [ ] **Step 2: Verify no periodic symbols remain**
 
 ```bash
 rg -n 'EewPollingIntervalMs|EarthquakePollingIntervalMs|PollAsync|_lastPolledAt|_lastFetchedAt' src tests
@@ -367,7 +352,7 @@ rg -n 'EewPollingIntervalMs|EarthquakePollingIntervalMs|PollAsync|_lastPolledAt|
 
 Expected: no matches.
 
-- [ ] **Step 5: Run feature tests and builds**
+- [ ] **Step 3: Run feature tests and builds**
 
 ```bash
 dotnet test tests/KyoshinEewViewer.Tests/KyoshinEewViewer.Tests.csproj --filter 'FullyQualifiedName~EqMonitor'
@@ -378,7 +363,7 @@ git diff --check
 
 Expected: all tests/builds pass and no whitespace errors.
 
-- [ ] **Step 6: Commit and re-run final verification**
+- [ ] **Step 4: Commit and re-run final verification**
 
 ```bash
 git add src/KyoshinEewViewer.Core/Models/KyoshinEewViewerConfiguration.cs src/KyoshinEewViewer/Services/EqMonitor/EqMonitorPage.axaml tests/KyoshinEewViewer.Tests/Services/EqMonitorRealtimeConsumerTests.cs
