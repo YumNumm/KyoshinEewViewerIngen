@@ -209,7 +209,8 @@ public class KyoshinMonitorSeries : SeriesBase
 		AxisInformationProvider axis,
 		ISubWindowsService? subWindowService,
 		Services.ObservationPointsUpdateService observationPointsUpdateService,
-		EqMonitorApiProvider eqMonitorApiProvider) : base(MetaData)
+		EqMonitorApiProvider eqMonitorApiProvider,
+		EqMonitorRealtimeService eqMonitorRealtimeService) : base(MetaData)
 	{
 		SplatRegistrations.RegisterLazySingleton<KyoshinMonitorSeries>();
 
@@ -225,7 +226,16 @@ public class KyoshinMonitorSeries : SeriesBase
 		ReplaySettingPage = new KyoshinMonitorReplaySettingPage(Config, this, timerService, subWindowService);
 
 		var eewController = new Services.Eew.EewController(logManager, this, config, soundPlayer, workflowService);
-		CurrentInformationHost = RealtimeInformationHost = new(logManager, config, eewController, timerService, telegramProvideService, axis, observationPointsUpdateService, eqMonitorApiProvider);
+		CurrentInformationHost = RealtimeInformationHost = new(
+			logManager,
+			config,
+			eewController,
+			timerService,
+			telegramProvideService,
+			axis,
+			observationPointsUpdateService,
+			eqMonitorApiProvider,
+			eqMonitorRealtimeService);
 		RegisterSystemWorkflows();
 		RealtimeInformationHost.KyoshinEventUpdated += e =>
 		{

@@ -123,10 +123,9 @@ public class EqMonitorRealtimeServiceTests
 		var config = CreateConfig();
 		var handler = new ApiHandler();
 		using var provider = CreateProvider(config, handler);
-		using var device = new EqMonitorDeviceService(provider, config, _ => { });
 		var fake = new FakeWebSocket();
 		var socketCount = 0;
-		using var service = new EqMonitorRealtimeService(CreateLogManager(), config, provider, device)
+		using var service = new EqMonitorRealtimeService(CreateLogManager(), config, provider)
 		{
 			CreateWebSocket = () =>
 			{
@@ -134,6 +133,7 @@ public class EqMonitorRealtimeServiceTests
 				return fake;
 			},
 		};
+		service.ReplaceDeviceServiceForTesting(new EqMonitorDeviceService(provider, config, _ => { }));
 		var order = new ConcurrentQueue<string>();
 		var releaseSync = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var syncStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -185,11 +185,11 @@ public class EqMonitorRealtimeServiceTests
 		var config = CreateConfig();
 		var handler = new ApiHandler();
 		using var provider = CreateProvider(config, handler);
-		using var device = new EqMonitorDeviceService(provider, config, _ => { });
-		using var service = new EqMonitorRealtimeService(CreateLogManager(), config, provider, device)
+		using var service = new EqMonitorRealtimeService(CreateLogManager(), config, provider)
 		{
 			CreateWebSocket = () => new FakeWebSocket(closeImmediately: true),
 		};
+		service.ReplaceDeviceServiceForTesting(new EqMonitorDeviceService(provider, config, _ => { }));
 		var delays = new List<TimeSpan>();
 		var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		service.DelayAsync = (delay, _) =>
@@ -221,12 +221,13 @@ public class EqMonitorRealtimeServiceTests
 		var handler = new ApiHandler { RejectFirstTicket = true };
 		using var provider = CreateProvider(config, handler);
 		var saveCount = 0;
-		using var device = new EqMonitorDeviceService(provider, config, _ => saveCount++);
 		var fake = new FakeWebSocket();
-		using var service = new EqMonitorRealtimeService(CreateLogManager(), config, provider, device)
+		using var service = new EqMonitorRealtimeService(CreateLogManager(), config, provider)
 		{
 			CreateWebSocket = () => fake,
 		};
+		service.ReplaceDeviceServiceForTesting(
+			new EqMonitorDeviceService(provider, config, _ => saveCount++));
 		var delayCount = 0;
 		service.DelayAsync = (_, _) =>
 		{

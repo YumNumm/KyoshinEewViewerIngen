@@ -273,6 +273,24 @@ public class EarthquakeWatchService : ReactiveObject
 		return target;
 	}
 
+	/// <summary>
+	/// 電文を持たない外部受信元由来の地震情報を削除する
+	/// </summary>
+	/// <remarks>
+	/// 同じイベントに電文由来の情報が存在する場合は、その詳細情報を保護して削除しない
+	/// </remarks>
+	public bool RemoveExternalEarthquake(string eventId)
+	{
+		lock (EarthquakesLock)
+		{
+			if (Earthquakes.FirstOrDefault(e => e.EventId == eventId) is not { } earthquake)
+				return false;
+			if (earthquake.Fragments.Any(f => f.BasedTelegram != null))
+				return false;
+			return Earthquakes.Remove(earthquake);
+		}
+	}
+
 	public async Task ProcessTsunamiInformation(Telegram telegram, bool hideNotice = false)
 	{
 		await using var stream = await telegram.GetBodyAsync();

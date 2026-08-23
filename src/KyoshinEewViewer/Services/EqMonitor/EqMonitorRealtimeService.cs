@@ -25,7 +25,7 @@ public sealed class EqMonitorRealtimeService : IDisposable
 	private ILogger Logger { get; }
 	private KyoshinEewViewerConfiguration Config { get; }
 	private EqMonitorApiProvider ApiProvider { get; }
-	private EqMonitorDeviceService DeviceService { get; }
+	internal EqMonitorDeviceService DeviceService { get; set; }
 	private object SyncRoot { get; } = new();
 	private PropertyChangedEventHandler ConfigChangedHandler { get; }
 
@@ -46,16 +46,23 @@ public sealed class EqMonitorRealtimeService : IDisposable
 	internal Func<TimeSpan, CancellationToken, Task> DelayAsync { get; set; } =
 		Task.Delay;
 
+	internal void ReplaceDeviceServiceForTesting(EqMonitorDeviceService deviceService)
+	{
+		DeviceService.Dispose();
+		DeviceService = deviceService;
+	}
+
 	public EqMonitorRealtimeService(
 		ILogManager logManager,
 		KyoshinEewViewerConfiguration config,
-		EqMonitorApiProvider apiProvider,
-		EqMonitorDeviceService deviceService)
+		EqMonitorApiProvider apiProvider)
 	{
+		SplatRegistrations.RegisterLazySingleton<EqMonitorRealtimeService>();
+
 		Logger = logManager.GetLogger<EqMonitorRealtimeService>();
 		Config = config;
 		ApiProvider = apiProvider;
-		DeviceService = deviceService;
+		DeviceService = new EqMonitorDeviceService(apiProvider, config);
 
 		ConfigChangedHandler = (_, e) =>
 		{
@@ -476,5 +483,6 @@ public sealed class EqMonitorRealtimeService : IDisposable
 		}
 		Config.EqMonitor.PropertyChanged -= ConfigChangedHandler;
 		NotifyConnection(false);
+		DeviceService.Dispose();
 	}
 }

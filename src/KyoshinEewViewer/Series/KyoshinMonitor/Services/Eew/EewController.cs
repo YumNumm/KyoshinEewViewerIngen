@@ -314,7 +314,7 @@ public class EewController
 			(EewSource.KyoshinMonitor, EewSource.EqMonitor) or (EewSource.SignalNowProfessional, EewSource.EqMonitor) or (EewSource.Axis, EewSource.EqMonitor)
 				=> (EewUpdateReason.MorePriority, MergeCancellation(current, received, received)),
 
-			// 同じ電文由来だが、ポーリングの EQMonitor より受信が早い dmdata を優先させる
+			// 同じ電文由来だが、EQMonitor より受信が早い dmdata を優先させる
 			(EewSource.EqMonitor, EewSource.Dmdata)
 				=> (EewUpdateReason.MorePriority, MergeCancellation(current, received, received)),
 
