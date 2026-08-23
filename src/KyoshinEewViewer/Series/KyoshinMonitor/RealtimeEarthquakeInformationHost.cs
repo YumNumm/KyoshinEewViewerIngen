@@ -48,7 +48,8 @@ public class RealtimeEarthquakeInformationHost : EarthquakeInformationHost
 		TelegramProvideService telegramProvider,
 		AxisInformationProvider axisInformationProvider,
 		ObservationPointsUpdateService observationPointsUpdateService,
-		EqMonitorApiProvider eqMonitorApiProvider
+		EqMonitorApiProvider eqMonitorApiProvider,
+		EqMonitorRealtimeService eqMonitorRealtimeService
 	) : base(false, config)
 	{
 		ReplayDescription = "リアルタイム";
@@ -68,7 +69,12 @@ public class RealtimeEarthquakeInformationHost : EarthquakeInformationHost
 		};
 		SignalNowEewReceiver = new SignalNowFileWatcher(AppLog.Create<SignalNowFileWatcher>(), config, EewController, TimerService);
 		EewTelegramSubscriber = new EewTelegramSubscriber(AppLog.Create<EewTelegramSubscriber>(), EewController, telegramProvider, TimerService);
-		EqMonitorEewSubscriber = new EqMonitorEewSubscriber(AppLog.Create<EqMonitorEewSubscriber>(), config, eqMonitorApiProvider, EewController, TimerService);
+		EqMonitorEewSubscriber = new EqMonitorEewSubscriber(
+			AppLog.Create<EqMonitorEewSubscriber>(),
+			eqMonitorApiProvider,
+			eqMonitorRealtimeService,
+			EewController,
+			TimerService);
 
 		EewTelegramSubscriber.ObservePropertyChanged(x => x.Enabled).Subscribe(x => DmdataReceiving = x);
 		EewTelegramSubscriber.ObservePropertyChanged(x => x.WarningOnlyEnabled).Subscribe(x => DmdataWarningOnlyReceiving = x);

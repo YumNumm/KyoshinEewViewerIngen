@@ -17,7 +17,7 @@ using Generated = KyoshinEewViewer.EqMonitorApi.Generated;
 namespace KyoshinEewViewer.Services.EqMonitor;
 
 /// <summary>
-/// EQMonitor API から地震情報の一覧を取得して取り込む
+/// EQMonitor WebSocket から地震情報を受信し、初期状態と過去情報を API から取得する
 /// </summary>
 public class EqMonitorEarthquakeService : ReactiveObject
 {
@@ -33,18 +33,17 @@ public class EqMonitorEarthquakeService : ReactiveObject
 
 	/// <summary>
 	/// 取り込み済みのフラグメントと、取得元の内容を表す署名<br/>
-	/// 数秒ごとに同じ内容が届くため、変化のないイベントを取り込み直さないために保持する。
+	/// 初期同期と WebSocket で同じ内容が届いても取り込み直さないために保持する。
 	/// あわせて、受信元の切り替えで一覧が消去された際の復元にも使う
 	/// </summary>
 	private Dictionary<string, (string Signature, EarthquakeInformationFragment Fragment)> Fetched { get; } = [];
+	private object FetchedLock { get; } = new();
 
 	private readonly SemaphoreSlim _fetchLock = new(1, 1);
-	private DateTime _lastFetchedAt = DateTime.MinValue;
-	private bool _isFailing;
 
 	/// <summary>
 	/// 次に読み込む位置を示すカーソル<br/>
-	/// 読み込み済みのうち最も古い位置を指すため、定期取得では更新しない
+	/// 読み込み済みのうち最も古い位置を指すため、初期同期では更新しない
 	/// </summary>
 	private string? _nextCursor;
 
@@ -73,7 +72,7 @@ public class EqMonitorEarthquakeService : ReactiveObject
 		KyoshinEewViewerConfiguration config,
 		EqMonitorApiProvider apiProvider,
 		EarthquakeWatchService watchService,
-		TimerService timerService)
+		EqMonitorRealtimeService realtimeService)
 	{
 		Logger = logger;
 		Config = config;
@@ -83,48 +82,27 @@ public class EqMonitorEarthquakeService : ReactiveObject
 		// 受信元の切り替え時に一覧が消去されるため、取り込み済みの情報を戻す
 		watchService.SourceSwitched.Subscribe(_ => Restore());
 
-		// タイマは他の機能が起動していないと回らないため、有効化された時点で起動しておく
-		void StartTimerWhenEnabled()
-		{
-			if (Config.EqMonitor.Enable && Config.EqMonitor.EnableEarthquake)
-				timerService.StartMainTimer();
-		}
-		Config.EqMonitor.ObservePropertyChanged(x => x.Enable).Subscribe(_ => StartTimerWhenEnabled());
-		Config.EqMonitor.ObservePropertyChanged(x => x.EnableEarthquake).Subscribe(_ => StartTimerWhenEnabled());
-
-		timerService.TimerElapsed += t =>
-		{
-			if (!Config.EqMonitor.Enable || !Config.EqMonitor.EnableEarthquake)
-			{
-				WatchService.SetExternalSource(null);
-				CanLoadMore = false;
-				return;
-			}
-			// タイマは1秒間隔のため、これより短い設定でも1秒間隔になる
-			if (t - _lastFetchedAt < TimeSpan.FromMilliseconds(Math.Max(Config.EqMonitor.EarthquakePollingIntervalMs, 1000)))
-				return;
-			_lastFetchedAt = t;
-			_ = FetchAsync();
-		};
+		realtimeService.RegisterEarthquakeConsumer(
+			SynchronizeAsync,
+			ApplyRealtime,
+			SetConnected);
+		realtimeService.Start();
 	}
 
 	/// <summary>
-	/// 地震情報の一覧を取得して取り込む
+	/// ready 受信後に地震情報の先頭ページを一度だけ同期する
 	/// </summary>
-	public async Task FetchAsync()
+	private async Task SynchronizeAsync(CancellationToken cancellationToken)
 	{
-		if (ApiProvider.GetClient() is not { } client)
-		{
-			WatchService.SetExternalSource(null);
-			return;
-		}
+		var client = ApiProvider.GetClient()
+			?? throw new InvalidOperationException("EQMonitor API の接続先が正しくありません");
 
-		// 前回の取得が終わっていなければ見送る
-		if (!await _fetchLock.WaitAsync(0))
-			return;
+		await _fetchLock.WaitAsync(cancellationToken);
 		try
 		{
-			var response = await client.GetV2EarthquakeAsync(limit: PageSize.ToString(CultureInfo.InvariantCulture));
+			var response = await client.GetV2EarthquakeAsync(
+				limit: PageSize.ToString(CultureInfo.InvariantCulture),
+				cancellationToken: cancellationToken);
 
 			var merged = MergeItems(response.Items);
 			if (merged > 0)
@@ -133,19 +111,6 @@ public class EqMonitorEarthquakeService : ReactiveObject
 			// 追加読み込みが進めた位置を巻き戻さないよう、カーソルは未設定のときだけ覚える
 			_nextCursor ??= response.Next_token;
 			CanLoadMore = _nextCursor != null;
-			_isFailing = false;
-			// 電文の受信元が失効していても、こちらが生きていれば受信エラーにしない
-			WatchService.SetExternalSource(SourceName);
-		}
-		catch (Exception ex)
-		{
-			WatchService.SetExternalSource(null);
-			// 数秒ごとに取得するため、復帰するまでは最初の1回だけ記録する
-			if (!_isFailing)
-			{
-				_isFailing = true;
-				Logger.LogWarning($"EQMonitor API からの地震情報の取得に失敗しました: {ex.Message}");
-			}
 		}
 		finally
 		{
@@ -168,7 +133,7 @@ public class EqMonitorEarthquakeService : ReactiveObject
 			return;
 
 		IsLoadingMore = true;
-		// 定期取得と競合しないよう、こちらは終わるまで待つ
+		// 初期同期と競合しないよう、こちらは終わるまで待つ
 		await _fetchLock.WaitAsync();
 		try
 		{
@@ -236,16 +201,53 @@ public class EqMonitorEarthquakeService : ReactiveObject
 		{
 			// 前回から内容が変わっていないイベントは触らない
 			var signature = JsonConvert.SerializeObject(item);
-			if (Fetched.TryGetValue(item.Event_id, out var cached) && cached.Signature == signature)
-				continue;
 			if (item.ToFragment() is not { } fragment)
 				continue;
-
-			Fetched[item.Event_id] = (signature, fragment);
-			if (WatchService.MergeExternalEarthquake(item.Event_id, fragment) != null)
+			if (MergeItem(item.Event_id, signature, fragment))
 				merged++;
 		}
 		return merged;
+	}
+
+	private bool MergeItem(
+		string eventId,
+		string signature,
+		EarthquakeInformationFragment fragment)
+	{
+		lock (FetchedLock)
+		{
+			if (Fetched.TryGetValue(eventId, out var cached) && cached.Signature == signature)
+				return false;
+			Fetched[eventId] = (signature, fragment);
+		}
+		return WatchService.MergeExternalEarthquake(eventId, fragment) != null;
+	}
+
+	private void ApplyRealtime(EqMonitorRealtimeMessage message)
+	{
+		switch (message)
+		{
+			case EqMonitorEarthquakeUpsertMessage upsert:
+				var signature = JsonConvert.SerializeObject(upsert.Record);
+				if (upsert.Record.ToFragment() is not { } fragment)
+					return;
+				if (MergeItem(upsert.Record.Event_id, signature, fragment))
+					Logger.LogInformation($"EQMonitor から地震情報を受信しました: {upsert.Record.Event_id}");
+				break;
+			case EqMonitorEarthquakeDeleteMessage delete:
+				lock (FetchedLock)
+					Fetched.Remove(delete.EventId);
+				if (WatchService.RemoveExternalEarthquake(delete.EventId))
+					Logger.LogInformation($"EQMonitor から地震情報の削除を受信しました: {delete.EventId}");
+				break;
+		}
+	}
+
+	private void SetConnected(bool connected)
+	{
+		WatchService.SetExternalSource(connected ? SourceName : null);
+		if (!connected && (!Config.EqMonitor.Enable || !Config.EqMonitor.EnableEarthquake))
+			CanLoadMore = false;
 	}
 
 	/// <summary>
@@ -256,7 +258,10 @@ public class EqMonitorEarthquakeService : ReactiveObject
 		if (!Config.EqMonitor.Enable || !Config.EqMonitor.EnableEarthquake)
 			return;
 
-		foreach (var (eventId, cached) in Fetched.OrderBy(x => x.Key, StringComparer.Ordinal))
+		KeyValuePair<string, (string Signature, EarthquakeInformationFragment Fragment)>[] fetched;
+		lock (FetchedLock)
+			fetched = [.. Fetched.OrderBy(x => x.Key, StringComparer.Ordinal)];
+		foreach (var (eventId, cached) in fetched)
 			WatchService.MergeExternalEarthquake(eventId, cached.Fragment);
 	}
 }

@@ -1,7 +1,10 @@
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Services.EqMonitor;
+using Microsoft.Extensions.Logging;
+using Moq;
 using Generated = KyoshinEewViewer.EqMonitorApi.Generated;
 
 namespace KyoshinEewViewer.Tests.Services;
@@ -17,10 +20,13 @@ public class EqMonitorApiClientTests
 	private sealed class StubHandler(string responseBody) : HttpMessageHandler
 	{
 		public Uri? RequestUri { get; private set; }
+		public Dictionary<string, string[]> RequestHeaders { get; } = [];
 
 		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
 			RequestUri = request.RequestUri;
+			foreach (var header in request.Headers)
+				RequestHeaders[header.Key] = [.. header.Value];
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new StringContent(responseBody, Encoding.UTF8, "application/json"),
@@ -136,5 +142,28 @@ public class EqMonitorApiClientTests
 		Assert.Matches(new Regex(@"^KyoshinEewViewer-(Android|iOS|macOS|Windows|Browser|Linux|Unknown)-v\d+\.\d+\.\d+$"),
 			EqMonitorApiProvider.UserAgent);
 		Assert.Matches(new Regex(@"^\d+$"), EqMonitorApiProvider.BuildNumber);
+	}
+
+	[Fact(DisplayName = "HTTPリクエストへUser-Agent・ビルド番号・同じ接続先の端末IDを設定する")]
+	public async Task HTTP識別ヘッダの設定()
+	{
+		var handler = new StubHandler(
+			"""{"url":"wss://socket.invalid/realtime","expiresAt":"2026-08-23T01:00:00Z","issuedAt":"2026-08-23T00:00:00Z"}""");
+		var config = new KyoshinEewViewerConfiguration();
+		config.EqMonitor.BaseUrl = "https://api.invalid";
+		config.EqMonitor.DeviceId = "persisted-device";
+		config.EqMonitor.DeviceRegisteredBaseUrl = "https://api.invalid/";
+		using var provider = new EqMonitorApiProvider(
+			new Mock<ILogger<EqMonitorApiProvider>>().Object,
+			config)
+		{
+			CreateHttpClient = () => new HttpClient(handler, disposeHandler: false),
+		};
+
+		await provider.GetClient()!.GetV2RealtimeTicketAsync();
+
+		Assert.Equal([EqMonitorApiProvider.UserAgent], handler.RequestHeaders["User-Agent"]);
+		Assert.Equal([EqMonitorApiProvider.BuildNumber], handler.RequestHeaders["x-eqmonitor-build"]);
+		Assert.Equal(["persisted-device"], handler.RequestHeaders["x-eqmonitor-device-id"]);
 	}
 }

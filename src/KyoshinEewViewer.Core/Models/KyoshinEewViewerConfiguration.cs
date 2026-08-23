@@ -609,6 +609,18 @@ public partial class KyoshinEewViewerConfiguration : ObservableObject, IWindowPl
 		public partial string BaseUrl { get; set; } = "";
 
 		/// <summary>
+		/// EQMonitor API で発行された端末 ID
+		/// </summary>
+		[ObservableProperty]
+		public partial string? DeviceId { get; set; }
+
+		/// <summary>
+		/// 端末 ID を登録した時点の正規化済み API ベース URL
+		/// </summary>
+		[ObservableProperty]
+		public partial string? DeviceRegisteredBaseUrl { get; set; }
+
+		/// <summary>
 		/// 地震情報を取得するか
 		/// </summary>
 		[ObservableProperty]
@@ -619,18 +631,6 @@ public partial class KyoshinEewViewerConfiguration : ObservableObject, IWindowPl
 		/// </summary>
 		[ObservableProperty]
 		public partial bool EnableEew { get; set; }
-
-		/// <summary>
-		/// 緊急地震速報のポーリング間隔(ミリ秒)
-		/// </summary>
-		[ObservableProperty]
-		public partial int EewPollingIntervalMs { get; set; } = 1000;
-
-		/// <summary>
-		/// 地震情報のポーリング間隔(ミリ秒)
-		/// </summary>
-		[ObservableProperty]
-		public partial int EarthquakePollingIntervalMs { get; set; } = 5000;
 
 		/// <summary>
 		/// 地震情報を一度に取得する件数

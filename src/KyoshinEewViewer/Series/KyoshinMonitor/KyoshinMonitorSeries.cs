@@ -209,6 +209,7 @@ public partial class KyoshinMonitorSeries : SeriesBase
 		AxisInformationProvider axis,
 		Services.ObservationPointsUpdateService observationPointsUpdateService,
 		EqMonitorApiProvider eqMonitorApiProvider,
+		EqMonitorRealtimeService eqMonitorRealtimeService,
 		ISubWindowsService? subWindowService = null) : base(MetaData)
 	{
 		Logger = logger;
@@ -224,7 +225,16 @@ public partial class KyoshinMonitorSeries : SeriesBase
 
 		var eewController = new Services.Eew.EewController(AppLog.Create<Services.Eew.EewController>(), this, config, soundPlayer, workflowService);
 		PointForecastController = new(AppLog.Create<Services.Eew.EewPointForecastController>(), config, eewController, timerService);
-		CurrentInformationHost = RealtimeInformationHost = new(AppLog.Create<RealtimeEarthquakeInformationHost>(), config, eewController, timerService, telegramProvideService, axis, observationPointsUpdateService, eqMonitorApiProvider);
+		CurrentInformationHost = RealtimeInformationHost = new(
+			AppLog.Create<RealtimeEarthquakeInformationHost>(),
+			config,
+			eewController,
+			timerService,
+			telegramProvideService,
+			axis,
+			observationPointsUpdateService,
+			eqMonitorApiProvider,
+			eqMonitorRealtimeService);
 		RegisterSystemWorkflows();
 		RealtimeInformationHost.KyoshinEventUpdated += e =>
 		{

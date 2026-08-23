@@ -1,5 +1,4 @@
 using KyoshinEewViewer.Core;
-using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Services;
 using KyoshinEewViewer.Services.EqMonitor;
 using ReactiveUI;
@@ -11,18 +10,14 @@ using System.Threading.Tasks;
 namespace KyoshinEewViewer.Series.KyoshinMonitor.Services.Eew;
 
 /// <summary>
-/// EQMonitor API から緊急地震速報をポーリングで取得する
+/// EQMonitor WebSocket から緊急地震速報を受信する
 /// </summary>
-/// <remarks>
-/// リアルタイム配信の WebSocket は端末登録が必要なため、
-/// 発表から5分以内の最新報を返す /v2/eew/latest を定期的に取得する
-/// </remarks>
 public class EqMonitorEewSubscriber : ReactiveObject
 {
 	private ILogger Logger { get; }
-	private KyoshinEewViewerConfiguration Config { get; }
 	private EqMonitorApiProvider ApiProvider { get; }
 	private EewController EewController { get; }
+	private TimerService TimerService { get; }
 
 	/// <summary>
 	/// 取り込み済みのイベントIDと報数<br/>
@@ -30,10 +25,7 @@ public class EqMonitorEewSubscriber : ReactiveObject
 	/// </summary>
 	private Dictionary<string, int> ProcessedSerials { get; } = [];
 
-	private readonly SemaphoreSlim _pollLock = new(1, 1);
-	private DateTime _lastPolledAt = DateTime.MinValue;
-
-	private bool _isDisconnected;
+	private bool _isDisconnected = true;
 	/// <summary>
 	/// 直近の取得に失敗しているか
 	/// </summary>
@@ -45,73 +37,55 @@ public class EqMonitorEewSubscriber : ReactiveObject
 
 	public EqMonitorEewSubscriber(
 		ILogger<EqMonitorEewSubscriber> logger,
-		KyoshinEewViewerConfiguration config,
 		EqMonitorApiProvider apiProvider,
+		EqMonitorRealtimeService realtimeService,
 		EewController eewController,
 		TimerService timerService)
 	{
 		Logger = logger;
-		Config = config;
 		ApiProvider = apiProvider;
 		EewController = eewController;
+		TimerService = timerService;
 
-		timerService.TimerElapsed += t =>
-		{
-			if (!Config.EqMonitor.Enable || !Config.EqMonitor.EnableEew)
-				return;
-			// タイマは1秒間隔のため、これより短い設定でも1秒間隔になる
-			if (t - _lastPolledAt < TimeSpan.FromMilliseconds(Math.Max(Config.EqMonitor.EewPollingIntervalMs, 1000)))
-				return;
-			_lastPolledAt = t;
-			_ = PollAsync(t);
-		};
+		realtimeService.RegisterEewConsumer(
+			SynchronizeAsync,
+			Apply,
+			connected => IsDisconnected = !connected);
+		realtimeService.Start();
 	}
 
-	private async Task PollAsync(DateTime receiveTime)
+	/// <summary>
+	/// ready 受信後に最新状態を一度だけ同期する
+	/// </summary>
+	private async Task SynchronizeAsync(CancellationToken cancellationToken)
 	{
-		if (ApiProvider.GetClient() is not { } client)
+		var client = ApiProvider.GetClient()
+			?? throw new InvalidOperationException("EQMonitor API の接続先が正しくありません");
+		var response = await client.GetV2EewLatestAsync(cancellationToken);
+		foreach (var item in response.Items)
+			Apply(item);
+
+		// 5分を過ぎて一覧から消えたイベントの記録を捨てる
+		if (ProcessedSerials.Count > 0 && response.Items.Count == 0)
+			ProcessedSerials.Clear();
+	}
+
+	private void Apply(EqMonitorApi.Generated.EewItemWithRelations item)
+	{
+		var receiveTime = TimerService.CurrentTime;
+		var serialNo = (int)item.Serial_no;
+		if (ProcessedSerials.TryGetValue(item.Event_id, out var processed) && processed >= serialNo)
 			return;
+		ProcessedSerials[item.Event_id] = serialNo;
 
-		// 前回の取得が終わっていなければ見送る
-		if (!await _pollLock.WaitAsync(0))
+		if (item.Is_canceled)
+		{
+			Logger.LogInformation($"EQMonitor から EEW 取消報を受信しました: {item.Event_id}");
+			EewController.Cancelled(item.Event_id, receiveTime);
 			return;
-		try
-		{
-			var response = await client.GetV2EewLatestAsync();
-			IsDisconnected = false;
-
-			foreach (var item in response.Items)
-			{
-				var serialNo = (int)item.Serial_no;
-				if (ProcessedSerials.TryGetValue(item.Event_id, out var processed) && processed >= serialNo)
-					continue;
-				ProcessedSerials[item.Event_id] = serialNo;
-
-				if (item.Is_canceled)
-				{
-					Logger.LogInformation($"EQMonitor から EEW 取消報を受信しました: {item.Event_id}");
-					EewController.Cancelled(item.Event_id, receiveTime);
-					continue;
-				}
-
-				Logger.LogInformation($"EQMonitor から EEW を受信しました: {item.Event_id} 第{serialNo}報");
-				EewController.Update(item.ToEew(receiveTime), receiveTime);
-			}
-
-			// 5分を過ぎて一覧から消えたイベントの記録を捨てる
-			if (ProcessedSerials.Count > 0 && response.Items.Count == 0)
-				ProcessedSerials.Clear();
 		}
-		catch (Exception ex)
-		{
-			// 毎秒取得するため、復帰するまでは最初の1回だけ記録する
-			if (!IsDisconnected)
-				Logger.LogWarning($"EQMonitor API からの緊急地震速報の取得に失敗しました: {ex.Message}");
-			IsDisconnected = true;
-		}
-		finally
-		{
-			_pollLock.Release();
-		}
+
+		Logger.LogInformation($"EQMonitor から EEW を受信しました: {item.Event_id} 第{serialNo}報");
+		EewController.Update(item.ToEew(receiveTime), receiveTime);
 	}
 }

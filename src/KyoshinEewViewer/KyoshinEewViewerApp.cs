@@ -67,6 +67,7 @@ public static class KyoshinEewViewerApp
 		services.AddSingleton<JmaXmlTelegramPublisher>();
 		services.AddSingleton<AxisInformationProvider>();
 		services.AddSingleton<EqMonitorApiProvider>();
+		services.AddSingleton<EqMonitorRealtimeService>();
 		services.AddSingleton<EqMonitorEarthquakeService>();
 		services.AddSingleton<EqMonitorEarthquakeSearchService>();
 		services.AddSingleton<EqMonitorEewHistoryService>();

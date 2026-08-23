@@ -18,6 +18,31 @@ public static class EqMonitorEarthquakeConverter
 	private const string UnknownPlace = "調査中";
 
 	/// <summary>
+	/// WebSocket から届く完全な地震レコードを情報フラグメントへ変換する
+	/// </summary>
+	public static EarthquakeInformationFragment? ToFragment(this Generated.Earthquake item)
+		=> new Generated.EarthquakePartial
+		{
+			Event_id = item.Event_id,
+			Status = item.Status,
+			Earthquake_type = item.Earthquake_type,
+			Origin_time = item.Origin_time,
+			Origin_time_precision = item.Origin_time_precision,
+			Arrival_time = item.Arrival_time,
+			Hypocenter = item.Hypocenter,
+			Intensity = item.Intensity == null
+				? null
+				: new Generated.IntensityPartial
+				{
+					Max_intensity = item.Intensity.Max_intensity,
+					Max_lpgm_intensity = item.Intensity.Max_lpgm_intensity,
+				},
+			Estimated_intensity_tile = item.Estimated_intensity_tile,
+			Datasources = item.Datasources,
+			Telegram_types = [],
+		}.ToFragment();
+
+	/// <summary>
 	/// 地震情報一覧の 1 件を情報フラグメントへ変換する
 	/// </summary>
 	/// <returns>震源も震度も持たない場合は null</returns>

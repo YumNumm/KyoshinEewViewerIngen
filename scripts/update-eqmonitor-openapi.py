@@ -15,8 +15,8 @@
 #      生成側でも /UseBaseUrl:false を指定し、HttpClient.BaseAddress のみを使う。
 #
 #   2. 不要なパスと到達不能なスキーマを削る
-#      KEVi が使うのは地震情報と緊急地震速報のみ。全体を生成すると 20,000 行を超え、
-#      端末設定まわりの enum が後述 3. の衝突を起こす。
+#      KEVi が使うのは地震情報、緊急地震速報、端末登録、リアルタイム接続のみ。
+#      全体を生成すると 20,000 行を超え、端末設定まわりの enum が後述 3. の衝突を起こす。
 #
 #   3. C# 識別子として衝突する enum 値に x-enumNames を付ける
 #      NSwag の既定の名前付けでは震度の "!5-" と "5-" が共に _5 となり CS0102 で失敗する。
@@ -42,8 +42,14 @@ OUTPUT = (
     / "openapi.json"
 )
 
-# KEVi が利用するパスの接頭辞
+# KEVi が一覧・詳細取得に利用するパスの接頭辞
 KEEP_PREFIXES = ("/v2/earthquake", "/v2/eew")
+
+# 接頭辞で残すと不要な通知 API まで含まれるため、完全一致で残すパス
+KEEP_PATHS = {"/v2/device", "/v2/realtime/ticket", "/v2/realtime/example"}
+
+# WebSocket の data として届き、HTTP パスからは参照されないスキーマ
+KEEP_SCHEMA_ROOTS = {"Earthquake", "EewItemWithRelations"}
 
 # enum 値に含まれる記号を C# 識別子へ置き換えるための対応表
 CHAR_WORDS = {"+": "Plus", "-": "Minus", "!": "Over", ".": "Dot", "/": "Slash"}
@@ -85,12 +91,16 @@ def prune(doc: dict) -> dict:
     doc["paths"] = {
         path: value
         for path, value in doc["paths"].items()
-        if path.startswith(KEEP_PREFIXES)
+        if path.startswith(KEEP_PREFIXES) or path in KEEP_PATHS
     }
 
     reachable: set[str] = set()
     frontier: set[str] = set()
     collect_refs(doc["paths"], frontier)
+    frontier |= {
+        f"#/components/schemas/{name}"
+        for name in KEEP_SCHEMA_ROOTS
+    }
     while frontier:
         ref = frontier.pop()
         if ref in reachable:

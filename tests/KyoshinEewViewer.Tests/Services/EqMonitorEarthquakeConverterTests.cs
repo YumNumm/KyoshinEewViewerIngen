@@ -61,6 +61,33 @@ public class EqMonitorEarthquakeConverterTests
 		Assert.Null(fragment.BasedTelegram);
 	}
 
+	[Fact(DisplayName = "WebSocketの完全な地震recordも情報フラグメントへ変換される")]
+	public void 完全な地震Record()
+	{
+		var item = new Generated.Earthquake
+		{
+			Event_id = "20251212191438",
+			Status = Generated.TelegramStatus.NORMAL,
+			Earthquake_type = Generated.EarthquakeType.NORMAL,
+			Origin_time = new DateTimeOffset(2025, 12, 12, 19, 14, 38, TimeSpan.FromHours(9)),
+			Origin_time_precision = Generated.OriginTimePrecision.SECOND,
+			Hypocenter = CreateHypocenter(),
+			Intensity = new Generated.Intensity
+			{
+				Max_intensity = Generated.JmaIntensity._6Minus,
+				Intensity_tree = [],
+			},
+			Datasources = [],
+			Telegrams = [],
+		};
+
+		var fragment = Assert.IsType<HypocenterAndIntensityInformationFragment>(item.ToFragment());
+
+		Assert.Equal("宮城県沖", fragment.Place);
+		Assert.Equal(JmaIntensity.Int6Lower, fragment.MaxIntensity);
+		Assert.Null(fragment.BasedTelegram);
+	}
+
 	[Fact(DisplayName = "震源が未確定の場合は震度速報へ変換される")]
 	public void 震源が未確定の場合()
 	{
