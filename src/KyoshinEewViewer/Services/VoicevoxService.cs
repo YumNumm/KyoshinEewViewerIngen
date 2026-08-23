@@ -1,10 +1,9 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Services.Audio;
 using KyoshinEewViewer.Services.NetworkDebug;
 using KyoshinEewViewer.Services.Voicevox;
-using ReactiveUI;
-using Splat;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -18,29 +17,22 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using Microsoft.Extensions.Logging;
 
 namespace KyoshinEewViewer.Services;
 
-public class VoicevoxService : ReactiveObject, IDisposable
+public partial class VoicevoxService : ObservableObject, IDisposable
 {
 	private KyoshinEewViewerConfiguration Config { get; }
 	private HttpClient HttpClient { get; } = NetworkDebugHttpClient.Create();
 	private SoundPlayerService SoundPlayerService { get; }
 	private ILogger Logger { get; }
 
-	private Speaker[] _speakers = [];
-	public Speaker[] Speakers
-	{
-		get => _speakers;
-		private set => this.RaiseAndSetIfChanged(ref _speakers, value);
-	}
+	[ObservableProperty]
+	public partial Speaker[] Speakers { get; private set; } = [];
 
-	private bool _speakersLoading = false;
-	public bool SpeakersLoading
-	{
-		get => _speakersLoading;
-		private set => this.RaiseAndSetIfChanged(ref _speakersLoading, value);
-	}
+	[ObservableProperty]
+	public partial bool SpeakersLoading { get; private set; } = false;
 
 	private readonly string _cacheDirectory;
 	private Timer? _cacheCleanupTimer;
@@ -55,12 +47,10 @@ public class VoicevoxService : ReactiveObject, IDisposable
 	private const int FadeOutDurationMs = 40;
 
 
-	public VoicevoxService(KyoshinEewViewerConfiguration config, ILogManager logManager, SoundPlayerService soundPlayerService)
+	public VoicevoxService(KyoshinEewViewerConfiguration config, ILogger<VoicevoxService> logger, SoundPlayerService soundPlayerService)
 	{
-		SplatRegistrations.RegisterLazySingleton<VoicevoxService>();
-
 		Config = config;
-		Logger = logManager.GetLogger<VoicevoxService>();
+		Logger = logger;
 		SoundPlayerService = soundPlayerService;
 		
 		_cacheDirectory = Path.Combine(Path.GetTempPath(), "KyoshinEewViewer", "VoicevoxCache");
@@ -122,7 +112,7 @@ public class VoicevoxService : ReactiveObject, IDisposable
 			}
 			catch (IOException) { }
 
-			Logger.LogDebug($"音声キャッシュが見つかりました: {cacheKey}");
+			Logger.LogDebug("音声キャッシュが見つかりました: {CacheKey}", cacheKey);
 			return Task.FromResult<string?>(filename);
 		}
 
@@ -141,7 +131,7 @@ public class VoicevoxService : ReactiveObject, IDisposable
 			using var response = await HttpClient.PostAsync(Config.Voicevox.Address + $"audio_query?{c}", null);
 			if (!response.IsSuccessStatusCode)
 			{
-				Logger.LogWarning($"audio query の作成に失敗しています。 StatusCode:{response.StatusCode}");
+				Logger.LogWarning("audio query の作成に失敗しています。 StatusCode:{StatusCode}", response.StatusCode);
 				return null;
 			}
 			var querybody = await JsonSerializer.DeserializeAsync<Voicevox.Model.AudioQuery>(await response.Content.ReadAsStreamAsync());
@@ -162,13 +152,13 @@ public class VoicevoxService : ReactiveObject, IDisposable
 				using var audioResponse = await HttpClient.PostAsync(Config.Voicevox.Address + $"synthesis?speaker=" + Config.Voicevox.SpeakerId.ToString(), new StringContent(JsonSerializer.Serialize(querybody), Encoding.UTF8, "application/json"));
 				if (!audioResponse.IsSuccessStatusCode)
 				{
-					Logger.LogWarning($"音声合成に失敗しています。 StatusCode:{audioResponse.StatusCode}");
+					Logger.LogWarning("音声合成に失敗しています。 StatusCode:{StatusCode}", audioResponse.StatusCode);
 					return null;
 				}
 				await audioResponse.Content.CopyToAsync(file);
 			}
 
-			Logger.LogDebug($"音声をキャッシュに保存しました: {cacheKey}");
+			Logger.LogDebug("音声をキャッシュに保存しました: {CacheKey}", cacheKey);
 
 			// 即時削除設定の場合、キャッシュから削除
 			if (Config.Voicevox.ClearCacheImmediately)
@@ -176,7 +166,7 @@ public class VoicevoxService : ReactiveObject, IDisposable
 				try
 				{
 					File.Delete(filename);
-					Logger.LogDebug($"即時削除設定により音声キャッシュを削除しました: {cacheKey}");
+					Logger.LogDebug("即時削除設定により音声キャッシュを削除しました: {CacheKey}", cacheKey);
 					return null;
 				}
 				catch (IOException ex)
@@ -304,7 +294,7 @@ public class VoicevoxService : ReactiveObject, IDisposable
 
 		if (!File.Exists(cachedFilePath))
 		{
-			Logger.LogDebug($"キャッシュされた音声が見つかりません: {cacheKey}");
+			Logger.LogDebug("キャッシュされた音声が見つかりません: {CacheKey}", cacheKey);
 			cachedFilePath = await PrepareAudioAsync(text);
 			if (cachedFilePath is null)
 				return;
@@ -318,7 +308,7 @@ public class VoicevoxService : ReactiveObject, IDisposable
 			var ch = SoundPlayerService.Backend.CreateChannel(cachedFilePath);
 			if (ch is null)
 			{
-				Logger.LogWarning($"音声ストリームの作成に失敗しています。 LastError:{SoundPlayerService.Backend.LastError}");
+				Logger.LogWarning("音声ストリームの作成に失敗しています。 LastError:{LastError}", SoundPlayerService.Backend.LastError);
 				return;
 			}
 			ch.Volume = volume;
@@ -329,7 +319,7 @@ public class VoicevoxService : ReactiveObject, IDisposable
 
 			if (!ch.Play())
 			{
-				Logger.LogWarning($"音声の再生開始に失敗しています。 LastError:{SoundPlayerService.Backend.LastError}");
+				Logger.LogWarning("音声の再生開始に失敗しています。 LastError:{LastError}", SoundPlayerService.Backend.LastError);
 				ch.Dispose();
 				return;
 			}
@@ -409,12 +399,12 @@ public class VoicevoxService : ReactiveObject, IDisposable
 			}
 			catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) 
 			{
-				Logger.LogWarning(ex, $"キャッシュファイルの削除に失敗: {file}");
+				Logger.LogWarning(ex, "キャッシュファイルの削除に失敗: {File}", file);
 			}
 		}
 
 		if (deletedCount > 0)
-			Logger.LogDebug($"voicevox cache cleaning completed: {deletedCount} files deleted in {(DateTime.Now - s).TotalMilliseconds}ms");
+			Logger.LogDebug("voicevox cache cleaning completed: {DeletedCount} files deleted in {TotalMilliseconds}ms", deletedCount, (DateTime.Now - s).TotalMilliseconds);
 	}
 
 	public Task PlayTest()
@@ -427,5 +417,4 @@ public class VoicevoxService : ReactiveObject, IDisposable
 		GC.SuppressFinalize(this);
 	}
 }
-
 

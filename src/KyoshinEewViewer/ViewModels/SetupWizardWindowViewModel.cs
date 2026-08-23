@@ -3,7 +3,6 @@ using KyoshinEewViewer.Series.Earthquake;
 using KyoshinEewViewer.Series.KyoshinMonitor;
 using KyoshinEewViewer.Series.Qzss;
 using KyoshinEewViewer.Series.Tsunami;
-using Splat;
 using System;
 
 namespace KyoshinEewViewer.ViewModels;
@@ -36,8 +35,6 @@ public class SetupWizardWindowViewModel : ViewModelBase
 
 	public SetupWizardWindowViewModel(KyoshinEewViewerConfiguration config)
 	{
-		SplatRegistrations.RegisterLazySingleton<SetupWizardWindowViewModel>();
-
 		Config = config;
 	}
 }

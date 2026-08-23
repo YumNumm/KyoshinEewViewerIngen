@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 #pragma warning disable CS8618 // JSON DTOs are populated by deserialization.
 
-namespace KyoshinEewViewer.Services.ExtarnalPublishers.Axis.ApiModels.Message;
+namespace KyoshinEewViewer.Services.ExternalPublishers.Axis.ApiModels.Message;
 
 public class EarthquakeMessage
 {
@@ -17,7 +17,8 @@ public class EarthquakeMessage
 public class JmaXmlControl
 {
 	public string Status { get; set; }
-	public DateTime DateTime { get; set; }
+	// DateTime で受けるとオフセット付きの値がマシンのローカル時刻へ変換されてしまうため、DateTimeOffset で受ける
+	public DateTimeOffset DateTime { get; set; }
 	public string PublishingOffice { get; set; }
 	public string EditorialOffice { get; set; }
 	public string Title { get; set; }
@@ -96,9 +97,9 @@ public class Forecastcomment
 public class Earthquake
 {
 	public PhysicalQuantity[] Magnitude { get; set; }
-	public DateTime OriginTime { get; set; }
+	public DateTimeOffset OriginTime { get; set; }
 	public Hypocenter Hypocenter { get; set; }
-	public DateTime ArrivalTime { get; set; }
+	public DateTimeOffset ArrivalTime { get; set; }
 }
 
 public class Hypocenter
@@ -134,13 +135,13 @@ public class PhysicalQuantity
 public class JmaXmlHead
 {
 	public string EventID { get; set; }
-	public DateTime TargetDateTime { get; set; }
+	public DateTimeOffset TargetDateTime { get; set; }
 	public string InfoType { get; set; }
 	public string Title { get; set; }
 	public JmaXmlHeadline Headline { get; set; }
 	public string InfoKindVersion { get; set; }
 	public string InfoKind { get; set; }
-	public DateTime ReportDateTime { get; set; }
+	public DateTimeOffset ReportDateTime { get; set; }
 	public string Serial { get; set; }
 }
 

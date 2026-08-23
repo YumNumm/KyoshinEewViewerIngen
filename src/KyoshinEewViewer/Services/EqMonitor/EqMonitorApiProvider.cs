@@ -3,7 +3,6 @@ using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.EqMonitorApi.Generated;
 using KyoshinEewViewer.Services.NetworkDebug;
 using ReactiveUI;
-using Splat;
 using System;
 using System.Globalization;
 using System.Linq;
@@ -62,11 +61,9 @@ public class EqMonitorApiProvider : ReactiveObject, IDisposable
 	private HttpClient? _httpClient;
 	private EqMonitorApiClient? _client;
 
-	public EqMonitorApiProvider(ILogManager logManager, KyoshinEewViewerConfiguration config)
+	public EqMonitorApiProvider(ILogger<EqMonitorApiProvider> logger, KyoshinEewViewerConfiguration config)
 	{
-		SplatRegistrations.RegisterLazySingleton<EqMonitorApiProvider>();
-
-		Logger = logManager.GetLogger<EqMonitorApiProvider>();
+		Logger = logger;
 		Config = config;
 	}
 
@@ -127,7 +124,7 @@ public class EqMonitorApiProvider : ReactiveObject, IDisposable
 
 		_appliedBaseUri = uri;
 		_client = new EqMonitorApiClient(_httpClient);
-		Logger.LogInfo("EQMonitor API の接続先を設定しました");
+		Logger.LogInformation("EQMonitor API の接続先を設定しました");
 		return _client;
 	}
 

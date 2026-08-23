@@ -7,7 +7,6 @@ using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Series;
 using KyoshinEewViewer.ViewModels;
 using KyoshinEewViewer.Views;
-using Splat;
 using System;
 using System.Threading.Tasks;
 
@@ -43,8 +42,8 @@ public class OverlaySubWindowsService : ISubWindowsService
 
 		Show("設定", new SettingView
 		{
-			DataContext = Locator.Current.RequireService<SettingWindowViewModel>(),
-		}, closable: true, onClosed: () => ConfigurationLoader.Save(Locator.Current.RequireService<KyoshinEewViewerConfiguration>()));
+			DataContext = ServiceLocator.Current.RequireService<SettingWindowViewModel>(),
+		}, closable: true, onClosed: () => ConfigurationLoader.Save(ServiceLocator.Current.RequireService<KyoshinEewViewerConfiguration>()));
 	}
 
 	public Task ShowDialogSetupWizardWindow(Action<SetupWizardWindow> opened)
@@ -54,7 +53,7 @@ public class OverlaySubWindowsService : ISubWindowsService
 
 		var view = new SetupWizardView
 		{
-			DataContext = Locator.Current.RequireService<SetupWizardWindowViewModel>(),
+			DataContext = ServiceLocator.Current.RequireService<SetupWizardWindowViewModel>(),
 		};
 		view.Continued += () =>
 		{

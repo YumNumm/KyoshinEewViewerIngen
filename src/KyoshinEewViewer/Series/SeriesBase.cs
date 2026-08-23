@@ -1,31 +1,23 @@
 using Avalonia;
 using Avalonia.Controls;
+using CommunityToolkit.Mvvm.ComponentModel;
 using KyoshinEewViewer.Core.Models.Events;
-using ReactiveUI;
 using System;
 
 namespace KyoshinEewViewer.Series;
 
-public abstract class SeriesBase(SeriesMeta meta) : ReactiveObject, IDisposable
+public abstract partial class SeriesBase(SeriesMeta meta) : ObservableObject, IDisposable
 {
 	public SeriesMeta Meta { get; } = meta;
 
-	private bool _isActivated;
-	public bool IsActivated
-	{
-		get => _isActivated;
-		internal set => this.RaiseAndSetIfChanged(ref _isActivated, value);
-	}
+	[ObservableProperty]
+	public partial bool IsActivated { get; internal set; }
 
-	private bool _isSeparated;
 	/// <summary>
 	/// 別ウィンドウに分離されているかどうか
 	/// </summary>
-	public bool IsSeparated
-	{
-		get => _isSeparated;
-		internal set => this.RaiseAndSetIfChanged(ref _isSeparated, value);
-	}
+	[ObservableProperty]
+	public partial bool IsSeparated { get; internal set; }
 
 	private bool _isSheetShown;
 	/// <summary>
@@ -35,7 +27,7 @@ public abstract class SeriesBase(SeriesMeta meta) : ReactiveObject, IDisposable
 	public bool IsSheetShown
 	{
 		get => _isSheetShown;
-		protected set => this.RaiseAndSetIfChanged(ref _isSheetShown, value);
+		protected set => SetProperty(ref _isSheetShown, value);
 	}
 
 	/// <summary>
@@ -54,25 +46,17 @@ public abstract class SeriesBase(SeriesMeta meta) : ReactiveObject, IDisposable
 	/// </summary>
 	public abstract ISettingPage[] SettingPages { get; }
 
-	private MapNavigationRequest? _mapNavigationRequest;
 	/// <summary>
 	/// マップ表示位置のリクエスト
 	/// </summary>
-	public MapNavigationRequest? MapNavigationRequest
-	{
-		get => _mapNavigationRequest;
-		protected set => this.RaiseAndSetIfChanged(ref _mapNavigationRequest, value);
-	}
+	[ObservableProperty]
+	public partial MapNavigationRequest? MapNavigationRequest { get; protected set; }
 
-	private MapDisplayParameter _mapDisplayParameter;
 	/// <summary>
 	/// マップ表示用のパラメータ
 	/// </summary>
-	public MapDisplayParameter MapDisplayParameter
-	{
-		get => _mapDisplayParameter;
-		protected set => this.RaiseAndSetIfChanged(ref _mapDisplayParameter, value);
-	}
+	[ObservableProperty]
+	public partial MapDisplayParameter MapDisplayParameter { get; protected set; }
 
 	public virtual void Initialize() { }
 

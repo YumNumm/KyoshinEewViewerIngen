@@ -1,5 +1,6 @@
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
+using KyoshinEewViewer.CustomControl;
 using KyoshinEewViewer.Map;
 using KyoshinEewViewer.Map.Layers;
 using KyoshinEewViewer.Series.KyoshinMonitor.Models;
@@ -50,6 +51,12 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 		}
 	}
 
+	/// <summary>
+	/// 地点予測の残り秒数など、EEWの差し替えを伴わない更新を反映する
+	/// </summary>
+	public void RefreshPointForecast()
+		=> RefreshRequest();
+
 	private Location? _currentLocation;
 	public Location? CurrentLocation
 	{
@@ -77,6 +84,26 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 		Color = SKColors.Gray,
 		StrokeWidth = 2,
 	};
+	private SKColor EewLabelStrokeColor { get; set; }
+	private SKColor EewLabelFillColor { get; set; }
+	private SKColor EewLeaderLineColor { get; set; }
+	private SKPaint EewLabelStrokePaint { get; } = new()
+	{
+		Style = SKPaintStyle.Stroke,
+		StrokeWidth = 3,
+		IsAntialias = true,
+	};
+	private SKPaint EewLabelFillPaint { get; } = new()
+	{
+		Style = SKPaintStyle.Fill,
+		IsAntialias = true,
+	};
+	private SKPaint EewLeaderLinePaint { get; } = new()
+	{
+		Style = SKPaintStyle.Stroke,
+		StrokeWidth = 1.2f,
+		IsAntialias = true,
+	};
 	private static readonly SKPaint InvalidatePaint = new()
 	{
 		Style = SKPaintStyle.Stroke,
@@ -87,6 +114,18 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 	private static readonly SKPaint PointPaint = new()
 	{
 		Style = SKPaintStyle.Fill,
+		IsAntialias = true,
+		StrokeWidth = 2,
+	};
+	// 地点予測のマーカー描画用
+	private static readonly SKPaint PointForecastFillPaint = new()
+	{
+		Style = SKPaintStyle.Fill,
+		IsAntialias = true,
+	};
+	private static readonly SKPaint PointForecastStrokePaint = new()
+	{
+		Style = SKPaintStyle.Stroke,
 		IsAntialias = true,
 		StrokeWidth = 2,
 	};
@@ -184,6 +223,10 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 		HypocenterRangePen.Color = rangeColor.WithAlpha(128);
 
 		IsHypocenterBlinkAnimation = windowTheme.IsEewHypocenterBlinkAnimation;
+
+		EewLabelStrokeColor = windowTheme.IsDark ? SKColors.Black : SKColors.White;
+		EewLabelFillColor = windowTheme.IsDark ? SKColors.White : SKColors.Black;
+		EewLeaderLineColor = (windowTheme.IsDark ? SKColors.White : SKColors.Black).WithAlpha(140);
 	}
 
 	public override IReadOnlyDictionary<string, object?>? GetRenderInfo()
@@ -209,9 +252,14 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 		try
 		{
 			var zoom = param.Zoom;
+			// 描画途中の配列差し替えで、震源・予報・ラベルが別のEEW集合を参照しないようスナップショット化する
+			var currentEews = CurrentEews;
+			var dimFinalEews = currentEews is not null && EewMapDisplay.ShouldDimFinalEews(currentEews);
 			canvas.Translate((float)-param.LeftTopPixel.X, (float)-param.LeftTopPixel.Y);
 
 			var pixelBound = param.PixelBound;
+			// ラベルの重なり判定用 観測点と地点予測で共有する
+			var fixedRect = new List<RectD>();
 
 			RenderObservationPoints();
 			void RenderObservationPoints()
@@ -224,7 +272,6 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 				var circleSize = (float)(Math.Max(1, zoom - 4) * 1.75);
 				var circleVector = new PointD(circleSize, circleSize);
 				var renderedPoints = new List<(RealtimeObservationPoint Point, PointD Center)>();
-				var fixedRect = new List<RectD>();
 
 				// 描画対象の観測点のリストアップ
 				for (var i = 0; i < points.Length; i++)
@@ -427,10 +474,10 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 			RenderEews();
 			void RenderEews()
 			{
-				if (CurrentEews == null)
+				if (currentEews == null)
 					return;
 
-				foreach (var eew in CurrentEews)
+				foreach (var eew in currentEews)
 				{
 					if (eew.Hypocenter?.Location == null)
 						continue;
@@ -447,41 +494,22 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 					var ms = DateTime.Now.Millisecond;
 					if (ms > 500)
 						ms = 1000 - ms;
-					if (IsHypocenterBlinkAnimation && !Config.Eew.DisableAnimation)
+					var contentOpacity = EewMapDisplay.GetContentOpacity(eew, dimFinalEews);
+					if (eew.IsCancelled)
 					{
-						if (eew.IsCancelled)
-						{
-							HypocenterBorderPen.Color = CancelledHypocenterBorder;
-							HypocenterPen.Color = CancelledHypocenter;
-						}
-						else if (eew.IsWarning)
-						{
-							HypocenterBorderPen.Color = WarningHypocenterBorder.WithAlpha((byte)(55 + (ms / 500.0 * 200)));
-							HypocenterPen.Color = WarningHypocenter.WithAlpha((byte)(55 + (ms / 500.0 * 200)));
-						}
-						else
-						{
-							HypocenterBorderPen.Color = ForecastHypocenterBorder.WithAlpha((byte)(55 + (ms / 500.0 * 200)));
-							HypocenterPen.Color = ForecastHypocenter.WithAlpha((byte)(55 + (ms / 500.0 * 200)));
-						}
+						// キャンセル報は従来の低彩度色を維持する
+						HypocenterBorderPen.Color = CancelledHypocenterBorder;
+						HypocenterPen.Color = CancelledHypocenter;
 					}
 					else
 					{
-						if (eew.IsCancelled)
-						{
-							HypocenterBorderPen.Color = CancelledHypocenterBorder;
-							HypocenterPen.Color = CancelledHypocenter;
-						}
-						else if (eew.IsWarning)
-						{
-							HypocenterBorderPen.Color = WarningHypocenterBorder;
-							HypocenterPen.Color = WarningHypocenter;
-						}
-						else
-						{
-							HypocenterBorderPen.Color = ForecastHypocenterBorder;
-							HypocenterPen.Color = ForecastHypocenter;
-						}
+						var pulseAlpha = IsHypocenterBlinkAnimation && !Config.Eew.DisableAnimation
+							? (byte)(55 + (ms / 500.0 * 200))
+							: byte.MaxValue;
+						var borderColor = eew.IsWarning ? WarningHypocenterBorder : ForecastHypocenterBorder;
+						var bodyColor = eew.IsWarning ? WarningHypocenter : ForecastHypocenter;
+						HypocenterBorderPen.Color = EewMapDisplay.ApplyOpacity(borderColor.WithAlpha(pulseAlpha), contentOpacity);
+						HypocenterPen.Color = EewMapDisplay.ApplyOpacity(bodyColor.WithAlpha(pulseAlpha), contentOpacity);
 					}
 					if (IsHypocenterBlinkAnimation || HostSeries.CurrentDisplayTime.Millisecond < 500 || !Config.Eew.DisableAnimation)
 					{
@@ -530,13 +558,13 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 
 						if (eew.IsWarning)
 						{
-							PWavePaint.Color = WarningPWave;
-							SWavePaint.Color = WarningSWave;
+							PWavePaint.Color = EewMapDisplay.ApplyOpacity(WarningPWave, contentOpacity);
+							SWavePaint.Color = EewMapDisplay.ApplyOpacity(WarningSWave, contentOpacity);
 						}
 						else
 						{
-							PWavePaint.Color = ForecastPWave;
-							SWavePaint.Color = ForecastSWave;
+							PWavePaint.Color = EewMapDisplay.ApplyOpacity(ForecastPWave, contentOpacity);
+							SWavePaint.Color = EewMapDisplay.ApplyOpacity(ForecastSWave, contentOpacity);
 						}
 
 						if (p is { } pDistance && pDistance > 0)
@@ -557,7 +585,14 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 									Shader = SKShader.CreateRadialGradient(
 										basePoint.AsSkPoint(),
 										circle.Bounds.Height / 2,
-										[SWavePaint.Color.WithAlpha(15), SWavePaint.Color.WithAlpha(80)],
+										[
+											EewMapDisplay.ApplyOpacity(
+												(eew.IsWarning ? WarningSWave : ForecastSWave).WithAlpha(15),
+												contentOpacity),
+											EewMapDisplay.ApplyOpacity(
+												(eew.IsWarning ? WarningSWave : ForecastSWave).WithAlpha(80),
+												contentOpacity),
+										],
 										[.6f, 1f],
 										SKShaderTileMode.Clamp
 									)
@@ -571,6 +606,7 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 					// 丸め誤差範囲の描画
 					if (zoom >= 8.75)
 					{
+						HypocenterRangePen.Color = EewMapDisplay.ApplyOpacity(ForecastHypocenterBorder.WithAlpha(128), contentOpacity);
 						var topLeft = new Location(eew.Hypocenter.Location.Latitude + 0.05f, eew.Hypocenter.Location.Longitude - 0.05f).ToPixel(zoom);
 						var bottomRight = new Location(eew.Hypocenter.Location.Latitude - 0.05f, eew.Hypocenter.Location.Longitude + 0.05f).ToPixel(zoom);
 						var rect = new SKRect(
@@ -599,6 +635,123 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 				}
 			}
 
+			RenderPointForecasts();
+			void RenderPointForecasts()
+			{
+				if (!Config.Eew.ShowPointForecastOnMap || currentEews == null)
+					return;
+
+				var markerSize = (float)Math.Max(4, (zoom - 4) * 1.2);
+				var markerVector = new PointD(markerSize, markerSize);
+
+				foreach (var eew in currentEews)
+				{
+					if (eew.PointForecasts is not { } forecasts)
+						continue;
+					var contentOpacity = EewMapDisplay.GetContentOpacity(eew, dimFinalEews);
+					var labelOpacity = EewMapDisplay.GetLabelOpacity(eew, dimFinalEews);
+
+					foreach (var forecast in forecasts)
+					{
+						if (forecast.Location is not { } location)
+							continue;
+
+						var center = location.ToPixel(zoom);
+						if (!pixelBound.IntersectsWith(new RectD(center - markerVector, center + markerVector)))
+							continue;
+
+						var color = EewMapDisplay.ApplyOpacity(
+							FixedObjectRenderer.IntensityPaintCache[forecast.Intensity].Background.Color,
+							contentOpacity);
+
+						// 到達済みの場合は塗りをやめて枠のみにする
+						if (forecast.IsArrived)
+						{
+							PointForecastStrokePaint.Color = color;
+							canvas.DrawCircle(center.AsSkPoint(), markerSize, PointForecastStrokePaint);
+						}
+						else
+						{
+							PointForecastFillPaint.Color = color;
+							canvas.DrawCircle(center.AsSkPoint(), markerSize, PointForecastFillPaint);
+							PointForecastStrokePaint.Color = EewMapDisplay.ApplyOpacity(
+								IsDarkTheme ? SKColors.White : SKColors.Black,
+								contentOpacity);
+							canvas.DrawCircle(center.AsSkPoint(), markerSize, PointForecastStrokePaint);
+						}
+
+						var text = $"{forecast.PointName} {KyoshinMonitorLib.JmaIntensityExtensions.ToShortString(forecast.Intensity).Replace('*', '-')}";
+						if (forecast.RemainingSeconds is { } remaining && !forecast.IsArrived)
+							text += $" / {Math.Ceiling(remaining):0}秒";
+
+						var textWidth = TextFont.MeasureText(text);
+						var textOrigin = center + new PointD(markerSize + 3, TextFont.Size * .4);
+						var bound = new RectD(
+							textOrigin - new PointD(0, TextFont.Size * .7),
+							textOrigin + new PointD(textWidth, TextFont.Size * .1));
+
+						TextBackgroundPaint.Color = EewMapDisplay.ApplyOpacity(new SKColor(0, 0, 0, 160), labelOpacity);
+						canvas.DrawRect(
+							(float)bound.Left - 2,
+							(float)bound.Top - 1,
+							(float)bound.Width + 4,
+							(float)bound.Height + 3,
+							TextBackgroundPaint);
+
+						TextPaint.Style = SKPaintStyle.Fill;
+						TextPaint.Color = EewMapDisplay.ApplyOpacity(SKColors.White, labelOpacity);
+						canvas.DrawText(text, textOrigin.AsSkPoint(), SKTextAlign.Left, TextFont, TextPaint);
+
+						fixedRect.Add(bound);
+					}
+				}
+			}
+
+			void RenderEewLabels()
+			{
+				// 単独EEWでは従来どおり地図を簡潔に保つ
+				if (currentEews == null || !EewMapDisplay.ShouldShowLabels(currentEews))
+					return;
+
+				var markerRadius = (float)(8 + (zoom - 5) * 1.25 + 1);
+				var viewport = new SKRect(
+					(float)(param.PixelBound.Left + param.Padding.Left),
+					(float)(param.PixelBound.Top + param.Padding.Top),
+					(float)(param.PixelBound.Right - param.Padding.Right),
+					(float)(param.PixelBound.Bottom - param.Padding.Bottom));
+				var items = new List<EewMapDisplay.LabelItem>(currentEews.Length);
+				foreach (var eew in currentEews)
+				{
+					if (eew.Hypocenter?.Location is not { } location)
+						continue;
+					var center = location.ToPixel(zoom).AsSkPoint();
+					if (!viewport.Contains(center))
+						continue;
+					items.Add(new EewMapDisplay.LabelItem(items.Count, eew, center, markerRadius));
+				}
+				if (items.Count == 0)
+					return;
+
+				var placements = EewMapDisplay.BuildLabelLayout(items, viewport, dimFinalEews);
+				foreach (var placementValue in placements)
+				{
+					if (placementValue is not { } placement)
+						continue;
+
+					EewLabelStrokePaint.Color = EewMapDisplay.ApplyOpacity(EewLabelStrokeColor, placement.Opacity);
+					EewLabelFillPaint.Color = EewMapDisplay.ApplyOpacity(EewLabelFillColor, placement.Opacity);
+					EewLeaderLinePaint.Color = EewMapDisplay.ApplyOpacity(EewLeaderLineColor, placement.Opacity);
+					if (placement.LeaderLine is { } leaderLine)
+						canvas.DrawLine(leaderLine.Start, leaderLine.End, EewLeaderLinePaint);
+					MapLayerLabelRenderer.DrawLabelLines(
+						canvas,
+						placement.Lines,
+						placement.Rect,
+						EewLabelStrokePaint,
+						EewLabelFillPaint);
+				}
+			}
+
 			if (CurrentLocation != null)
 			{
 				var size = 5;
@@ -609,6 +762,10 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 				canvas.DrawLine((basePoint - new PointD(size, 0)).AsSkPoint(), (basePoint + new PointD(size, 0)).AsSkPoint(), CurrentLocationPen);
 			}
 
+			// EEWラベルは地点予測や現在地マーカーに隠れないよう、EEW関連表示の最後に描画する
+			RenderEewLabels();
+
+#if DEBUG
 			if (KyoshinEvents != null)
 				foreach (var evt in KyoshinEvents)
 				{
@@ -618,6 +775,7 @@ public class KyoshinMonitorLayer(KyoshinEewViewerConfiguration config, KyoshinMo
 					var br = evt.BottomRight.ToPixel(zoom).AsSkPoint() - tl;
 					canvas.DrawRect(tl.X, tl.Y, br.X, br.Y, TextPaint);
 				}
+#endif
 		}
 		finally
 		{

@@ -4,19 +4,20 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.Messaging;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Core.Models.Events;
 using KyoshinEewViewer.CustomControl;
 using KyoshinEewViewer.Notification;
-using KyoshinEewViewer.Series;
 using KyoshinEewViewer.Services;
 using KyoshinEewViewer.Services.Audio;
 using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
 using KyoshinEewViewer.ViewModels;
 using KyoshinEewViewer.Views;
-using ReactiveUI;
-using Splat;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using R3;
 using System;
 using System.Linq;
 using System.Reactive.Linq;
@@ -85,14 +86,14 @@ public class App : Application
 
 	private static void ShowFatalError(ISingleViewApplicationLifetime singleViewPlatform, Exception ex)
 	{
-		LogHost.Default.Error(ex, "致命的な例外が発生しました");
+		AppLog.Default.LogError(ex, "致命的な例外が発生しました");
 		try
 		{
 			singleViewPlatform.MainView = MainView = FatalErrorView.Create(ex);
 		}
 		catch (Exception inner)
 		{
-			LogHost.Default.Error(inner, "例外内容の表示に失敗しました");
+			AppLog.Default.LogError(inner, "例外内容の表示に失敗しました");
 		}
 	}
 
@@ -101,13 +102,13 @@ public class App : Application
 		KyoshinEewViewerApp.Selector = ThemeSelector.Create(null);
 		KyoshinEewViewerApp.Selector.EnableThemes(this);
 
-		var config = Locator.Current.RequireService<KyoshinEewViewerConfiguration>();
+		var config = ServiceLocator.Current.RequireService<KyoshinEewViewerConfiguration>();
 
 		// サブウィンドウをオーバーレイとして重ねるため、MainView を Panel で包む
 		var host = new Panel();
 		var mainView = new MainView
 		{
-			DataContext = Locator.Current.RequireService<MainViewModel>(),
+			DataContext = ServiceLocator.Current.RequireService<MainViewModel>(),
 		};
 		host.Children.Add(mainView);
 		_subWindowsService.OverlayHost = host;
@@ -115,8 +116,8 @@ public class App : Application
 
 		ApplyHostBackground(host);
 
-		MessageBus.Current.Listen<ShowSettingWindowRequested>()
-			.Subscribe(_ => Dispatcher.UIThread.Post(_subWindowsService.ShowSettingWindow));
+		StrongReferenceMessenger.Default.Register<ShowSettingWindowRequested>(this,
+			(_, _) => Dispatcher.UIThread.Post(_subWindowsService.ShowSettingWindow));
 
 		// NOTE: 旧バージョンからの移行
 		if (config.Theme.WindowThemeName is string windowTheme)
@@ -131,7 +132,7 @@ public class App : Application
 		}
 
 		KyoshinEewViewerApp.Selector.ApplyTheme(config.Theme.WindowTheme, config.Theme.IntensityTheme);
-		KyoshinEewViewerApp.Selector.WhenAnyValue(x => x.SelectedIntensityTheme)
+		KyoshinEewViewerApp.Selector.ObservePropertyChanged(x => x.SelectedIntensityTheme)
 			.Subscribe(x =>
 			{
 				if (x == null) return;
@@ -139,7 +140,7 @@ public class App : Application
 				// MainView は論理ツリー未接続の場合にテーマリソースを解決できないため Application から引く
 				Dispatcher.UIThread.Post(() => FixedObjectRenderer.UpdateIntensityPaintCache(this));
 			});
-		KyoshinEewViewerApp.Selector.WhenAnyValue(x => x.SelectedWindowTheme)
+		KyoshinEewViewerApp.Selector.ObservePropertyChanged(x => x.SelectedWindowTheme)
 			.Subscribe(x =>
 			{
 				if (x == null) return;
@@ -168,30 +169,23 @@ public class App : Application
 	/// </summary>
 	public override void RegisterServices()
 	{
-		Locator.CurrentMutable.RegisterConstant(Locator.Current, typeof(IReadonlyDependencyResolver));
-		Locator.CurrentMutable.RegisterLazySingleton(ConfigurationLoader.Load, typeof(KyoshinEewViewerConfiguration));
-		Locator.CurrentMutable.RegisterLazySingleton(() => new SeriesController(), typeof(SeriesController));
-		Locator.CurrentMutable.RegisterConstant(_subWindowsService, typeof(ISubWindowsService));
-		Locator.CurrentMutable.RegisterConstant(_dmdataAuthenticator, typeof(IDmdataAuthenticator));
+		var services = new ServiceCollection();
+		services.SetupConfigurationAndLogging(config =>
+		{
+			// 共通の既定クライアントはループバック URI しか登録されていないため iOS では使えない。
+			// 既定値のままの場合のみ差し替え、ユーザーが独自に設定したクライアントは尊重する
+			if (config.Dmdata.OAuthClientId == KyoshinEewViewerConfiguration.DmdataConfig.DefaultOAuthClientId)
+				config.Dmdata.OAuthClientId = DmdataCustomSchemeAuthenticator.ClientId;
+		});
+		services.AddKyoshinEewViewer();
+		services.AddSingleton<ISubWindowsService>(_subWindowsService);
+		services.AddSingleton<IDmdataAuthenticator>(_dmdataAuthenticator);
 		// NotificationService から解決された時点で通知の許可を要求する
-		Locator.CurrentMutable.RegisterLazySingleton(() => (NotificationProvider)new Notification.IosNotificationProvider(), typeof(NotificationProvider));
+		services.AddSingleton<NotificationProvider, Notification.IosNotificationProvider>();
 		// BASS のネイティブが存在しないため AVFoundation の実装へ差し替える
-		Locator.CurrentMutable.RegisterLazySingleton(() => (IAudioBackend)new Audio.IosAudioBackend(), typeof(IAudioBackend));
-		var config = Locator.Current.RequireService<KyoshinEewViewerConfiguration>();
-		LoggingAdapter.Setup(config);
+		services.AddSingleton<IAudioBackend, Audio.IosAudioBackend>();
 
-		// 共通の既定クライアントはループバック URI しか登録されていないため iOS では使えない。
-		// 既定値のままの場合のみ差し替え、ユーザーが独自に設定したクライアントは尊重する
-		if (config.Dmdata.OAuthClientId == KyoshinEewViewerConfiguration.DmdataConfig.DefaultOAuthClientId)
-			config.Dmdata.OAuthClientId = DmdataCustomSchemeAuthenticator.ClientId;
-
-		SetupIOC(Locator.GetLocator());
+		ServiceLocator.SetProvider(services.BuildServiceProvider());
 		base.RegisterServices();
-	}
-
-	public static void SetupIOC(IDependencyResolver resolver)
-	{
-		KyoshinEewViewerApp.SetupIOC(resolver);
-		SplatRegistrations.SetupIOC(resolver);
 	}
 }

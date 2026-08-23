@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Series;
-using Splat;
 
 namespace KyoshinEewViewer.Services.TelegramPublishers.JmaXml;
 
@@ -21,7 +20,6 @@ public class JmaXmlSettingPage : ISettingPage
 
 	public JmaXmlSettingPage(KyoshinEewViewerConfiguration config)
 	{
-		SplatRegistrations.RegisterLazySingleton<JmaXmlSettingPage>();
 
 		Config = config;
 	}

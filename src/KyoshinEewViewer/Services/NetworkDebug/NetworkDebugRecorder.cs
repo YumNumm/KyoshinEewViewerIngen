@@ -1,6 +1,7 @@
 using KyoshinEewViewer.Core.Models;
-using ReactiveUI;
-using Splat;
+using KyoshinEewViewer.Core;
+using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -31,7 +32,6 @@ public class NetworkDebugRecorder
 
 	public NetworkDebugRecorder(KyoshinEewViewerConfiguration config)
 	{
-		SplatRegistrations.RegisterLazySingleton<NetworkDebugRecorder>();
 		Config = config;
 	}
 
@@ -54,7 +54,7 @@ public class NetworkDebugRecorder
 		while (_transactions.Count > MaxEntryCount)
 			_transactions.TryDequeue(out _);
 
-		MessageBus.Current.SendMessage(new NetworkTransactionAdded { Transaction = transaction });
+		StrongReferenceMessenger.Default.Send(new NetworkTransactionAdded { Transaction = transaction });
 	}
 
 	/// <summary>
@@ -72,7 +72,7 @@ public class NetworkDebugRecorder
 	/// <summary>
 	/// 静的フィールドで生成される HttpClient があるため、DI の準備完了を待って遅延解決する
 	/// </summary>
-	public static NetworkDebugRecorder? Current => _current ??= Locator.Current.GetService<NetworkDebugRecorder>();
+	public static NetworkDebugRecorder? Current => _current ??= ServiceLocator.CurrentOrNull?.GetService<NetworkDebugRecorder>();
 
 	/// <summary>
 	/// WebSocket の通信を記録する<br/>
@@ -102,7 +102,7 @@ public class NetworkDebugRecorder
 		}
 		catch (Exception ex)
 		{
-			LogHost.Default.Warn(ex, "WebSocket 通信の記録に失敗しました");
+			AppLog.Default.LogWarning(ex, "WebSocket 通信の記録に失敗しました");
 		}
 	}
 }

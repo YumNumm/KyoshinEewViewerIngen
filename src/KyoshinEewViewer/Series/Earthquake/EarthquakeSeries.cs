@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
 using FluentAvalonia.UI.Controls;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
@@ -21,11 +23,10 @@ using KyoshinEewViewer.Services;
 using KyoshinEewViewer.Services.EqMonitor;
 using KyoshinEewViewer.Services.TelegramPublishers;
 using KyoshinEewViewer.Services.Workflows.BuiltinActions;
+using R3;
 using WorkflowsNamespace = KyoshinEewViewer.Services.Workflows;
 using KyoshinMonitorLib;
-using ReactiveUI;
 using SkiaSharp;
-using Splat;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -38,10 +39,12 @@ using System.Reactive.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Location = KyoshinMonitorLib.Location;
+using Observable = System.Reactive.Linq.Observable;
+using Microsoft.Extensions.Logging;
 
 namespace KyoshinEewViewer.Series.Earthquake;
 
-public class EarthquakeSeries : SeriesBase
+public partial class EarthquakeSeries : SeriesBase
 {
 	public static SeriesMeta MetaData { get; } = new(typeof(EarthquakeSeries), "earthquake", "地震情報", new FAFontIconSource { Glyph = "\xf05a", FontFamily = new(Utils.IconFontName) }, true, "震源･震度情報を受信･表示します。");
 
@@ -56,7 +59,7 @@ public class EarthquakeSeries : SeriesBase
 	private Sound UpdatedTrainingSound { get; }
 
 	private ILogger Logger { get; }
-	private KyoshinEewViewerConfiguration Config { get; }
+	public KyoshinEewViewerConfiguration Config { get; }
 	private NotificationService NotificationService { get; }
 	private TelegramProvideService TelegramProvideService { get; }
 	private WorkflowService WorkflowService { get; }
@@ -79,7 +82,7 @@ public class EarthquakeSeries : SeriesBase
 	public ObservableCollection<EarthquakeEvent> DisplayedEarthquakes
 	{
 		get => _displayedEarthquakes;
-		private set => this.RaiseAndSetIfChanged(ref _displayedEarthquakes, value);
+		private set => SetProperty(ref _displayedEarthquakes, value);
 	}
 
 	private bool _isSearching;
@@ -89,7 +92,7 @@ public class EarthquakeSeries : SeriesBase
 	public bool IsSearching
 	{
 		get => _isSearching;
-		private set => this.RaiseAndSetIfChanged(ref _isSearching, value);
+		private set => SetProperty(ref _isSearching, value);
 	}
 
 	/// <summary>
@@ -175,7 +178,7 @@ public class EarthquakeSeries : SeriesBase
 	public bool IsSelectingEpicenterRect
 	{
 		get => _isSelectingEpicenterRect;
-		private set => this.RaiseAndSetIfChanged(ref _isSelectingEpicenterRect, value);
+		private set => SetProperty(ref _isSelectingEpicenterRect, value);
 	}
 
 	/// <summary>
@@ -279,7 +282,7 @@ public class EarthquakeSeries : SeriesBase
 	private MapData? MapData { get; set; }
 
 	public EarthquakeSeries(
-		ILogManager logManager,
+		ILogger<EarthquakeSeries> logger,
 		KyoshinEewViewerConfiguration config,
 		EarthquakeWatchService watchService,
 		WorkflowService workflowService,
@@ -289,9 +292,7 @@ public class EarthquakeSeries : SeriesBase
 		EqMonitorEarthquakeService eqMonitorService,
 		EqMonitorEarthquakeSearchService searchService) : base(MetaData)
 	{
-		SplatRegistrations.RegisterLazySingleton<EarthquakeSeries>();
-
-		Logger = logManager.GetLogger<EarthquakeSeries>();
+		Logger = logger;
 		Config = config;
 		TelegramProvideService = telegramProvider;
 		NotificationService = notifyService;
@@ -326,14 +327,15 @@ public class EarthquakeSeries : SeriesBase
 		DisplayedEarthquakes = watchService.Earthquakes;
 
 		// EQMonitor API を使えなくなったら検索を続けられないため解除する
-		Config.EqMonitor.WhenAnyValue(x => x.Enable, x => x.EnableEarthquake, x => x.BaseUrl)
-			.ObserveOn(RxSchedulers.MainThreadScheduler)
-			.Subscribe(_ =>
-			{
-				this.RaisePropertyChanged(nameof(CanSearch));
-				if (!CanSearch)
-					ClearSearch();
-			});
+		void OnEqMonitorConfigChanged()
+		{
+			OnPropertyChanged(nameof(CanSearch));
+			if (!CanSearch)
+				ClearSearch();
+		}
+		Config.EqMonitor.ObservePropertyChanged(x => x.Enable).Subscribe(_ => OnEqMonitorConfigChanged());
+		Config.EqMonitor.ObservePropertyChanged(x => x.EnableEarthquake).Subscribe(_ => OnEqMonitorConfigChanged());
+		Config.EqMonitor.ObservePropertyChanged(x => x.BaseUrl).Subscribe(_ => OnEqMonitorConfigChanged());
 
 		MapDisplayParameter = new() {
 			OverlayLayers = [EarthquakeLayer],
@@ -341,7 +343,7 @@ public class EarthquakeSeries : SeriesBase
 		IsHistoryShown = Config.Earthquake.ShowHistory;
 
 		Service.SourceSwitching
-			.ObserveOn(RxSchedulers.MainThreadScheduler)
+			.ObserveOn(UiScheduler.Instance)
 			.Subscribe(_ =>
 			{
 				IsFault = false;
@@ -349,7 +351,7 @@ public class EarthquakeSeries : SeriesBase
 			});
 
 		Service.SourceSwitched
-			.ObserveOn(RxSchedulers.MainThreadScheduler)
+			.ObserveOn(UiScheduler.Instance)
 			.Select(s => Observable.FromAsync(async () =>
 			{
 				SourceString = s;
@@ -371,7 +373,7 @@ public class EarthquakeSeries : SeriesBase
 
 		Service.EarthquakeUpdated
 			.Where(u => !u.IsBulkInserting)
-			.ObserveOn(RxSchedulers.MainThreadScheduler)
+			.ObserveOn(UiScheduler.Instance)
 			.Select(u => Observable.FromAsync(async () =>
 			{
 				// 新しい地震を受信したら、見逃さないよう検索を解除して通常の一覧へ戻す
@@ -382,7 +384,7 @@ public class EarthquakeSeries : SeriesBase
 				var prevInt = u.PreviousMaxIntensity;
 
 				await ProcessEarthquakeEvent(eq);
-				MessageBus.Current.SendMessage(new EarthquakeInformationUpdated(eq));
+				StrongReferenceMessenger.Default.Send(new EarthquakeInformationUpdated(eq));
 
 				if (fragment == null)
 					return;
@@ -431,7 +433,7 @@ public class EarthquakeSeries : SeriesBase
 			.Subscribe(_ => { }, ex => Logger.LogError(ex, "地震情報更新処理中に例外が発生しました"));
 
 		Service.Failed
-			.ObserveOn(RxSchedulers.MainThreadScheduler)
+			.ObserveOn(UiScheduler.Instance)
 			.Subscribe(_ =>
 			{
 				IsFault = true;
@@ -460,8 +462,8 @@ public class EarthquakeSeries : SeriesBase
 
 	public override void Initialize()
 	{
-		MessageBus.Current.Listen<ProcessJmaEqdbRequested>().Subscribe(async x => await ProcessJmaEqdbAsync(x.Id));
-		MessageBus.Current.Listen<MapLoaded>().Subscribe(x => MapData = x.Data);
+		StrongReferenceMessenger.Default.Register<ProcessJmaEqdbRequested>(this, async (_, x) => await ProcessJmaEqdbAsync(x.Id));
+		StrongReferenceMessenger.Default.Register<MapLoaded>(this, (_, x) => MapData = x.Data);
 	}
 
 	public override void RecreateDisplayControl()
@@ -499,7 +501,7 @@ public class EarthquakeSeries : SeriesBase
 			ResetView();
 		}
 	}
-	private class FakeTelegram(IStorageFile file) : Telegram("", "", file.Name, DateTime.Now)
+	private partial class FakeTelegram(IStorageFile file) : Telegram("", "", file.Name, DateTime.Now)
 	{
 		public override void Cleanup() { }
 		public override Task<Stream> GetBodyAsync() => file.OpenReadAsync();
@@ -556,7 +558,14 @@ public class EarthquakeSeries : SeriesBase
 		MapDisplayParameter = MapDisplayParameter with { CustomColorMap = null };
 		ObservationIntensityGroups = null;
 		// 地図の位置は読み込みが終わってから動かすため、ここでは触らない
+		RemarksIntensities = null;
 	}
+
+	/// <summary>
+	/// 震度の並び替えに使用する値を取得する 震度不明は5弱の直前に配置する
+	/// </summary>
+	private static int GetIntensityOrder(JmaIntensity intensity)
+		=> intensity switch { JmaIntensity.Unknown => ((int)JmaIntensity.Int5Lower * 10) - 1, _ => (int)intensity * 10 };
 
 	//public ReactiveCommand<string, Unit> ProcessHistoryXml { get; }
 
@@ -794,7 +803,7 @@ public class EarthquakeSeries : SeriesBase
 			}
 
 			MapDisplayParameter = MapDisplayParameter with { CustomColorMap = colorMap };
-			ObservationIntensityGroups = pointGroups.OrderByDescending(g => g.Intensity switch { JmaIntensity.Unknown => (((int)JmaIntensity.Int5Lower) * 10) - 1, _ => ((int)g.Intensity) * 10 }).ToArray();
+			ObservationIntensityGroups = pointGroups.OrderByDescending(g => GetIntensityOrder(g.Intensity)).ToArray();
 		}
 		else if (targetFragment is IntensityInformationFragment or HypocenterAndIntensityInformationFragment)
 		{
@@ -822,6 +831,16 @@ public class EarthquakeSeries : SeriesBase
 			zoomPoints.Add(new Location(hypocenter.Latitude - size, hypocenter.Longitude - size));
 			zoomPoints.Add(new Location(hypocenter.Latitude + size, hypocenter.Longitude + size));
 		}
+		// 震度1以上の場合、地図上に描画される観測震度を凡例として表示させる
+		if (evt.Intensity >= JmaIntensity.Int1)
+		{
+			var intensities = areaItems.Keys.Concat(cityItems.Keys).Concat(stationItems.Keys)
+				.Distinct()
+				.OrderByDescending(GetIntensityOrder)
+				.ToArray();
+			RemarksIntensities = intensities.Length > 0 ? intensities : null;
+		}
+
 		EarthquakeLayer.UpdatePoints(hypocenters, areaItems, cityItems.Count != 0 ? cityItems : null, stationItems.Count != 0 ? stationItems : null);
 
 		// 自動ズーム範囲を計算
@@ -916,7 +935,12 @@ public class EarthquakeSeries : SeriesBase
 
 			CurrentEvent = eq;
 			EarthquakeLayer.UpdatePoints(hypocenters, null, null, stationItems);
-			ObservationIntensityGroups = pointGroups.OrderByDescending(g => g.Intensity switch { JmaIntensity.Unknown => (((int)JmaIntensity.Int5Lower) * 10) - 1, _ => ((int)g.Intensity) * 10 }).ToArray();
+			ObservationIntensityGroups = pointGroups.OrderByDescending(g => GetIntensityOrder(g.Intensity)).ToArray();
+
+			// 震度1以上の場合、地図上に描画される観測震度を凡例として表示させる
+			if (eq.Intensity >= JmaIntensity.Int1 && stationItems.Count > 0)
+				RemarksIntensities = stationItems.Keys.OrderByDescending(GetIntensityOrder).ToArray();
+
 			TelegramProcessError = null;
 		}
 		catch (Exception ex)
@@ -924,6 +948,7 @@ public class EarthquakeSeries : SeriesBase
 			TelegramProcessError = ex.Message;
 			EarthquakeLayer.ClearPoints();
 			ObservationIntensityGroups = null;
+			RemarksIntensities = null;
 		}
 
 		MapDisplayParameter = MapDisplayParameter with { CustomColorMap = null };
@@ -941,7 +966,7 @@ public class EarthquakeSeries : SeriesBase
 	{
 		get => _isHistoryShown;
 		set {
-			this.RaiseAndSetIfChanged(ref _isHistoryShown, value);
+			SetProperty(ref _isHistoryShown, value);
 			UpdateMapPadding();
 			Config.Earthquake.ShowHistory = value;
 		}
@@ -969,7 +994,7 @@ public class EarthquakeSeries : SeriesBase
 		set {
 			if (_viewWidth == value)
 				return;
-			this.RaiseAndSetIfChanged(ref _viewWidth, value);
+			SetProperty(ref _viewWidth, value);
 			IsNarrowLayout = value < NarrowLayoutMaxWidth;
 		}
 	}
@@ -984,7 +1009,7 @@ public class EarthquakeSeries : SeriesBase
 		private set {
 			if (_isNarrowLayout == value)
 				return;
-			this.RaiseAndSetIfChanged(ref _isNarrowLayout, value);
+			SetProperty(ref _isNarrowLayout, value);
 			UpdateMapPadding();
 			// 広い画面に戻った際はインライン表示になるためシートは閉じる
 			if (!value)
@@ -1009,7 +1034,7 @@ public class EarthquakeSeries : SeriesBase
 		set {
 			if (_isObservationSheetOpen == value)
 				return;
-			this.RaiseAndSetIfChanged(ref _isObservationSheetOpen, value);
+			SetProperty(ref _isObservationSheetOpen, value);
 			if (value)
 				IsHistorySheetOpen = false;
 			UpdateIsSheetShown();
@@ -1026,7 +1051,7 @@ public class EarthquakeSeries : SeriesBase
 		set {
 			if (_isHistorySheetOpen == value)
 				return;
-			this.RaiseAndSetIfChanged(ref _isHistorySheetOpen, value);
+			SetProperty(ref _isHistorySheetOpen, value);
 			if (value)
 				IsObservationSheetOpen = false;
 			UpdateIsSheetShown();
@@ -1051,11 +1076,10 @@ public class EarthquakeSeries : SeriesBase
 				return;
 			if (_currentEvent != null)
 				_currentEvent.IsSelecting = false;
-			this.RaiseAndSetIfChanged(ref _currentEvent, value);
+			SetProperty(ref _currentEvent, value);
 			if (_currentEvent == null)
 			{
 				ResetView();
-				RemarksIntensities = null;
 				return;
 			}
 			// IsSelecting が未設定なのは一覧から選ばれた場合のみで、
@@ -1066,67 +1090,33 @@ public class EarthquakeSeries : SeriesBase
 				ProcessEarthquakeEvent(_currentEvent).ConfigureAwait(false);
 			}
 			_currentEvent.IsSelecting = true;
-
-			// 震度2以上の時のみ凡例を表示させる
-			if (_currentEvent.Intensity > JmaIntensity.Int1)
-				RemarksIntensities = Enumerable.Range((int)JmaIntensity.Int1, (int)_currentEvent.Intensity - 1).Reverse().Cast<JmaIntensity>().ToArray();
-			else
-				RemarksIntensities = null;
 		}
 	}
 
-	private JmaIntensity[]? _remarksIntensities;
-	public JmaIntensity[]? RemarksIntensities
-	{
-		get => _remarksIntensities;
-		set => this.RaiseAndSetIfChanged(ref _remarksIntensities, value);
-	}
+	[ObservableProperty]
+	public partial JmaIntensity[]? RemarksIntensities { get; set; }
 
-	private string? _telegramProcessError;
-	public string? TelegramProcessError
-	{
-		get => _telegramProcessError;
-		set => this.RaiseAndSetIfChanged(ref _telegramProcessError, value);
-	}
+	[ObservableProperty]
+	public partial string? TelegramProcessError { get; set; }
 
 
-	private ObservationIntensityGroup[]? _observationIntensityGroups;
-	public ObservationIntensityGroup[]? ObservationIntensityGroups
-	{
-		get => _observationIntensityGroups;
-		set => this.RaiseAndSetIfChanged(ref _observationIntensityGroups, value);
-	}
+	[ObservableProperty]
+	public partial ObservationIntensityGroup[]? ObservationIntensityGroups { get; set; }
 
-	private bool _isLoading = true;
-	public bool IsLoading
-	{
-		get => _isLoading;
-		set => this.RaiseAndSetIfChanged(ref _isLoading, value);
-	}
+	[ObservableProperty]
+	public partial bool IsLoading { get; set; } = true;
 
-	private bool _isFault = false;
-	public bool IsFault
-	{
-		get => _isFault;
-		set => this.RaiseAndSetIfChanged(ref _isFault, value);
-	}
+	[ObservableProperty]
+	public partial bool IsFault { get; set; } = false;
 
-	private bool _isLoadingDetail;
 	/// <summary>
 	/// 選択された地震の詳細を取得中か
 	/// </summary>
-	public bool IsLoadingDetail
-	{
-		get => _isLoadingDetail;
-		set => this.RaiseAndSetIfChanged(ref _isLoadingDetail, value);
-	}
+	[ObservableProperty]
+	public partial bool IsLoadingDetail { get; set; }
 
-	private string _sourceString = "不明";
-	public string SourceString
-	{
-		get => _sourceString;
-		set => this.RaiseAndSetIfChanged(ref _sourceString, value);
-	}
+	[ObservableProperty]
+	public partial string SourceString { get; set; } = "不明";
 
 	private void RegisterSystemWorkflows()
 	{
@@ -1161,7 +1151,7 @@ public class EarthquakeSeries : SeriesBase
 			}
 		};
 
-		Config.WhenAnyValue(x => x.Notification.GotEq)
+		Config.ObservePropertyChanged(x => x.Notification, x => x.GotEq)
 			.Subscribe(enabled => updateWorkflow.Enabled = enabled);
 
 		WorkflowService.SystemWorkflows.Add(updateWorkflow);
@@ -1190,7 +1180,7 @@ public class EarthquakeSeries : SeriesBase
 			}
 		};
 
-		Config.WhenAnyValue(x => x.Earthquake.SwitchAtUpdate)
+		Config.ObservePropertyChanged(x => x.Earthquake, x => x.SwitchAtUpdate)
 			.Subscribe(enabled => switchWorkflow.Enabled = enabled);
 
 		WorkflowService.SystemWorkflows.Add(switchWorkflow);

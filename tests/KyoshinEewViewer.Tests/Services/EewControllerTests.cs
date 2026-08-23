@@ -4,11 +4,64 @@ using KyoshinEewViewer.Series.KyoshinMonitor.Models;
 using KyoshinEewViewer.Series.KyoshinMonitor.Services.Eew;
 using KyoshinEewViewer.Services;
 using KyoshinMonitorLib;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KyoshinEewViewer.Tests.Services;
 
 public class EewControllerTests
 {
+	[Fact(DisplayName = "音声設定に緊急地震速報警報発表時の項目を登録する")]
+	public void 音声設定に緊急地震速報警報発表時の項目を登録する()
+	{
+		var config = new KyoshinEewViewerConfiguration();
+		var soundPlayer = new SoundPlayerService(config, NullLogger<SoundPlayerService>.Instance);
+		_ = CreateController(config, soundPlayer);
+
+		var sounds = soundPlayer.RegisteredSounds[new SoundCategory("Eew", "緊急地震速報")];
+		var sound = Assert.Single(sounds, s => s.Name == "EewWarningAnnounced");
+		Assert.Equal("緊急地震速報(警報)発表･レベル到達時", sound.DisplayName);
+		Assert.Equal("5-", sound.ExampleParameter?["int"]);
+	}
+
+	[Fact(DisplayName = "予報受信後に警報電文を受信しても警報音を重複して処理しない")]
+	public void 予報受信後に警報電文を受信しても警報音を重複して処理しない()
+	{
+		var config = new KyoshinEewViewerConfiguration();
+		var soundPlayer = new SoundPlayerService(config, NullLogger<SoundPlayerService>.Instance);
+		var controller = CreateController(config, soundPlayer);
+		var baseTime = new DateTime(2026, 8, 23, 12, 0, 0);
+
+		controller.Update(CreateEew(baseTime), baseTime);
+		controller.UpdateWarning(CreateWarningEew(baseTime.AddSeconds(1)), baseTime.AddSeconds(1));
+
+		var soundConfigs = config.Sounds["Eew"];
+		Assert.True(soundConfigs.Remove("EewWarningAnnounced"));
+
+		controller.Update(
+			CreateEew(baseTime.AddSeconds(2)) with { SerialNo = 2, IsWarning = true },
+			baseTime.AddSeconds(2));
+
+		Assert.DoesNotContain("EewWarningAnnounced", soundConfigs);
+	}
+
+	[Fact(DisplayName = "警報状態の予報受信後に警報電文を受信しても警報音を重複して処理しない")]
+	public void 警報状態の予報受信後に警報電文を受信しても警報音を重複して処理しない()
+	{
+		var config = new KyoshinEewViewerConfiguration();
+		var soundPlayer = new SoundPlayerService(config, NullLogger<SoundPlayerService>.Instance);
+		var controller = CreateController(config, soundPlayer);
+		var baseTime = new DateTime(2026, 8, 23, 12, 0, 0);
+
+		controller.Update(CreateEew(baseTime) with { IsWarning = true }, baseTime);
+
+		var soundConfigs = config.Sounds["Eew"];
+		Assert.True(soundConfigs.Remove("EewWarningAnnounced"));
+
+		controller.UpdateWarning(CreateWarningEew(baseTime.AddSeconds(1)), baseTime.AddSeconds(1));
+
+		Assert.DoesNotContain("EewWarningAnnounced", soundConfigs);
+	}
+
 	[Fact(DisplayName = "擬似キャンセル後_同一報の再受信でキャンセル状態が解除される")]
 	public void 擬似キャンセル後_同一報の再受信でキャンセル状態が解除される()
 	{
@@ -136,17 +189,90 @@ public class EewControllerTests
 		Assert.Equal(["警報電文地域"], actualWarningAreas.Names);
 	}
 
+	[Fact(DisplayName = "EEWの期限切れ処理でも警報のみのEEWは通知に含まれる")]
+	public void EEWの期限切れ処理でも警報のみのEEWは通知に含まれる()
+	{
+		var controller = CreateController();
+		var updatedEews = new List<Eew[]>();
+		controller.EewUpdated += (_, eews) => updatedEews.Add(eews);
+		var baseTime = new DateTime(2026, 6, 18, 12, 0, 0);
+
+		// 期限切れになる通常のEEWと、まだ有効な警報のみのEEWを登録する
+		controller.Update(CreateEew(baseTime), baseTime);
+		var warningOnlyEew = CreateEew(baseTime.AddMinutes(2)) with
+		{
+			Id = "test-warning-only",
+			IsWarning = true,
+			WarningAreas = new EewWarningAreas
+			{
+				DisplaySource = "DM-D.S.S 警報電文",
+				SerialNo = 1,
+				Codes = [200],
+				Names = ["警報電文地域"],
+				IsWarningTelegram = true,
+			},
+		};
+		controller.UpdateWarning(warningOnlyEew, baseTime.AddMinutes(2));
+
+		// 通常のEEWのみが期限切れになるタイミング
+		controller.TimerElapsed(baseTime.AddMinutes(3).AddSeconds(1));
+
+		var actual = updatedEews.Last();
+		Assert.Equal("test-warning-only", Assert.Single(actual).Id);
+	}
+
+	[Fact(DisplayName = "予報電文が残っている間は警報電文を期限切れで削除しない")]
+	public void 予報電文が残っている間は警報電文を期限切れで削除しない()
+	{
+		var controller = CreateController();
+		var updatedEews = new List<Eew[]>();
+		controller.EewUpdated += (_, eews) => updatedEews.Add(eews);
+		var baseTime = new DateTime(2026, 6, 18, 12, 0, 0);
+
+		// 警報電文の受信後も予報電文の更新が続き、予報電文のほうが新しい状態
+		controller.Update(CreateEew(baseTime), baseTime);
+		controller.UpdateWarning(CreateWarningEew(baseTime.AddSeconds(5)), baseTime.AddSeconds(5));
+		controller.Update(CreateEew(baseTime.AddMinutes(1)) with { SerialNo = 2 }, baseTime.AddMinutes(1));
+
+		// 警報電文の受信から3分経過したが、予報電文はまだ期限内
+		controller.TimerElapsed(baseTime.AddMinutes(3).AddSeconds(5));
+		var actual = Assert.Single(updatedEews.Last());
+		Assert.Equal("test-eew", actual.Id);
+		Assert.NotNull(actual.WarningAreas);
+
+		// 予報電文が期限切れになれば警報電文も連動して削除される
+		controller.TimerElapsed(baseTime.AddMinutes(4).AddSeconds(5));
+		Assert.Empty(updatedEews.Last());
+	}
+
+	private static Eew CreateWarningEew(DateTime receiveTime)
+		=> CreateEew(receiveTime) with
+		{
+			DisplaySource = "DM-D.S.S 警報電文",
+			IsWarning = true,
+			WarningAreas = new EewWarningAreas
+			{
+				DisplaySource = "DM-D.S.S 警報電文",
+				SerialNo = 1,
+				Codes = [200],
+				Names = ["警報電文地域"],
+				IsWarningTelegram = true,
+			},
+		};
+
 	private static EewController CreateController()
 	{
 		var config = new KyoshinEewViewerConfiguration();
-		var logManager = new DefaultLogManager();
-		return new EewController(
-			logManager,
+		return CreateController(config, new SoundPlayerService(config, NullLogger<SoundPlayerService>.Instance));
+	}
+
+	private static EewController CreateController(KyoshinEewViewerConfiguration config, SoundPlayerService soundPlayer)
+		=> new(
+			NullLogger<EewController>.Instance,
 			null!,
 			config,
-			new SoundPlayerService(config, logManager),
-			new WorkflowService(logManager));
-	}
+			soundPlayer,
+			new WorkflowService(NullLogger<WorkflowService>.Instance));
 
 	private static Eew CreateEew(DateTime receiveTime)
 		=> EewMock.NORMAL with

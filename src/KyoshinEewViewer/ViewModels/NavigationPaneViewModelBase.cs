@@ -1,5 +1,4 @@
 using FluentAvalonia.UI.Controls;
-using ReactiveUI;
 
 namespace KyoshinEewViewer.ViewModels;
 
@@ -29,7 +28,7 @@ public abstract class NavigationPaneViewModelBase : ViewModelBase
 		set {
 			if (_viewWidth == value)
 				return;
-			this.RaiseAndSetIfChanged(ref _viewWidth, value);
+			SetProperty(ref _viewWidth, value);
 			if (!IsPaneLayoutAdaptive)
 				return;
 			IsNarrowLayout = value < PaneVisibleMinWidth;
@@ -46,7 +45,7 @@ public abstract class NavigationPaneViewModelBase : ViewModelBase
 		private set {
 			if (_isNarrowLayout == value)
 				return;
-			this.RaiseAndSetIfChanged(ref _isNarrowLayout, value);
+			SetProperty(ref _isNarrowLayout, value);
 			// LeftMinimal ではペインが画面外に隠れ、開いたときのみオーバーレイ表示になる
 			NavigationViewPaneDisplayMode = value
 				? FANavigationViewPaneDisplayMode.LeftMinimal
@@ -61,14 +60,14 @@ public abstract class NavigationPaneViewModelBase : ViewModelBase
 	public FANavigationViewPaneDisplayMode NavigationViewPaneDisplayMode
 	{
 		get => _navigationViewPaneDisplayMode;
-		set => this.RaiseAndSetIfChanged(ref _navigationViewPaneDisplayMode, value);
+		set => SetProperty(ref _navigationViewPaneDisplayMode, value);
 	}
 
 	private bool _isNavigationPaneOpen = true;
 	public bool IsNavigationPaneOpen
 	{
 		get => _isNavigationPaneOpen;
-		set => this.RaiseAndSetIfChanged(ref _isNavigationPaneOpen, value);
+		set => SetProperty(ref _isNavigationPaneOpen, value);
 	}
 
 	public void ToggleNavigationPane()

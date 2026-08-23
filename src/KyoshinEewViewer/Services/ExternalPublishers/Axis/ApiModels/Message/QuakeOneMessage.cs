@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 #pragma warning disable CS8618 // JSON DTOs are populated by deserialization.
 
-namespace KyoshinEewViewer.Services.ExtarnalPublishers.Axis.ApiModels.Message;
+namespace KyoshinEewViewer.Services.ExternalPublishers.Axis.ApiModels.Message;
 
 public class QuakeOneMessage
 {
@@ -22,8 +22,9 @@ public class QuakeOneMessage
 public class QuakeOneEarthquakeInfo
 {
 	public string EventID { get; set; }
-	public DateTime ReportDateTime { get; set; }
-	public DateTime OriginDateTime { get; set; }
+	// DateTime で受けるとオフセット付きの値がマシンのローカル時刻へ変換されてしまうため、DateTimeOffset で受ける
+	public DateTimeOffset ReportDateTime { get; set; }
+	public DateTimeOffset OriginDateTime { get; set; }
 	public string MaxInt { get; set; }
 	public string Magnitude { get; set; }
 	public QuakeOneHypocenter Hypocenter { get; set; }

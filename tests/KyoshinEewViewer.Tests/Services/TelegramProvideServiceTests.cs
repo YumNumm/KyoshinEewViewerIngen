@@ -3,7 +3,8 @@ using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
 using KyoshinEewViewer.Services.TelegramPublishers.JmaXml;
 using KyoshinEewViewer.Tests.Services.Mocks;
 using Moq;
-using Splat;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace KyoshinEewViewer.Tests.Services;
 
@@ -12,23 +13,16 @@ namespace KyoshinEewViewer.Tests.Services;
 /// </summary>
 public class TelegramProvideServiceTests : IDisposable
 {
-	private readonly Mock<ILogManager> _mockLogManager;
-	private readonly Mock<IFullLogger> _mockLogger;
-	private readonly Mock<IReadonlyDependencyResolver> _mockServiceProvider;
+	private readonly Mock<ILogger<TelegramProvideService>> _mockLogger;
+	private readonly Mock<IServiceProvider> _mockServiceProvider;
 	private readonly TelegramProvideService _service;
 
 	public TelegramProvideServiceTests()
 	{
-		_mockLogManager = new Mock<ILogManager>();
-		_mockLogger = new Mock<IFullLogger>();
-		
-		// GetLoggerメソッドを適切にセットアップするために、実際の実装を提供
-		_mockLogManager.Setup(x => x.GetLogger(It.IsAny<Type>()))
-			.Returns(_mockLogger.Object);
+		_mockLogger = new Mock<ILogger<TelegramProvideService>>();
+		_mockServiceProvider = new Mock<IServiceProvider>();
 
-		_mockServiceProvider = new Mock<IReadonlyDependencyResolver>();
-
-		_service = new TelegramProvideService(_mockLogManager.Object, _mockServiceProvider.Object);
+		_service = new TelegramProvideService(_mockLogger.Object, _mockServiceProvider.Object);
 	}
 
 	[Fact]
@@ -52,7 +46,7 @@ public class TelegramProvideServiceTests : IDisposable
 			typeof(MockTelegramPublisher)
 		};
 
-		_mockServiceProvider.SetupSequence(x => x.GetService(typeof(MockTelegramPublisher), null))
+		_mockServiceProvider.SetupSequence(x => x.GetService(typeof(MockTelegramPublisher)))
 			.Returns(mockPublisher1)
 			.Returns(mockPublisher2);
 
@@ -79,9 +73,9 @@ public class TelegramProvideServiceTests : IDisposable
 			SupportedCategories = [InformationCategory.Tsunami]
 		};
 
-		_mockServiceProvider.Setup(x => x.GetService(typeof(DmdataRedundantTelegramPublisher), null))
+		_mockServiceProvider.Setup(x => x.GetService(typeof(DmdataRedundantTelegramPublisher)))
 			.Returns(mockDmdata);
-		_mockServiceProvider.Setup(x => x.GetService(typeof(JmaXmlTelegramPublisher), null))
+		_mockServiceProvider.Setup(x => x.GetService(typeof(JmaXmlTelegramPublisher)))
 			.Returns(mockJma);
 
 		// Act
@@ -113,7 +107,7 @@ public class TelegramProvideServiceTests : IDisposable
 			typeof(MockTelegramPublisher)
 		};
 
-		_mockServiceProvider.SetupSequence(x => x.GetService(typeof(MockTelegramPublisher), null))
+		_mockServiceProvider.SetupSequence(x => x.GetService(typeof(MockTelegramPublisher)))
 			.Returns(failingPublisher)
 			.Returns(workingPublisher);
 
@@ -141,7 +135,7 @@ public class TelegramProvideServiceTests : IDisposable
 			typeof(MockTelegramPublisher)
 		};
 
-		_mockServiceProvider.SetupSequence(x => x.GetService(typeof(MockTelegramPublisher), null))
+		_mockServiceProvider.SetupSequence(x => x.GetService(typeof(MockTelegramPublisher)))
 			.Returns((object?)null) // 最初のPublisherは見つからない
 			.Returns(workingPublisher);
 
@@ -159,7 +153,7 @@ public class TelegramProvideServiceTests : IDisposable
 		var publisher = new MockTelegramPublisher();
 		var customTypes = new[] { typeof(MockTelegramPublisher) };
 
-		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher), null))
+		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher)))
 			.Returns(publisher);
 
 		// Act
@@ -178,7 +172,7 @@ public class TelegramProvideServiceTests : IDisposable
 		var publisher = new MockTelegramPublisher();
 		var customTypes = new[] { typeof(MockTelegramPublisher) };
 
-		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher), null))
+		_mockServiceProvider.Setup(x => x.GetService(typeof(MockTelegramPublisher)))
 			.Returns(publisher);
 
 		await _service.StartAsync(customTypes);
@@ -235,7 +229,7 @@ public class TelegramProvideServiceTests : IDisposable
 			typeof(MockTelegramPublisher)  // 低優先度
 		};
 
-		_mockServiceProvider.SetupSequence(x => x.GetService(typeof(MockTelegramPublisher), null))
+		_mockServiceProvider.SetupSequence(x => x.GetService(typeof(MockTelegramPublisher)))
 			.Returns(highPriorityPublisher)
 			.Returns(lowPriorityPublisher);
 
