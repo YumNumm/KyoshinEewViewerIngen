@@ -344,6 +344,7 @@ dataset/
 output/
 **/recordings/
 .claude/settings.local.json
+/.worktrees/
 
 .DS_Store
 tmp-*
