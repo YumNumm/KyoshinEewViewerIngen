@@ -1,7 +1,6 @@
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
 using Newtonsoft.Json;
-using Splat;
 using System;
 using System.ComponentModel;
 using System.Collections.Generic;
@@ -53,13 +52,11 @@ public sealed class EqMonitorRealtimeService : IDisposable
 	}
 
 	public EqMonitorRealtimeService(
-		ILogManager logManager,
+		ILogger<EqMonitorRealtimeService> logger,
 		KyoshinEewViewerConfiguration config,
 		EqMonitorApiProvider apiProvider)
 	{
-		SplatRegistrations.RegisterLazySingleton<EqMonitorRealtimeService>();
-
-		Logger = logManager.GetLogger<EqMonitorRealtimeService>();
+		Logger = logger;
 		Config = config;
 		ApiProvider = apiProvider;
 		DeviceService = new EqMonitorDeviceService(apiProvider, config);
@@ -216,7 +213,7 @@ public sealed class EqMonitorRealtimeService : IDisposable
 				{
 					retryCount = 0;
 					if (failureLogged)
-						Logger.LogInfo("EQMonitor WebSocket へ再接続しました");
+						Logger.LogInformation("EQMonitor WebSocket へ再接続しました");
 					failureLogged = false;
 				}, cancellationToken);
 			}

@@ -3,8 +3,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Services.EqMonitor;
+using Microsoft.Extensions.Logging;
 using Moq;
-using Splat;
 using Generated = KyoshinEewViewer.EqMonitorApi.Generated;
 
 namespace KyoshinEewViewer.Tests.Services;
@@ -153,10 +153,9 @@ public class EqMonitorApiClientTests
 		config.EqMonitor.BaseUrl = "https://api.invalid";
 		config.EqMonitor.DeviceId = "persisted-device";
 		config.EqMonitor.DeviceRegisteredBaseUrl = "https://api.invalid/";
-		var logManager = new Mock<ILogManager>();
-		logManager.Setup(x => x.GetLogger(It.IsAny<Type>()))
-			.Returns(new Mock<IFullLogger>().Object);
-		using var provider = new EqMonitorApiProvider(logManager.Object, config)
+		using var provider = new EqMonitorApiProvider(
+			new Mock<ILogger<EqMonitorApiProvider>>().Object,
+			config)
 		{
 			CreateHttpClient = () => new HttpClient(handler, disposeHandler: false),
 		};

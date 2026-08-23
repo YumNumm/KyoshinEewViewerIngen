@@ -2,7 +2,6 @@ using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Series.EewHistory.Models;
 using ReactiveUI;
-using Splat;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -104,13 +103,11 @@ public class EqMonitorEewHistoryService : ReactiveObject
 	}
 
 	public EqMonitorEewHistoryService(
-		ILogManager logManager,
+		ILogger<EqMonitorEewHistoryService> logger,
 		KyoshinEewViewerConfiguration config,
 		EqMonitorApiProvider apiProvider)
 	{
-		SplatRegistrations.RegisterLazySingleton<EqMonitorEewHistoryService>();
-
-		Logger = logManager.GetLogger<EqMonitorEewHistoryService>();
+		Logger = logger;
 		Config = config;
 		ApiProvider = apiProvider;
 	}
@@ -141,7 +138,7 @@ public class EqMonitorEewHistoryService : ReactiveObject
 			_isLoadMoreFailing = false;
 			CanLoadMore = _nextCursor != null;
 
-			Logger.LogInfo($"EQMonitor API で EEW 履歴を取得し {Items.Count} 件が該当しました");
+			Logger.LogInformation($"EQMonitor API で EEW 履歴を取得し {Items.Count} 件が該当しました");
 			return null;
 		}
 		catch (Exception ex)
@@ -240,7 +237,7 @@ public class EqMonitorEewHistoryService : ReactiveObject
 			foreach (var report in EewHistoryReportOrdering.ToOrderedListItems(response.Items))
 				SelectedReports.Add(report);
 
-			Logger.LogInfo($"EQMonitor API で EEW 全報を取得しました: {eventId} ({SelectedReports.Count} 報)");
+			Logger.LogInformation($"EQMonitor API で EEW 全報を取得しました: {eventId} ({SelectedReports.Count} 報)");
 			return null;
 		}
 		catch (OperationCanceledException)

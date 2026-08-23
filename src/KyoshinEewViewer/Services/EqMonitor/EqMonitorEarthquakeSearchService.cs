@@ -2,7 +2,6 @@ using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Series.Earthquake.Models;
 using ReactiveUI;
-using Splat;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -68,13 +67,11 @@ public class EqMonitorEarthquakeSearchService : ReactiveObject
 	}
 
 	public EqMonitorEarthquakeSearchService(
-		ILogManager logManager,
+		ILogger<EqMonitorEarthquakeSearchService> logger,
 		KyoshinEewViewerConfiguration config,
 		EqMonitorApiProvider apiProvider)
 	{
-		SplatRegistrations.RegisterLazySingleton<EqMonitorEarthquakeSearchService>();
-
-		Logger = logManager.GetLogger<EqMonitorEarthquakeSearchService>();
+		Logger = logger;
 		Config = config;
 		ApiProvider = apiProvider;
 	}
@@ -104,7 +101,7 @@ public class EqMonitorEarthquakeSearchService : ReactiveObject
 			IsCursorUnavailable = !normalized.CanUseCursor;
 			CanLoadMore = normalized.CanUseCursor && _nextCursor != null;
 
-			Logger.LogInfo($"EQMonitor API で地震履歴を検索し {Results.Count} 件が該当しました");
+			Logger.LogInformation($"EQMonitor API で地震履歴を検索し {Results.Count} 件が該当しました");
 			return null;
 		}
 		catch (Exception ex)

@@ -1,4 +1,6 @@
 using Avalonia.Controls;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
 using FluentAvalonia.UI.Controls;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Core.Models;
@@ -12,22 +14,22 @@ using KyoshinEewViewer.Series.KyoshinMonitor.Templates;
 using KyoshinEewViewer.Series.KyoshinMonitor.Workflow;
 using KyoshinEewViewer.Services;
 using KyoshinEewViewer.Services.EqMonitor;
+using R3;
 using WorkflowsNamespace = KyoshinEewViewer.Services.Workflows;
 using KyoshinEewViewer.Services.Workflows.BuiltinActions;
 using KyoshinMonitorLib;
-using KyoshinEewViewer.Services.ExtarnalPublishers.Axis;
-using ReactiveUI;
-using Splat;
+using KyoshinEewViewer.Services.ExternalPublishers.Axis;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Generated = KyoshinEewViewer.EqMonitorApi.Generated;
+using Microsoft.Extensions.Logging;
 
 namespace KyoshinEewViewer.Series.KyoshinMonitor;
 
-public class KyoshinMonitorSeries : SeriesBase
+public partial class KyoshinMonitorSeries : SeriesBase
 {
 	public static SeriesMeta MetaData { get; } = new(typeof(KyoshinMonitorSeries), "kyoshin-monitor", "強震モニタ", new FAFontIconSource { Glyph = "\xe3b1", FontFamily = new(Utils.IconFontName) }, true, "強震モニタ･緊急地震速報を表示します。");
 
@@ -59,6 +61,8 @@ public class KyoshinMonitorSeries : SeriesBase
 		]),
 	];
 
+	public Services.Eew.EewPointForecastController PointForecastController { get; }
+
 	private RealtimeEarthquakeInformationHost RealtimeInformationHost { get; }
 	private TimeshiftEarthquakeInformationHost TimeshiftInformationHost { get; }
 	public ReplayFileEarthquakeInformationHost ReplayFileInformationHost { get; }
@@ -80,7 +84,7 @@ public class KyoshinMonitorSeries : SeriesBase
 				_currentInformationHost.RealtimeDataUpdated -= RealtimeDataUpdated;
 				_currentInformationHost.KyoshinEventUpdated -= KyoshinEventUpdated;
 			}
-			this.RaiseAndSetIfChanged(ref _currentInformationHost, value);
+			SetProperty(ref _currentInformationHost, value);
 
 			value.EewUpdated += EewUpdated;
 			value.RealtimeDataUpdated += RealtimeDataUpdated;
@@ -94,25 +98,21 @@ public class KyoshinMonitorSeries : SeriesBase
 			}
 
 			MapNavigationSubscription?.Dispose();
-			MapNavigationSubscription = value.WhenAnyValue(x => x.MapNavigationRequest).Subscribe(x =>
+			MapNavigationSubscription = value.ObservePropertyChanged(x => x.MapNavigationRequest).Subscribe(x =>
 			{
 				MapNavigationRequest = x;
 				UpdatePadding();
 			});
 
 			MapDisplayParameterSubscription?.Dispose();
-			MapDisplayParameterSubscription = value.WhenAnyValue(x => x.MapDisplayParameter).Subscribe(x => MapDisplayParameter = x with { OverlayLayers = [ShakeDetectionAreaLayer!, KyoshinMonitorLayer!], Padding = MapDisplayParameter.Padding });
+			MapDisplayParameterSubscription = value.ObservePropertyChanged(x => x.MapDisplayParameter).Subscribe(x => MapDisplayParameter = x with { OverlayLayers = [ShakeDetectionAreaLayer!, KyoshinMonitorLayer!], Padding = MapDisplayParameter.Padding });
 
 			NowReplaying = value.IsReplay;
 		}
 	}
 
-	private bool _nowReplaying;
-	public bool NowReplaying
-	{
-		get => _nowReplaying;
-		set => this.RaiseAndSetIfChanged(ref _nowReplaying, value);
-	}
+	[ObservableProperty]
+	public partial bool NowReplaying { get; set; }
 
 	public void StartTimeshift()
 	{
@@ -183,7 +183,7 @@ public class KyoshinMonitorSeries : SeriesBase
 	{
 		get => _widgetRect;
 		set {
-			this.RaiseAndSetIfChanged(ref _widgetRect, value);
+			SetProperty(ref _widgetRect, value);
 			UpdatePadding();
 		}
 	}
@@ -193,13 +193,13 @@ public class KyoshinMonitorSeries : SeriesBase
 	{
 		get => _viewRect;
 		set {
-			this.RaiseAndSetIfChanged(ref _viewRect, value);
+			SetProperty(ref _viewRect, value);
 			UpdatePadding();
 		}
 	}
 
 	public KyoshinMonitorSeries(
-		ILogManager logManager,
+		ILogger<KyoshinMonitorSeries> logger,
 		KyoshinEewViewerConfiguration config,
 		NotificationService notificationService,
 		SoundPlayerService soundPlayer,
@@ -207,27 +207,26 @@ public class KyoshinMonitorSeries : SeriesBase
 		TimerService timerService,
 		TelegramProvideService telegramProvideService,
 		AxisInformationProvider axis,
-		ISubWindowsService? subWindowService,
 		Services.ObservationPointsUpdateService observationPointsUpdateService,
 		EqMonitorApiProvider eqMonitorApiProvider,
-		EqMonitorRealtimeService eqMonitorRealtimeService) : base(MetaData)
+		EqMonitorRealtimeService eqMonitorRealtimeService,
+		ISubWindowsService? subWindowService = null) : base(MetaData)
 	{
-		SplatRegistrations.RegisterLazySingleton<KyoshinMonitorSeries>();
-
-		Logger = logManager.GetLogger<KyoshinMonitorSeries>();
+		Logger = logger;
 		Config = config;
 		WorkflowService = workflowService;
 
-		WeakShakeDetectedSound = soundPlayer.RegisterSound(SoundCategory, "WeakShakeDetected", "揺れ検出(震度1未満)", "鳴動させるためには揺れ検出の設定を有効にしている必要があります。");
-		MediumShakeDetectedSound = soundPlayer.RegisterSound(SoundCategory, "MediumShakeDetected", "揺れ検出(震度1以上3未満)", "震度上昇時にも鳴動します。\n鳴動させるためには揺れ検出の設定を有効にしている必要があります。");
-		StrongShakeDetectedSound = soundPlayer.RegisterSound(SoundCategory, "StrongShakeDetected", "揺れ検出(震度3以上5弱未満)", "震度上昇時にも鳴動します。\n鳴動させるためには揺れ検出の設定を有効にしている必要があります。");
-		StrongerShakeDetectedSound = soundPlayer.RegisterSound(SoundCategory, "StrongerShakeDetected", "揺れ検出(震度5弱以上)", "震度上昇時にも鳴動します。\n鳴動させるためには揺れ検出の設定を有効にしている必要があります。");
+		WeakShakeDetectedSound = soundPlayer.RegisterSound(SoundCategory, "WeakShakeDetected", "揺れ検出(震度1未満)", "鳴動させるためには揺れ検出の設定を有効にしている必要があります。\n{mode}: 再生モード [replay, realtime]", new() { { "mode", "realtime" }, });
+		MediumShakeDetectedSound = soundPlayer.RegisterSound(SoundCategory, "MediumShakeDetected", "揺れ検出(震度1以上3未満)", "震度上昇時にも鳴動します。\n鳴動させるためには揺れ検出の設定を有効にしている必要があります。\n{mode}: 再生モード [replay, realtime]", new() { { "mode", "realtime" }, });
+		StrongShakeDetectedSound = soundPlayer.RegisterSound(SoundCategory, "StrongShakeDetected", "揺れ検出(震度3以上5弱未満)", "震度上昇時にも鳴動します。\n鳴動させるためには揺れ検出の設定を有効にしている必要があります。\n{mode}: 再生モード [replay, realtime]", new() { { "mode", "replay" }, });
+		StrongerShakeDetectedSound = soundPlayer.RegisterSound(SoundCategory, "StrongerShakeDetected", "揺れ検出(震度5弱以上)", "震度上昇時にも鳴動します。\n鳴動させるためには揺れ検出の設定を有効にしている必要があります。\n{mode}: 再生モード [replay, realtime]", new() { { "mode", "replay" }, });
 
 		ReplaySettingPage = new KyoshinMonitorReplaySettingPage(Config, this, timerService, subWindowService);
 
-		var eewController = new Services.Eew.EewController(logManager, this, config, soundPlayer, workflowService);
+		var eewController = new Services.Eew.EewController(AppLog.Create<Services.Eew.EewController>(), this, config, soundPlayer, workflowService);
+		PointForecastController = new(AppLog.Create<Services.Eew.EewPointForecastController>(), config, eewController, timerService);
 		CurrentInformationHost = RealtimeInformationHost = new(
-			logManager,
+			AppLog.Create<RealtimeEarthquakeInformationHost>(),
 			config,
 			eewController,
 			timerService,
@@ -247,19 +246,23 @@ public class KyoshinMonitorSeries : SeriesBase
 			if (Config.KyoshinMonitor.ReturnToRealtimeAtEewReceived && e.Length > 0)
 				ReturnToRealtime();
 		};
-		TimeshiftInformationHost = new(logManager, this, config, timerService, notificationService, soundPlayer, workflowService, observationPointsUpdateService);
-		ReplayFileInformationHost = new(logManager, this, config, notificationService, soundPlayer, workflowService, observationPointsUpdateService);
+		TimeshiftInformationHost = new(AppLog.Create<TimeshiftEarthquakeInformationHost>(), this, config, timerService, notificationService, soundPlayer, workflowService, observationPointsUpdateService);
+		ReplayFileInformationHost = new(AppLog.Create<ReplayFileEarthquakeInformationHost>(), this, config, notificationService, soundPlayer, workflowService, timerService, observationPointsUpdateService);
 
 		ShakeDetectionAreaLayer = new(config, this);
 		KyoshinMonitorLayer = new(config, this);
+		// 地点予測の残り秒数の更新を地図へ反映する
+		PointForecastController.DisplayValuesUpdated += () => KyoshinMonitorLayer.RefreshPointForecast();
+		TimeshiftInformationHost.PointForecastController.DisplayValuesUpdated += () => KyoshinMonitorLayer.RefreshPointForecast();
+		ReplayFileInformationHost.PointForecastController.DisplayValuesUpdated += () => KyoshinMonitorLayer.RefreshPointForecast();
 		MapDisplayParameter = new() { OverlayLayers = [ShakeDetectionAreaLayer, KyoshinMonitorLayer] };
 
-		config.Eew.WhenAnyValue(x => x.ShowDetails).Subscribe(x => ShowEewAccuracy = x);
-		config.KyoshinMonitor.WhenAnyValue(x => x.ShowColorSample).Subscribe(x => ShowColorSample = x);
+		config.Eew.ObservePropertyChanged(x => x.ShowDetails).Subscribe(x => ShowEewAccuracy = x);
+		config.KyoshinMonitor.ObservePropertyChanged(x => x.ShowColorSample).Subscribe(x => ShowColorSample = x);
 	}
 	public override void Initialize()
 	{
-		MessageBus.Current.Listen<MapLoaded>().Subscribe(x => RealtimeInformationHost.MapData = TimeshiftInformationHost.MapData = ReplayFileInformationHost.MapData = x.Data);
+		StrongReferenceMessenger.Default.Register<MapLoaded>(this, (_, x) => RealtimeInformationHost.MapData = TimeshiftInformationHost.MapData = ReplayFileInformationHost.MapData = x.Data);
 		RealtimeInformationHost.Start();
 
 		// 全 Series の初期化完了後に、有効な EEW履歴 Series へリプレイ要求を接続する
@@ -271,7 +274,7 @@ public class KyoshinMonitorSeries : SeriesBase
 	/// </summary>
 	private void ConnectEewHistoryReplay()
 	{
-		var eewHistory = Locator.Current.GetService<SeriesController>()?.EnabledSeries
+		var eewHistory = ServiceLocator.Current.RequireService<SeriesController>().EnabledSeries
 			.OfType<EewHistorySeries>()
 			.FirstOrDefault();
 		if (eewHistory == null)
@@ -292,7 +295,7 @@ public class KyoshinMonitorSeries : SeriesBase
 			return Task.CompletedTask;
 		}
 
-		Logger.LogInfo($"EEW履歴からのリプレイを開始します: {request.EventId}（{request.RawItems.Count}報）");
+		Logger.LogInformation("EEW履歴からのリプレイを開始します: {EventId}（{ReportCount}報）", request.EventId, request.RawItems.Count);
 		// Generated DTO をそのまま渡し、ホスト側で ToEew 変換する（JSON 再シリアライズしない）
 		StartEewHistoryReplay(request.RawItems);
 		return Task.CompletedTask;
@@ -325,19 +328,19 @@ public class KyoshinMonitorSeries : SeriesBase
 		switch (e.e.Level)
 		{
 			case KyoshinEventLevel.Weak:
-				WeakShakeDetectedSound.Play();
+				WeakShakeDetectedSound.Play(new() { { "mode", NowReplaying ? "replay" : "realtime" } });
 				break;
 			case KyoshinEventLevel.Medium:
-				MediumShakeDetectedSound.Play();
+				MediumShakeDetectedSound.Play(new() { { "mode", NowReplaying ? "replay" : "realtime" } });
 				break;
 			case KyoshinEventLevel.Strong:
-				StrongShakeDetectedSound.Play();
+				StrongShakeDetectedSound.Play(new() { { "mode", NowReplaying ? "replay" : "realtime" } });
 				break;
 			case KyoshinEventLevel.Stronger:
-				StrongerShakeDetectedSound.Play();
+				StrongerShakeDetectedSound.Play(new() { { "mode", NowReplaying ? "replay" : "realtime" } });
 				break;
 		}
-		MessageBus.Current.SendMessage(new KyoshinShakeDetected(e.e, e.isLevelUp, NowReplaying));
+		StrongReferenceMessenger.Default.Send(new KyoshinShakeDetected(e.e, e.isLevelUp, NowReplaying));
 	}
 
 	private void UpdatePadding()
@@ -367,19 +370,11 @@ public class KyoshinMonitorSeries : SeriesBase
 		= true;
 #endif
 
-	private bool _showColorSample;
-	public bool ShowColorSample
-	{
-		get => _showColorSample;
-		set => this.RaiseAndSetIfChanged(ref _showColorSample, value);
-	}
+	[ObservableProperty]
+	public partial bool ShowColorSample { get; set; }
 
-	private bool _showEewAccuracy = false;
-	public bool ShowEewAccuracy
-	{
-		get => _showEewAccuracy;
-		set => this.RaiseAndSetIfChanged(ref _showEewAccuracy, value);
-	}
+	[ObservableProperty]
+	public partial bool ShowEewAccuracy { get; set; } = false;
 
 
 	private void RegisterSystemWorkflows()
@@ -422,7 +417,7 @@ public class KyoshinMonitorSeries : SeriesBase
 		};
 
 		// 設定変更監視でEnabled状態を制御
-		Config.WhenAnyValue(x => x.Notification.EewReceived)
+		Config.ObservePropertyChanged(x => x.Notification, x => x.EewReceived)
 			.Subscribe(enabled => eewReceivedWorkflow.Enabled = enabled);
 
 		WorkflowService.SystemWorkflows.Add(eewReceivedWorkflow);
@@ -455,7 +450,7 @@ public class KyoshinMonitorSeries : SeriesBase
 			}
 		};
 
-		Config.WhenAnyValue(x => x.Eew.SwitchAtAnnounce)
+		Config.ObservePropertyChanged(x => x.Eew, x => x.SwitchAtAnnounce)
 			.Subscribe(enabled => eewSwitchWorkflow.Enabled = enabled);
 
 		WorkflowService.SystemWorkflows.Add(eewSwitchWorkflow);
@@ -477,7 +472,7 @@ public class KyoshinMonitorSeries : SeriesBase
 			}
 		};
 
-		Config.WhenAnyValue(x => x.KyoshinMonitor.SwitchAtShakeDetect)
+		Config.ObservePropertyChanged(x => x.KyoshinMonitor, x => x.SwitchAtShakeDetect)
 			.Subscribe(enabled => shakeSwitchWorkflow.Enabled = enabled);
 
 		WorkflowService.SystemWorkflows.Add(shakeSwitchWorkflow);

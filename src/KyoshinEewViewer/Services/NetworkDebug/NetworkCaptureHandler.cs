@@ -1,4 +1,5 @@
-using Splat;
+using KyoshinEewViewer.Core;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -74,7 +75,7 @@ public class NetworkCaptureHandler(HttpMessageHandler innerHandler, NetworkDebug
 		}
 		catch (Exception ex)
 		{
-			LogHost.Default.Warn(ex, "リクエスト内容の記録に失敗しました");
+			AppLog.Default.LogWarning(ex, "リクエスト内容の記録に失敗しました");
 		}
 
 		return new CapturedRequest(timestamp, method, uri, headers, body);
@@ -107,7 +108,7 @@ public class NetworkCaptureHandler(HttpMessageHandler innerHandler, NetworkDebug
 		}
 		catch (Exception ex)
 		{
-			LogHost.Default.Warn(ex, "レスポンス内容の記録に失敗しました");
+			AppLog.Default.LogWarning(ex, "レスポンス内容の記録に失敗しました");
 		}
 	}
 
@@ -128,7 +129,7 @@ public class NetworkCaptureHandler(HttpMessageHandler innerHandler, NetworkDebug
 		}
 		catch (Exception ex)
 		{
-			LogHost.Default.Warn(ex, "通信失敗の記録に失敗しました");
+			AppLog.Default.LogWarning(ex, "通信失敗の記録に失敗しました");
 		}
 	}
 

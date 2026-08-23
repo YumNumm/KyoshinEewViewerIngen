@@ -4,8 +4,8 @@ using System.Text;
 using System.Threading.Channels;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Services.EqMonitor;
+using Microsoft.Extensions.Logging;
 using Moq;
-using Splat;
 using Generated = KyoshinEewViewer.EqMonitorApi.Generated;
 
 namespace KyoshinEewViewer.Tests.Services;
@@ -125,7 +125,7 @@ public class EqMonitorRealtimeServiceTests
 		using var provider = CreateProvider(config, handler);
 		var fake = new FakeWebSocket();
 		var socketCount = 0;
-		using var service = new EqMonitorRealtimeService(CreateLogManager(), config, provider)
+		using var service = new EqMonitorRealtimeService(CreateLogger<EqMonitorRealtimeService>(), config, provider)
 		{
 			CreateWebSocket = () =>
 			{
@@ -185,7 +185,7 @@ public class EqMonitorRealtimeServiceTests
 		var config = CreateConfig();
 		var handler = new ApiHandler();
 		using var provider = CreateProvider(config, handler);
-		using var service = new EqMonitorRealtimeService(CreateLogManager(), config, provider)
+		using var service = new EqMonitorRealtimeService(CreateLogger<EqMonitorRealtimeService>(), config, provider)
 		{
 			CreateWebSocket = () => new FakeWebSocket(closeImmediately: true),
 		};
@@ -219,7 +219,7 @@ public class EqMonitorRealtimeServiceTests
 		var handler = new ApiHandler();
 		using var provider = CreateProvider(config, handler);
 		var fake = new FakeWebSocket();
-		using var service = new EqMonitorRealtimeService(CreateLogManager(), config, provider)
+		using var service = new EqMonitorRealtimeService(CreateLogger<EqMonitorRealtimeService>(), config, provider)
 		{
 			CreateWebSocket = () => fake,
 		};
@@ -266,7 +266,7 @@ public class EqMonitorRealtimeServiceTests
 		using var provider = CreateProvider(config, handler);
 		var saveCount = 0;
 		var fake = new FakeWebSocket();
-		using var service = new EqMonitorRealtimeService(CreateLogManager(), config, provider)
+		using var service = new EqMonitorRealtimeService(CreateLogger<EqMonitorRealtimeService>(), config, provider)
 		{
 			CreateWebSocket = () => fake,
 		};
@@ -304,18 +304,13 @@ public class EqMonitorRealtimeServiceTests
 	private static EqMonitorApiProvider CreateProvider(
 		KyoshinEewViewerConfiguration config,
 		HttpMessageHandler handler)
-		=> new(CreateLogManager(), config)
+		=> new(CreateLogger<EqMonitorApiProvider>(), config)
 		{
 			CreateHttpClient = () => new HttpClient(handler, disposeHandler: false),
 		};
 
-	private static ILogManager CreateLogManager()
-	{
-		var logManager = new Mock<ILogManager>();
-		logManager.Setup(x => x.GetLogger(It.IsAny<Type>()))
-			.Returns(new Mock<IFullLogger>().Object);
-		return logManager.Object;
-	}
+	private static ILogger<T> CreateLogger<T>()
+		=> new Mock<ILogger<T>>().Object;
 
 	private static async Task WaitUntilAsync(Func<bool> condition)
 	{

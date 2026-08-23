@@ -1,7 +1,7 @@
 using Foundation;
 using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Notification;
-using Splat;
+using Microsoft.Extensions.Logging;
 using System;
 using UserNotifications;
 
@@ -32,9 +32,9 @@ public class IosNotificationProvider : NotificationProvider
 			{
 				_authorized = granted;
 				if (error != null)
-					LogHost.Default.Warn($"通知の許可要求に失敗しました: {error.LocalizedDescription}");
+					AppLog.Default.LogWarning("通知の許可要求に失敗しました: {Error}", error.LocalizedDescription);
 				else if (!granted)
-					LogHost.Default.Warn("通知が許可されませんでした");
+					AppLog.Default.LogWarning("通知が許可されませんでした");
 			});
 	}
 
@@ -68,7 +68,7 @@ public class IosNotificationProvider : NotificationProvider
 		UNUserNotificationCenter.Current.AddNotificationRequest(notification, error =>
 		{
 			if (error != null)
-				LogHost.Default.Warn($"通知の送信に失敗しました: {error.LocalizedDescription}");
+				AppLog.Default.LogWarning("通知の送信に失敗しました: {Error}", error.LocalizedDescription);
 		});
 	}
 

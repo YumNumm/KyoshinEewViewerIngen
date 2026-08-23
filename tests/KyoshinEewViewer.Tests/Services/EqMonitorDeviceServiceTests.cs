@@ -2,8 +2,8 @@ using System.Net;
 using System.Text;
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Services.EqMonitor;
+using Microsoft.Extensions.Logging;
 using Moq;
-using Splat;
 
 namespace KyoshinEewViewer.Tests.Services;
 
@@ -40,7 +40,7 @@ public class EqMonitorDeviceServiceTests
 		var config = new KyoshinEewViewerConfiguration();
 		config.EqMonitor.BaseUrl = "https://api-a.invalid";
 		var handler = new RegistrationHandler("device-a", "device-b", "device-c");
-		using var provider = new EqMonitorApiProvider(CreateLogManager(), config)
+		using var provider = new EqMonitorApiProvider(CreateLogger(), config)
 		{
 			CreateHttpClient = () => new HttpClient(handler, disposeHandler: false),
 		};
@@ -68,11 +68,6 @@ public class EqMonitorDeviceServiceTests
 		Assert.Equal(4, saveCount);
 	}
 
-	private static ILogManager CreateLogManager()
-	{
-		var logManager = new Mock<ILogManager>();
-		logManager.Setup(x => x.GetLogger(It.IsAny<Type>()))
-			.Returns(new Mock<IFullLogger>().Object);
-		return logManager.Object;
-	}
+	private static ILogger<EqMonitorApiProvider> CreateLogger()
+		=> new Mock<ILogger<EqMonitorApiProvider>>().Object;
 }

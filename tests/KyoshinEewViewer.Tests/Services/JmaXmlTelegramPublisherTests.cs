@@ -1,7 +1,7 @@
 using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Services;
 using KyoshinEewViewer.Services.TelegramPublishers.JmaXml;
-using Splat;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KyoshinEewViewer.Tests.Services;
 
@@ -9,8 +9,11 @@ public class JmaXmlTelegramPublisherTests
 {
 	private static JmaXmlTelegramPublisher CreatePublisher(KyoshinEewViewerConfiguration config)
 	{
-		var logManager = Locator.Current.GetService<ILogManager>() ?? new DefaultLogManager();
-		return new JmaXmlTelegramPublisher(logManager, new TimerService(logManager, config), new InformationCacheService(logManager), config);
+		return new JmaXmlTelegramPublisher(
+			NullLogger<JmaXmlTelegramPublisher>.Instance,
+			new TimerService(NullLogger<TimerService>.Instance, config),
+			new InformationCacheService(NullLogger<InformationCacheService>.Instance),
+			config);
 	}
 
 	[Fact(DisplayName = "無効化されている場合はフィードへ問い合わせずサポートカテゴリが空になる")]

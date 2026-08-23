@@ -3,8 +3,10 @@ using Android.Content;
 using Android.Content.PM;
 using Avalonia.Android;
 using Avalonia.Controls.ApplicationLifetimes;
+using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Services.TelegramPublishers.Dmdata;
-using Splat;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace KyoshinEewViewer.Android;
 
@@ -32,10 +34,10 @@ public class MainActivity : AvaloniaMainActivity
 		{
 			if (e is not ProtocolActivatedEventArgs protocolArgs)
 				return;
-			LogHost.Default.Info($"URL アクティベーション: {protocolArgs.Uri.Scheme}://{protocolArgs.Uri.Host}");
-			if (Locator.Current.GetService<IDmdataAuthenticator>() is DmdataCustomSchemeAuthenticator authenticator)
+			AppLog.Default.LogInformation("URL アクティベーション: {Scheme}://{Host}", protocolArgs.Uri.Scheme, protocolArgs.Uri.Host);
+			if (ServiceLocator.Current.GetService<IDmdataAuthenticator>() is DmdataCustomSchemeAuthenticator authenticator)
 				authenticator.HandleCallback(protocolArgs.Uri);
 			else
-				LogHost.Default.Warn("認可の実装が登録されていないためコールバックを処理できません");
+				AppLog.Default.LogWarning("認可の実装が登録されていないためコールバックを処理できません");
 		};
 }

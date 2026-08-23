@@ -2,7 +2,6 @@ using KyoshinEewViewer.Core;
 using KyoshinEewViewer.Services;
 using KyoshinEewViewer.Services.EqMonitor;
 using ReactiveUI;
-using Splat;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -37,13 +36,13 @@ public class EqMonitorEewSubscriber : ReactiveObject
 	}
 
 	public EqMonitorEewSubscriber(
-		ILogManager logManager,
+		ILogger<EqMonitorEewSubscriber> logger,
 		EqMonitorApiProvider apiProvider,
 		EqMonitorRealtimeService realtimeService,
 		EewController eewController,
 		TimerService timerService)
 	{
-		Logger = logManager.GetLogger<EqMonitorEewSubscriber>();
+		Logger = logger;
 		ApiProvider = apiProvider;
 		EewController = eewController;
 		TimerService = timerService;
@@ -81,12 +80,12 @@ public class EqMonitorEewSubscriber : ReactiveObject
 
 		if (item.Is_canceled)
 		{
-			Logger.LogInfo($"EQMonitor から EEW 取消報を受信しました: {item.Event_id}");
+			Logger.LogInformation($"EQMonitor から EEW 取消報を受信しました: {item.Event_id}");
 			EewController.Cancelled(item.Event_id, receiveTime);
 			return;
 		}
 
-		Logger.LogInfo($"EQMonitor から EEW を受信しました: {item.Event_id} 第{serialNo}報");
+		Logger.LogInformation($"EQMonitor から EEW を受信しました: {item.Event_id} 第{serialNo}報");
 		EewController.Update(item.ToEew(receiveTime), receiveTime);
 	}
 }
