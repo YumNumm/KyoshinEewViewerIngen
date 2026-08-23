@@ -1233,6 +1233,26 @@ public class KyoshinEewViewerConfiguration : ReactiveObject, IWindowPlacementCon
 			set => this.RaiseAndSetIfChanged(ref _baseUrl, value);
 		}
 
+		private string? _deviceId;
+		/// <summary>
+		/// EQMonitor API で発行された端末 ID
+		/// </summary>
+		public string? DeviceId
+		{
+			get => _deviceId;
+			set => this.RaiseAndSetIfChanged(ref _deviceId, value);
+		}
+
+		private string? _deviceRegisteredBaseUrl;
+		/// <summary>
+		/// 端末 ID を登録した時点の正規化済み API ベース URL
+		/// </summary>
+		public string? DeviceRegisteredBaseUrl
+		{
+			get => _deviceRegisteredBaseUrl;
+			set => this.RaiseAndSetIfChanged(ref _deviceRegisteredBaseUrl, value);
+		}
+
 		private bool _enableEarthquake = true;
 		/// <summary>
 		/// 地震情報を取得するか

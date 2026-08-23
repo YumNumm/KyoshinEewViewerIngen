@@ -57,8 +57,10 @@ public class EqMonitorApiProvider : ReactiveObject, IDisposable
 
 	private ILogger Logger { get; }
 	private KyoshinEewViewerConfiguration Config { get; }
+	internal Func<HttpClient> CreateHttpClient { get; set; } = CreateDefaultHttpClient;
 
 	private Uri? _appliedBaseUri;
+	private string? _appliedDeviceId;
 	private HttpClient? _httpClient;
 	private EqMonitorApiClient? _client;
 
@@ -69,6 +71,12 @@ public class EqMonitorApiProvider : ReactiveObject, IDisposable
 		Logger = logManager.GetLogger<EqMonitorApiProvider>();
 		Config = config;
 	}
+
+	private static HttpClient CreateDefaultHttpClient()
+		=> NetworkDebugHttpClient.Create(new HttpClientHandler
+		{
+			AutomaticDecompression = DecompressionMethods.All,
+		}, TimeSpan.FromSeconds(10));
 
 	/// <summary>
 	/// 利用する接続先を決定する<br/>
@@ -96,12 +104,26 @@ public class EqMonitorApiProvider : ReactiveObject, IDisposable
 	}
 
 	/// <summary>
+	/// 現在利用する接続先を取得する
+	/// </summary>
+	public Uri? GetBaseUri()
+		=> ResolveBaseUri(Config.EqMonitor.BaseUrl, BuiltInBaseUrl);
+
+	private string? GetDeviceIdFor(Uri baseUri)
+	{
+		if (string.IsNullOrWhiteSpace(Config.EqMonitor.DeviceId))
+			return null;
+		var registeredUri = ResolveBaseUri(Config.EqMonitor.DeviceRegisteredBaseUrl, null);
+		return registeredUri == baseUri ? Config.EqMonitor.DeviceId : null;
+	}
+
+	/// <summary>
 	/// 現在の設定に対応したクライアントを取得する
 	/// </summary>
 	/// <returns>接続先が未設定もしくは不正な場合は null</returns>
 	public EqMonitorApiClient? GetClient()
 	{
-		var uri = ResolveBaseUri(Config.EqMonitor.BaseUrl, BuiltInBaseUrl);
+		var uri = GetBaseUri();
 		if (uri == null)
 		{
 			// 接続先が一つも与えられていない状態は異常ではないため警告しない
@@ -110,22 +132,23 @@ public class EqMonitorApiProvider : ReactiveObject, IDisposable
 			Reset();
 			return null;
 		}
+		var deviceId = GetDeviceIdFor(uri);
 
 		// 設定が変わっていなければ既存のクライアントを使い回す
-		if (_appliedBaseUri == uri)
+		if (_appliedBaseUri == uri && _appliedDeviceId == deviceId)
 			return _client;
 
-		// BaseAddress はリクエスト送信後に変更できないため、接続先ごとに作り直す
+		// BaseAddress と既定ヘッダーは送信後に変更できないため、設定ごとに作り直す
 		Reset();
-		_httpClient = NetworkDebugHttpClient.Create(new HttpClientHandler
-		{
-			AutomaticDecompression = DecompressionMethods.All,
-		}, TimeSpan.FromSeconds(10));
+		_httpClient = CreateHttpClient();
 		_httpClient.BaseAddress = uri;
 		_httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
 		_httpClient.DefaultRequestHeaders.TryAddWithoutValidation("x-eqmonitor-build", BuildNumber);
+		if (deviceId != null)
+			_httpClient.DefaultRequestHeaders.TryAddWithoutValidation("x-eqmonitor-device-id", deviceId);
 
 		_appliedBaseUri = uri;
+		_appliedDeviceId = deviceId;
 		_client = new EqMonitorApiClient(_httpClient);
 		Logger.LogInfo("EQMonitor API の接続先を設定しました");
 		return _client;
@@ -142,6 +165,7 @@ public class EqMonitorApiProvider : ReactiveObject, IDisposable
 		_httpClient = null;
 		_client = null;
 		_appliedBaseUri = null;
+		_appliedDeviceId = null;
 	}
 
 	public void Dispose()
