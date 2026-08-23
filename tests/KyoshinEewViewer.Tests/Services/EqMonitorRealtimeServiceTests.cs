@@ -212,6 +212,50 @@ public class EqMonitorRealtimeServiceTests
 			delays.Select(delay => (int)delay.TotalSeconds));
 	}
 
+	[Fact(DisplayName = "ready後に登録した購読者へ接続済みを通知してから初期同期する")]
+	public async Task Ready後の購読者登録()
+	{
+		var config = CreateConfig();
+		var handler = new ApiHandler();
+		using var provider = CreateProvider(config, handler);
+		var fake = new FakeWebSocket();
+		using var service = new EqMonitorRealtimeService(CreateLogManager(), config, provider)
+		{
+			CreateWebSocket = () => fake,
+		};
+		service.ReplaceDeviceServiceForTesting(new EqMonitorDeviceService(provider, config, _ => { }));
+		var firstSync = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		service.RegisterEewConsumer(
+			_ =>
+			{
+				firstSync.TrySetResult();
+				return Task.CompletedTask;
+			},
+			_ => { },
+			_ => { });
+
+		service.Start();
+		await fake.Connected.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		fake.Receive("""{"type":"ready"}""");
+		await firstSync.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+		var order = new ConcurrentQueue<string>();
+		var lateSync = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		service.RegisterEarthquakeConsumer(
+			_ =>
+			{
+				order.Enqueue("sync");
+				lateSync.TrySetResult();
+				return Task.CompletedTask;
+			},
+			_ => { },
+			connected => order.Enqueue($"connected:{connected}"));
+
+		await lateSync.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+		Assert.Equal(["connected:True", "sync"], order);
+	}
+
 	[Fact(DisplayName = "無効端末IDのチケット応答では一度だけ再登録して待機なしで接続する")]
 	public async Task 無効端末IDの再登録()
 	{

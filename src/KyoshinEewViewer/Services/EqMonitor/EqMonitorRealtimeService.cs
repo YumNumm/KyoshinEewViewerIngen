@@ -331,28 +331,45 @@ public sealed class EqMonitorRealtimeService : IDisposable
 			{
 				case MessageWorkItem { Message: EqMonitorReadyMessage }:
 					var isCurrent = false;
+					Func<CancellationToken, Task>? synchronizeEew = null;
+					Action<bool>? notifyEewConnection = null;
+					Func<CancellationToken, Task>? synchronizeEarthquake = null;
+					Action<bool>? notifyEarthquakeConnection = null;
 					lock (SyncRoot)
 					{
 						if (_runCancellation == owner)
 						{
 							_isReady = true;
 							isCurrent = true;
+							// ready 処理中に購読者が追加されても二重同期しないよう、
+							// この時点で登録済みの購読者だけをスナップショットする
+							if (Config.EqMonitor.EnableEew)
+							{
+								synchronizeEew = _synchronizeEew;
+								notifyEewConnection = _notifyEewConnection;
+							}
+							if (Config.EqMonitor.EnableEarthquake)
+							{
+								synchronizeEarthquake = _synchronizeEarthquake;
+								notifyEarthquakeConnection = _notifyEarthquakeConnection;
+							}
 						}
 					}
 					if (!isCurrent)
 						return;
 					ready();
-					NotifyConnection(true);
-					if (Config.EqMonitor.EnableEew)
-						await SynchronizeEewAsync(cancellationToken);
-					if (Config.EqMonitor.EnableEarthquake)
-						await SynchronizeEarthquakeAsync(cancellationToken);
+					NotifyConsumerConnection(notifyEewConnection, true, "EEW");
+					NotifyConsumerConnection(notifyEarthquakeConnection, true, "地震情報");
+					await SynchronizeEewAsync(synchronizeEew, cancellationToken);
+					await SynchronizeEarthquakeAsync(synchronizeEarthquake, cancellationToken);
 					break;
 				case SynchronizeEewWorkItem when Config.EqMonitor.EnableEew:
-					await SynchronizeEewAsync(cancellationToken);
+					NotifyConsumerConnection(_notifyEewConnection, true, "EEW");
+					await SynchronizeEewAsync(_synchronizeEew, cancellationToken);
 					break;
 				case SynchronizeEarthquakeWorkItem when Config.EqMonitor.EnableEarthquake:
-					await SynchronizeEarthquakeAsync(cancellationToken);
+					NotifyConsumerConnection(_notifyEarthquakeConnection, true, "地震情報");
+					await SynchronizeEarthquakeAsync(_synchronizeEarthquake, cancellationToken);
 					break;
 				case MessageWorkItem { Message: EqMonitorEewUpsertMessage eew }
 					when Config.EqMonitor.EnableEew:
@@ -396,9 +413,10 @@ public sealed class EqMonitorRealtimeService : IDisposable
 		}
 	}
 
-	private async Task SynchronizeEewAsync(CancellationToken cancellationToken)
+	private async Task SynchronizeEewAsync(
+		Func<CancellationToken, Task>? synchronize,
+		CancellationToken cancellationToken)
 	{
-		var synchronize = _synchronizeEew;
 		if (synchronize == null)
 			return;
 		try
@@ -415,9 +433,10 @@ public sealed class EqMonitorRealtimeService : IDisposable
 		}
 	}
 
-	private async Task SynchronizeEarthquakeAsync(CancellationToken cancellationToken)
+	private async Task SynchronizeEarthquakeAsync(
+		Func<CancellationToken, Task>? synchronize,
+		CancellationToken cancellationToken)
 	{
-		var synchronize = _synchronizeEarthquake;
 		if (synchronize == null)
 			return;
 		try
@@ -452,16 +471,24 @@ public sealed class EqMonitorRealtimeService : IDisposable
 
 	private void NotifyConnection(bool connected)
 	{
+		if (!connected || Config.EqMonitor.EnableEew)
+			NotifyConsumerConnection(_notifyEewConnection, connected, "EEW");
+		if (!connected || Config.EqMonitor.EnableEarthquake)
+			NotifyConsumerConnection(_notifyEarthquakeConnection, connected, "地震情報");
+	}
+
+	private void NotifyConsumerConnection(
+		Action<bool>? notifyConnection,
+		bool connected,
+		string consumerName)
+	{
 		try
 		{
-			if (!connected || Config.EqMonitor.EnableEew)
-				_notifyEewConnection?.Invoke(connected);
-			if (!connected || Config.EqMonitor.EnableEarthquake)
-				_notifyEarthquakeConnection?.Invoke(connected);
+			notifyConnection?.Invoke(connected);
 		}
 		catch (Exception ex)
 		{
-			Logger.LogWarning(ex, "EQMonitor の接続状態通知に失敗しました");
+			Logger.LogWarning(ex, $"EQMonitor {consumerName} の接続状態通知に失敗しました");
 		}
 	}
 
