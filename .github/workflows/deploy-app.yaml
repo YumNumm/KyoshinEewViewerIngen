@@ -110,7 +110,7 @@ jobs:
 
             # https://github.com/docker/setup-buildx-action
             - name: Set up Docker Buildx
-              uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+              uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
             # https://github.com/docker/login-action
             - name: Log in to Container Registry
@@ -289,13 +289,13 @@ jobs:
                   persist-credentials: false
 
             - name: Setup JDK 21
-              uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+              uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
               with:
                   distribution: temurin
                   java-version: "21"
 
             - name: Setup mise
-              uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+              uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
               with:
                   install: false
                   cache: false
@@ -311,7 +311,7 @@ jobs:
                   mise ls --current
 
             - name: Setup JDK 21
-              uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+              uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
               with:
                   distribution: temurin
                   java-version: "21"
@@ -376,7 +376,7 @@ jobs:
                   xcode-version: ${{ env.XCODE_VERSION }}
 
             - name: Setup mise
-              uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+              uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
               with:
                   install: false
                   cache: false
@@ -464,7 +464,7 @@ jobs:
                   persist-credentials: false
 
             - name: Setup mise
-              uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+              uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
               with:
                   cache: false
               env:
@@ -552,7 +552,7 @@ jobs:
                   xcode-version: ${{ env.XCODE_VERSION }}
 
             - name: Setup mise
-              uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+              uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
               with:
                   install: false
                   cache: false
@@ -667,7 +667,7 @@ jobs:
                   persist-credentials: false
 
             - name: Setup mise
-              uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+              uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
               with:
                   cache: false
               env:
