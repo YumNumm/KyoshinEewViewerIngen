@@ -1,5 +1,7 @@
 # Changelog
 
+## [1.0.10](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.9...1.0.10) - 2026-09-18
+
 ## [1.0.9](https://github.com/YumNumm/KyoshinEewViewerIngen/compare/1.0.8...1.0.9) - 2026-08-23
 
 - fix: exclude local artifacts from Docker context by @YumNumm in https://github.com/YumNumm/KyoshinEewViewerIngen/pull/27
